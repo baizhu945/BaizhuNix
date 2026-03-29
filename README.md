@@ -61,6 +61,14 @@ sudo fc-cache -fv
 # NixOS包中v2rayN功能残缺
 到 https://github.com/2dust/v2rayN 中下载`v2rayN-linux-64.zip`的包，解压后将整个`bin`文件夹复制到`~/.local/share/v2rayN/`中，选择全部替换
 
+# 在conda中安装`pix2tex`
+```
+conda-shell # 进入conda环境
+
+conda create -n latexocr # 创建环境
+```
+然后按照 https://github.com/lukas-blecher/LaTeX-OCR 进行安装
+
 # noctalia配置
 ## 插件
 `Catwalk`、`KDE Connect`、`Keybind Cheatsheet`、`SuperGFX Control`、`Screen Recorder`、`Screen Toolkit`、`Todo List`
