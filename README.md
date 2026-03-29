@@ -59,7 +59,7 @@ sudo fc-cache -fv
 若还有windows系统，则可以复制windows系统的字体到`~/.local/share/fonts/`中，然后运行`rm ~/.local/share/fonts/*.fon`
 
 # NixOS包中v2rayN功能残缺
-到https://github.com/2dust/v2rayN中下载`v2rayN-linux-64.zip`的包，解压后将整个`bin`文件夹复制到`~/.local/share/v2rayN/`中，选择全部替换
+到 https://github.com/2dust/v2rayN 中下载`v2rayN-linux-64.zip`的包，解压后将整个`bin`文件夹复制到`~/.local/share/v2rayN/`中，选择全部替换
 
 # noctalia配置
 ## 插件
@@ -70,14 +70,17 @@ Left click: `noctalia-shell ipc call launcher toggle`
 
 ### Wallpaper
 Left click: `noctalia-shell ipc call wallpaper random eDP-2 & noctalia-shell ipc call wallpaper random eDP-1 & noctalia-shell ipc call wallpaper random HDMI-A-1`
+
 Right click: `noctalia-shell ipc call wallpaper toggle`
 
 ### 截图
 Left click: `grim -l 0 -g "$(slurp)" -c /home/baizhu945/Pictures/Screenshots/$(date +'%s_grim.png') && wl-copy < ~/Pictures/Screenshots/$(date +'%s_grim.png') && noctalia-shell ipc call toast send '{"title":"区域截图"}'`
+
 Right click: `grim -l 0 -c $(xdg-user-dir PICTURES)/Screenshots/$(date +'%s_grim.png') && wl-copy < ~/Pictures/Screenshots/$(date +'%s_grim.png') && noctalia-shell ipc call toast send '{"title":"屏幕截图"}'`
 
 ### 朗读
 Left click: `speak_from_clipboard-zh`
+
 Right click: `speak_from_clipboard-en`
 
 ### Clean nix cache
