@@ -317,8 +317,6 @@ in
     '';
   };
 
-  services.v2raya.enable = true;
-
   services.udisks2.enable = true;
 
   # Allow unfree packages
