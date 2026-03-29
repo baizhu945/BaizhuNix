@@ -328,6 +328,8 @@ in
   programs.appimage.enable = true;
   programs.appimage.binfmt = true;
 
+  programs.direnv.enable = true; # 通过创建.envrc文件就可以在进入某个文件夹时自动加载环境变量
+
   programs.ydotool.enable = true;
 
   # Automatically creates a loader in /lib/* to avoid patching stuff
@@ -336,6 +338,9 @@ in
   programs.nix-ld = {
     enable = true;
     libraries = with pkgs; [
+      # Needed by latexocr
+      libxkbfile krb5 brotli
+
       #Needed by Kazumi
       harfbuzz webkitgtk_4_1 libsoup_3 libepoxy libayatana-indicator libXv 
       libayatana-appindicator ayatana-ido gnutls libunwind libarchive pulseaudio
@@ -390,6 +395,7 @@ in
   environment.systemPackages = [
   #  vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
 
+    pkgs.conda
     pkgs.baobab
     pkgs.showmethekey
     pkgs.libnotify
@@ -409,6 +415,7 @@ in
     pkgs.chameleos
     pkgs.networkmanagerapplet
     nix-alien-pkgs.nix-alien
+    pkgs.nix-index
     pkgs.nix-prefetch
     pkgs.nix-prefetch-hg
     pkgs.nix-prefetch-svn

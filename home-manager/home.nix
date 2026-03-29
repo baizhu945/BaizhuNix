@@ -110,23 +110,17 @@ in
     # # fonts?
     # (pkgs.nerdfonts.override { fonts = [ "FantasqueSansMono" ]; })
 
-#    (pkgs.symlinkJoin {
-#      name = "freecad-wrapped";
-#      paths = [ stablePkgs.freecad ];
-#      buildInputs = [ pkgs.makeWrapper ];
-#      postBuild = ''
-#        wrapProgram $out/bin/freecad \
-#          --set QT_QPA_PLATFORM xcb
-#      '';
-#    })
-
     # # You can also create simple shell scripts directly inside your
     # # configuration. For example, this adds a command 'my-hello' to your
     # # environment:
     # (pkgs.writeShellScriptBin "my-hello" ''
     #   echo "Hello, ${config.home.username}!"
     # '')
-
+    
+    (pkgs.writeShellScriptBin "latex-ocr" ''
+      export LD_LIBRARY_PATH=/run/current-system/sw/share/nix-ld/lib
+      latexocr
+    '')
   ];
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
