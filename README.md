@@ -58,9 +58,6 @@ sudo fc-cache -fv
 ```
 若还有windows系统，则可以复制windows系统的字体到`~/.local/share/fonts/`中，然后运行`rm ~/.local/share/fonts/*.fon`
 
-# NixOS包中v2rayN功能残缺
-到 https://github.com/2dust/v2rayN 中下载`v2rayN-linux-64.zip`的包，解压后将整个`bin`文件夹复制到`~/.local/share/v2rayN/`中，选择全部替换
-
 # 在conda中安装`pix2tex`
 ```
 conda-shell # 进入conda环境
