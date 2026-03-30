@@ -6,7 +6,7 @@
       #!/usr/bin/env bash
       MODEL="$HOME/.local/share/piper/zh_CN-huayan-medium.onnx"
       OUT="/home/baizhu945/Music/piper/$(date +%Y%m%d_%H%M%S_%3N).wav"
-      echo "$1" | piper --cuda -m "$MODEL" -f "$OUT"
+      echo "$1" | piper -m "$MODEL" -f "$OUT"
       aplay "$OUT"
     '')
 
@@ -14,7 +14,7 @@
       #!/usr/bin/env bash
       MODEL="$HOME/.local/share/piper/zh_CN-huayan-medium.onnx"
       OUT="/home/baizhu945/Music/piper/$(date +%Y%m%d_%H%M%S_%3N).wav"
-      wl-paste --no-newline | piper --cuda -m "$MODEL" -f "$OUT"
+      wl-paste --no-newline | piper -m "$MODEL" -f "$OUT"
       noctalia-shell ipc call toast send '{"title":"朗读已保存"}'
       aplay "$OUT"
     '')
@@ -23,7 +23,7 @@
       #!/usr/bin/env bash
       MODEL="$HOME/.local/share/piper/en_GB-cori-high.onnx"
       OUT="/home/baizhu945/Music/piper/$(date +%Y%m%d_%H%M%S_%3N).wav"
-      echo "$1" | piper --cuda -m "$MODEL" -f "$OUT"
+      echo "$1" | piper -m "$MODEL" -f "$OUT"
       aplay "$OUT"
     '')
 
@@ -31,7 +31,7 @@
       #!/usr/bin/env bash
       MODEL="$HOME/.local/share/piper/en_GB-cori-high.onnx"
       OUT="/home/baizhu945/Music/piper/$(date +%Y%m%d_%H%M%S_%3N).wav"
-      wl-paste --no-newline | piper --cuda -m "$MODEL" -f "$OUT"
+      wl-paste --no-newline | piper -m "$MODEL" -f "$OUT"
       noctalia-shell ipc call toast send '{"title":"朗读已保存"}'
       aplay "$OUT"
     '')
