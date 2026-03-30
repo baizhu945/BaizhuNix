@@ -347,6 +347,13 @@ in
 
   programs.ydotool.enable = true;
 
+  programs.clash-verge = {
+    enable = true;
+    group = "wheel";
+    tunMode = true;
+    serviceMode = true;
+  };
+
   # Automatically creates a loader in /lib/* to avoid patching stuff
   # To disable it temporarily use
   # unset NIX_LD
@@ -424,7 +431,6 @@ in
     pkgs.binutils
     pkgs.piper-tts
     pkgs.ffmpeg-full
-    pkgs.v2rayn
     pkgs.rustdesk-flutter
     pkgs.nirius
     pkgs.chameleos
@@ -509,9 +515,9 @@ in
     version = "590.48.01";
     # 64位驱动 Hash
     sha256_64bit = "sha256-ueL4BpN4FDHMh/TNKRCeEz3Oy1ClDWto1LO/LWlr1ok=";
-    # AArch64 驱动 Hash 
+    # AArch64 驱动 Hash
     sha256_aarch64 = "sha256-2AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-    # 开源内核模块 Hash 
+    # 开源内核模块 Hash
     openSha256 = "sha256-hECHfguzwduEfPo5pCDjWE/MjtRDhINVr4b1awFdP44=";
     # 设置程序 Hash
     settingsSha256 = "sha256-NWsqUciPa4f1ZX6f0By3yScz3pqKJV1ei9GvOF8qIEE=";
