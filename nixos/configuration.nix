@@ -474,7 +474,8 @@ in
     pkgs.thunderbird
     pkgs.kurve
     pkgs.texlivePackages.dvipng
-    pkgs.texliveBasic
+    pkgs.texliveFull
+    pkgs.miktex
     pkgs.pwvucontrol
     pkgs.coppwr
 
