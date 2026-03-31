@@ -416,8 +416,13 @@
       window-rule {
         match app-id=r#"firefox$"# title="^Picture-in-Picture$"
 	      match app-id=r#"google-chrome$"# title="^Picture-in-Picture$"
-        match app-id=r"^$" title=r"^$" 
         match app-id=r#"one.alynx.showmethekey$"# title="Floating Window - Show Me The Key$"
+        open-floating true
+      }
+
+      window-rule {
+        match app-id=r"^$" title=r"^$" 
+        default-floating-position x=-20 y=20 relative-to="top-right"
         open-floating true
       }
       
