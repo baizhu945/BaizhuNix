@@ -406,7 +406,6 @@
           match app-id=r#"Alacritty$"#
           match app-id=r#"kitty$"#
           match app-id=r#"Zed$"#
-          match app-id=r#"code$"#
           geometry-corner-radius 8
           clip-to-geometry true
           opacity 0.85

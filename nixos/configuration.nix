@@ -42,6 +42,7 @@ in
       ./hifi.nix
       ./zsh.nix
       ./customized-pkgs.nix
+      ./rust.nix
     ];
 
   hardware.bluetooth.enable = true;
