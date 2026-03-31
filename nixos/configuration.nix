@@ -147,6 +147,10 @@ in
     ];
   };
 
+  services.dictd = {
+    enable = true;
+  };
+
   # Allow installation of unfree corefonts package
   nixpkgs.config.allowUnfreePredicate = pkg:
     builtins.elem (lib.getName pkg) [ "corefonts" ];
