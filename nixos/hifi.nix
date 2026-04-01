@@ -64,4 +64,6 @@
       };
     };
   };
+
+  environment.systemPackages = [ pkgs.cantata ];
 }
