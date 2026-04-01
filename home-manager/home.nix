@@ -17,6 +17,7 @@ in
   imports = [
     ./niri.nix
     ./piper.nix
+    # ./lyrics-waybar.nix
   ];
 
   # Home Manager needs a bit of information about you and the paths it should
@@ -119,6 +120,20 @@ in
     (pkgs.writeShellScriptBin "latex-ocr" ''
       export LD_LIBRARY_PATH=/run/current-system/sw/share/nix-ld/lib
       latexocr
+    '')
+
+    (pkgs.writeShellScriptBin "mount-win" '' 
+      echo "wcandxl" | sudo -S mount /dev/disk/by-partuuid/e8bba6ef-dab7-48e9-b2d6-b9b7c12da71d /mnt/Win10/EFI/
+      echo "wcandxl" | sudo -S mount /dev/disk/by-partuuid/d4faa16c-2c12-433c-90df-67ce411519fd /mnt/Win10/C
+      echo "wcandxl" | sudo -S mount /dev/disk/by-partuuid/1967c4ec-2813-40c2-b9f7-a420c6252c99 /mnt/Win10/D
+      echo "wcandxl" | sudo -S mount /dev/disk/by-partuuid/ba12308b-873f-4bcd-bc83-c87419360ec1 /mnt/Win10/RECOVER/
+    '')
+
+    (pkgs.writeShellScriptBin "umount-win" '' 
+      echo "wcandxl" | sudo -S umount /mnt/Win10/EFI/
+      echo "wcandxl" | sudo -S umount /mnt/Win10/C
+      echo "wcandxl" | sudo -S umount /mnt/Win10/D
+      echo "wcandxl" | sudo -S umount /mnt/Win10/RECOVER/
     '')
   ];
 
