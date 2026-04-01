@@ -11,8 +11,13 @@
       "uid=1000"
       "gid=1000"
       "umask=0022"
+      "noauto"
     ];
   };
+  services.udev.extraRules = ''
+    ACTION=="add", SUBSYSTEM=="block", ENV{ID_FS_UUID}=="601F-0929", \
+    TAG+="systemd", ENV{SYSTEMD_WANTS}+="mnt-T7_Shield.mount"
+  '';
 
   services.mpd = {
     enable = true;
