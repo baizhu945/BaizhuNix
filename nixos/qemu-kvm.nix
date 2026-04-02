@@ -168,55 +168,70 @@ in
   hardware.ksm.enable = true;
   hardware.ksm.sleep = 500;
 
-  system.activationScripts.libvirtFixFirmwarePaths = {
-    deps = [ "var" ];
-    text = ''
-      # 在 activationScripts 里必须用完整的 store 路径引用所有外部工具
-      # 因为激活环境的 PATH 是空的，不包含任何常规命令
-      SED="${pkgs.gnused}/bin/sed"
-
+  systemd.services.libvirt-fix-firmware-paths = {
+    description = "Fix libvirt VM firmware paths to use stable NixOS symlinks";
+  
+    # 关键：必须在 virtqemud 启动并完成 XML 迁移之后再运行
+    # virtqemud 启动时会把 XML 里的路径"修正"为新版 store 路径
+    # 在它之后运行，把这些 store 路径再改回稳定的符号链接路径
+    after = [ "virtqemud.service" ];
+    wants = [ "virtqemud.service" ];
+    wantedBy = [ "multi-user.target" ];
+  
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      # 需要 root 权限来修改 /var/lib/libvirt/qemu/ 下的 XML 文件
+      User = "root";
+    };
+  
+    script = let
+      sed = "${pkgs.gnused}/bin/sed";
+      grep = "${pkgs.gnugrep}/bin/grep";
+      systemctl = "${pkgs.systemd}/bin/systemctl";
+    in ''
+      CHANGED=0
+  
       if [ -d /var/lib/libvirt/qemu ]; then
         for xmlfile in /var/lib/libvirt/qemu/*.xml; do
           [ -f "$xmlfile" ] || continue
-
-          # 替换 <loader> 标签内容里的 secure-code 路径
-          "$SED" -i \
+  
+          # 检查这个 XML 文件是否包含需要修复的 nix store 路径
+          # 如果不含任何 store 路径则跳过，避免不必要的文件写入
+          if ! ${grep} -q "/nix/store/" "$xmlfile"; then
+            continue
+          fi
+  
+          # 修复 <loader> 标签内容：secure boot 固件路径
+          # 使用 [^<]* 作为贪婪匹配边界，确保不会跨越 XML 标签边界
+          ${sed} -i \
             's|/nix/store/[^<]*edk2-x86_64-secure-code\.fd|/run/libvirt/nix-ovmf/edk2-x86_64-secure-code.fd|g' \
             "$xmlfile"
-
-          # 替换 <loader> 标签内容里的普通 code 路径（放在 secure-code 之后避免误匹配）
-          "$SED" -i \
+  
+          # 修复 <loader> 标签内容：普通 UEFI 固件路径
+          # 注意此条必须放在 secure-code 之后，因为 secure-code 路径也包含 "code"
+          ${sed} -i \
             's|/nix/store/[^<]*edk2-x86_64-code\.fd|/run/libvirt/nix-ovmf/edk2-x86_64-code.fd|g' \
             "$xmlfile"
-
-          # 只替换 <nvram> 的 template 属性值，保留标签内容里的 _VARS.fd 路径不变
-          "$SED" -i \
+  
+          # 修复 <nvram> 的 template 属性值
+          # 不会误伤标签内容里的 /var/lib/libvirt/qemu/nvram/xxx_VARS.fd
+          ${sed} -i \
             's|template="/nix/store/[^"]*edk2-i386-vars\.fd"|template="/run/libvirt/nix-ovmf/edk2-i386-vars.fd"|g' \
             "$xmlfile"
+  
+          CHANGED=1
+          echo "Fixed firmware paths in: $xmlfile"
         done
       fi
 
-      if [ -d /var/lib/libvirt/qemu ]; then
-        # 修复主 VM XML
-        for xml in /var/lib/libvirt/qemu/*.xml; do
-          [ -f "$xml" ] || continue
-  
-          $SED -i \
-            's|/nix/store/.*/bin/qemu-system-x86_64|/run/libvirt/nix-emulators/qemu-system-x86_64|g' \
-            "$xml"
-        done
-  
-        # 修复 snapshot XML（你现在其实已经部分正确，但建议统一）
-        for xml in /var/lib/libvirt/qemu/snapshot/*/*.xml; do
-          [ -f "$xml" ] || continue
-  
-          $SED -i \
-            's|/nix/store/.*/bin/qemu-system-x86_64|/run/libvirt/nix-emulators/qemu-system-x86_64|g' \
-            "$xml"
-        done
+      # 如果有任何文件被修改，重启 virtqemud 让它重新加载修正后的 XML
+      # 不重启的话 libvirt 内存里仍然保留着旧的（store 路径）版本
+      # 下次 virt-manager 添加设备时会用内存里的旧版本调用 defineXML，仍然会报错
+      if [ "$CHANGED" = "1" ]; then
+        echo "Restarting virtqemud to reload fixed XML..."
+        ${systemctl} restart virtqemud.service
       fi
-
-      rm -rf /var/cache/libvirt/qemu/*
     '';
   };
 }
