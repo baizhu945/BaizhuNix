@@ -89,7 +89,7 @@ Left click: `speak_from_clipboard-zh`
 Right click: `speak_from_clipboard-en`
 
 ### Clean nix cache
-Left click: `noctalia-shell ipc call toast send '{"title":"Cleaning"}' && alacritty -e nix-store --gc && nix-collect-garbage  --delete-old && echo '<yourpassword>' | sudo -S nix-store --gc && echo '<yourpassword>' | sudo -S nix-collect-garbage  --delete-old && noctalia-shell ipc call toast send '{"title":"Clean Completed"}'`
+Left click: `noctalia-shell ipc call toast send '{"title":"Cleaning"}' && ghostty -e nix-store --gc && nix-collect-garbage  --delete-old && echo '<yourpassword>' | sudo -S nix-store --gc && echo '<yourpassword>' | sudo -S nix-collect-garbage  --delete-old && noctalia-shell ipc call toast send '{"title":"Clean Completed"}'`
 
 # DankMaterialShell配置
 放在底部且自动隐藏，将其当作一个dock栏使用
