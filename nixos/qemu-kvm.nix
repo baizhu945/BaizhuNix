@@ -14,6 +14,11 @@ in
     "riscv64-linux"
   ];
 
+  boot.extraModprobeConfig = ''
+    options kvm_intel nested=1
+    options kvm_intel yield_func_stats=0
+  '';
+
   users.users.baizhu945 = {
     extraGroups = [
       "libvirtd"
