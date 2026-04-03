@@ -17,7 +17,8 @@ in
   imports = [
     ./niri.nix
     ./piper.nix
-    # ./lyrics-waybar.nix
+    ./kitty.nix
+    ./ghostty.nix
   ];
 
   # Home Manager needs a bit of information about you and the paths it should
@@ -58,7 +59,6 @@ in
     pkgs.maxima
     pkgs.kdePackages.cantor
     pkgs.openutau
-    pkgs.kitty
     pkgs.seahorse
     stablePkgs.krita
     pkgs.kdePackages.kdenlive

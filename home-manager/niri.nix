@@ -406,6 +406,7 @@
           match app-id=r#"Alacritty$"#
           match app-id=r#"kitty$"#
           match app-id=r#"Zed$"#
+          match app-id=r#"com.mitchellh.ghostty$"#
           geometry-corner-radius 8
           clip-to-geometry true
           opacity 0.85
@@ -421,7 +422,7 @@
 
       window-rule {
         match app-id=r"^$" title=r"^$" 
-        default-floating-position x=-20 y=20 relative-to="top-right"
+        default-floating-position x=20 y=20 relative-to="top-right"
         open-floating true
       }
       
@@ -429,8 +430,9 @@
           //Mod+Shift+Slash { show-hotkey-overlay; }
           Mod+Shift+Slash hotkey-overlay-title="Browse Hotkey" { spawn-sh "noctalia-shell ipc call plugin:keybind-cheatsheet toggle"; }
       
-          Mod+T hotkey-overlay-title="Open a Terminal: alacritty" { spawn "alacritty" "-e" "zsh"; }
-      	  Mod+Shift+T hotkey-overlay-title="Open a Terminal: kitty" { spawn "kitty" "-e" "zsh"; }
+          Mod+T hotkey-overlay-title="Open a Terminal" { spawn "ghostty" "-e" "zsh"; }
+      	  Mod+Shift+T hotkey-overlay-title="Open a Terminal" { spawn "alacritty" "-e" "zsh"; }
+          Mod+Alt+T hotkey-overlay-title="Open a Terminal" { spawn "kitty" "-e" "zsh"; }
           Mod+D hotkey-overlay-title="Run an Application Finder" { spawn-sh "noctalia-shell ipc call launcher toggle"; }
           Mod+B hotkey-overlay-title="Run a Browser: firefox" { spawn "firefox"; }
           Mod+E hotkey-overlay-title="Open an emoji selector" { spawn-sh "noctalia-shell ipc call launcher emoji"; }
