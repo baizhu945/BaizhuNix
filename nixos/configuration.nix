@@ -147,10 +147,6 @@ in
     ];
   };
 
-  services.dictd = {
-    enable = true;
-  };
-
   # Allow installation of unfree corefonts package
   nixpkgs.config.allowUnfreePredicate = pkg:
     builtins.elem (lib.getName pkg) [ "corefonts" ];
@@ -173,6 +169,11 @@ in
     mplus-outline-fonts.githubRelease
     dina-font
     proggyfonts
+    sarasa-gothic
+    maple-mono.CN
+    maple-mono.NF-CN
+    maple-mono.NL-CN
+    maple-mono.Normal-CN
 
     nerd-fonts.fira-code
     nerd-fonts.fira-mono
