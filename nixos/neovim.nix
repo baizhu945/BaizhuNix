@@ -17,12 +17,43 @@ in
     enable = true;
     vimAlias = true;
     viAlias = true;
-    defaultEditor = false;
+    defaultEditor = true;
+    colorschemes.cyberdream = {
+      enable = true;
+      luaConfig.post = ''
+        -- 将所有覆盖逻辑放进 ColorScheme autocmd，
+        -- 确保它永远在主题完全应用之后才执行，不会被覆盖
+        vim.api.nvim_create_autocmd("ColorScheme", {
+          pattern = "*",
+          callback = function()
+    
+            -- ── 背景透明 ──────────────────────────────────────────
+            -- 让终端/WM 的背景透过来
+            vim.api.nvim_set_hl(0, "Normal",      { bg = "none" })
+            vim.api.nvim_set_hl(0, "NormalNC",    { bg = "none" })
+            vim.api.nvim_set_hl(0, "NormalFloat", { bg = "none" })
+            vim.api.nvim_set_hl(0, "FloatBorder", { bg = "none" })
+            vim.api.nvim_set_hl(0, "SignColumn",  { bg = "none" })
+    
+            -- ── 恢复折叠行的视觉区分 ──────────────────────────────
+            -- cyberdream 把 Folded 的 bg 设得和 Normal 一样，
+            vim.api.nvim_set_hl(0, "Folded", {
+              bg = "#1e2030",   -- 比 Normal 深的颜色，根据你的终端背景调整
+              fg = "#636da6",   -- 折叠行的文字颜色（偏蓝灰）
+              italic = true,
+            })
+    
+            -- ── 恢复状态栏的视觉区分 ──────────────────────────────
+            vim.api.nvim_set_hl(0, "StatusLine",   { bg = "#1a1b2e", fg = "#c8d3f5" })
+            vim.api.nvim_set_hl(0, "StatusLineNC", { bg = "#16161e", fg = "#545c7e" })
+          end,
+        })
+      '';
+    };
   
     extraPackages = with pkgs; [ 
       ripgrep
       fd
-
       # 拦截并重写 tree-sitter 包，强行拉取 0.26.7 版本
       (tree-sitter.overrideAttrs (old: rec {
         version = "0.26.7";
@@ -32,16 +63,16 @@ in
           rev = "v${version}";
           hash = "sha256-O3c2djKhM+vIYunthDApi9sw/gFH/FBME1uR4N+9MFM="; 
         };
-	nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ 
+      	nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ 
           llvmPackages.libclang 
           rustPlatform.bindgenHook 
         ];
         LIBCLANG_PATH = "${llvmPackages.libclang.lib}/lib";
-  	patches = [];
-  	doCheck = false;
-  	cargoDeps = rustPlatform.importCargoLock {
-	  lockFile = "${src}/Cargo.lock";
-	};
+      	patches = [];
+  	    doCheck = false;
+  	    cargoDeps = rustPlatform.importCargoLock {
+	        lockFile = "${src}/Cargo.lock";
+	      };
       }))
     ];
   
@@ -100,10 +131,10 @@ in
       # Needed by ufo to fold nix
       treesitter = {
         enable = true;
-	settings = {
+      	settings = {
           highlight.enable = true;
-	  indent.enable = true;
-	};
+	        indent.enable = true;
+      	};
       };
   
       nvim-ufo = {
@@ -119,7 +150,7 @@ in
           fold_virt_text_handler = ''
             function(virtText, lnum, endLnum, width, truncate)
                 local newVirtText = {}
-                local suffix = (' 󰁂 %d '):format(endLnum - lnum)
+                local suffix = (' 󰁂 󰁂 󰁂  %d '):format(endLnum - lnum)
                 local sufWidth = vim.fn.strdisplaywidth(suffix)
                 local targetWidth = width - sufWidth
                 local curWidth = 0
