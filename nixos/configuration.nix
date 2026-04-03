@@ -422,6 +422,7 @@ in
   environment.systemPackages = [
   #  vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
 
+    pkgs.lsd
     pkgs.lsof
     pkgs.evtest
     pkgs.conda

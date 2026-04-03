@@ -12,6 +12,11 @@
     syntaxHighlighting.enable = true;
     histSize = 20000;
 
+    shellAliases = {
+      ls = "lsd";
+      sudo = "sudo ";
+    };
+
     promptInit = ''
       # PROMPT：FAIL 后带两个换行
       PROMPT='%(?,,)%F{109}%n%{$reset_color%}@%F{195}%m%{$reset_color%}: %{$fg_bold[blue]%}%~%}
