@@ -17,7 +17,6 @@ in
   imports = [
     ./niri.nix
     ./piper.nix
-    ./kitty.nix
     ./ghostty.nix
     ./lyrics.nix
   ];
