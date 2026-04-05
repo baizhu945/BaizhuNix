@@ -430,9 +430,9 @@
           //Mod+Shift+Slash { show-hotkey-overlay; }
           Mod+Shift+Slash hotkey-overlay-title="Browse Hotkey" { spawn-sh "noctalia-shell ipc call plugin:keybind-cheatsheet toggle"; }
       
-          Mod+T hotkey-overlay-title="Open a Terminal" { spawn "ghostty" "-e" "zsh"; }
-      	  Mod+Shift+T hotkey-overlay-title="Open a Terminal" { spawn "alacritty" "-e" "zsh"; }
-          Mod+Alt+T hotkey-overlay-title="Open a Terminal" { spawn "kitty" "-e" "zsh"; }
+          Mod+T hotkey-overlay-title="Open a Terminal" { spawn "ghostty"; }
+      	  Mod+Shift+T hotkey-overlay-title="Open a Terminal" { spawn "alacritty"; }
+          Mod+Alt+T hotkey-overlay-title="Open a Terminal" { spawn "kitty"; }
           Mod+D hotkey-overlay-title="Run an Application Finder" { spawn-sh "noctalia-shell ipc call launcher toggle"; }
           Mod+B hotkey-overlay-title="Run a Browser: firefox" { spawn "firefox"; }
           Mod+E hotkey-overlay-title="Open an emoji selector" { spawn-sh "noctalia-shell ipc call launcher emoji"; }
