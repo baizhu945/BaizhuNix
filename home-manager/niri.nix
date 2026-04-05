@@ -1,3 +1,5 @@
+{ config, lib, pkgs, ... }:
+
 {
   home.file = {
     ".config/niri/config.kdl".text = ''
@@ -386,8 +388,88 @@
       
           // Slow down all animations by this factor. Values below 1 speed them up instead.
           // slowdown 3.0
-      }
+
+          window-open {
+              duration-ms 250
+              curve "linear"
+              custom-shader r"
+                  // 【动画曲线】修改此函数改变缓动效果
+                  // 当前：ease-out cubic（快进慢出，适合弹入）
+                  // 替换为 t*t*(3.0-2.0*t) 得到 smoothstep
+                  // 替换为 t 得到匀速
+                  float animation_curve(float t) {
+                      float inv = 1.0 - t;
+                      return 1.0 - inv * inv * inv;
+                  }
       
+                  vec4 open_color(vec3 coords_geo, vec3 size_geo) {
+                      float p = animation_curve(niri_clamped_progress);
+      
+                      // 【滑入距离】1.0 = 完整窗口高度，0.3 = 较短距离
+                      float slide_amount = 1.0;
+      
+                      // 从上方滑入：p=0 时 y 偏移最大（窗口在上方），p=1 时偏移归零
+                      vec3 shifted = vec3(
+                          coords_geo.x,
+                          coords_geo.y + (1.0 - p) * slide_amount,
+                          1.0
+                      );
+      
+                      // 坐标超出窗口范围 → 透明（窗口还未进入）
+                      if (shifted.x < 0.0 || shifted.x > 1.0 ||
+                          shifted.y < 0.0 || shifted.y > 1.0) {
+                          return vec4(0.0);
+                      }
+
+                      // 将几何坐标转换为纹理坐标并采样窗口内容
+                      vec3 coords_tex = niri_geo_to_tex * shifted;
+                      vec4 color = texture2D(niri_tex, coords_tex.st);
+      
+                      // 【淡入强度】改为 1.0 可禁用淡入，只保留滑动
+                      color *= p;
+                      return color;
+                  }
+              "
+          }
+
+          window-close {
+              duration-ms 250
+              curve "linear"
+              custom-shader r"
+                  // 【动画曲线】当前：ease-in cubic（慢出快走，像被拉走）
+                  float animation_curve(float t) {
+                      return t * t * t;
+                  }
+      
+                  vec4 close_color(vec3 coords_geo, vec3 size_geo) {
+                      float p = animation_curve(niri_clamped_progress);
+      
+                      // 【滑出距离】
+                      float slide_amount = 1.0;
+      
+                      // 向下滑出：p 增大时 y 坐标减小，等效于内容向下移动
+                      vec3 shifted = vec3(
+                          coords_geo.x,
+                          coords_geo.y - p * slide_amount,
+                          1.0
+                      );
+      
+                      if (shifted.x < 0.0 || shifted.x > 1.0 ||
+                          shifted.y < 0.0 || shifted.y > 1.0) {
+                          return vec4(0.0);
+                      }
+      
+                      vec3 coords_tex = niri_geo_to_tex * shifted;
+                      vec4 color = texture2D(niri_tex, coords_tex.st);
+      
+                      // 【淡出强度】改为 1.0 可禁用淡出
+                      color *= (1.0 - p);
+                      return color;
+                  }
+              "
+          }
+      }
+            
       // Window rules let you adjust behavior for individual windows.
       // Find more information on the wiki:
       // https://yalter.github.io/niri/Configuration:-Window-Rules
@@ -559,7 +641,6 @@
       
     ".config/niri/noctalia.kdl".text = ''
       layout {
-
           focus-ring {
               active-color   "#405aa9"
               inactive-color "#fbf8fd"
@@ -596,5 +677,5 @@
     '';
   };
 }
-      
-      
+            
+                  
