@@ -363,7 +363,12 @@ in
   programs.appimage.enable = true;
   programs.appimage.binfmt = true;
 
-  programs.direnv.enable = true; # 通过创建.envrc文件就可以在进入某个文件夹时自动加载环境变量
+  programs.direnv = {
+    enable = true;
+    nix-direnv.enable = true;
+  };
+
+  programs.nh.enable = true;
 
   programs.ydotool.enable = true;
 
@@ -458,6 +463,8 @@ in
     pkgs.nirius
     pkgs.chameleos
     pkgs.networkmanagerapplet
+    pkgs.nurl
+    pkgs.noogle-search
     nix-alien-pkgs.nix-alien
     pkgs.nix-index
     pkgs.nix-prefetch
