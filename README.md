@@ -91,6 +91,13 @@ Right click: `speak_from_clipboard-en`
 ### Clean nix cache
 Left click: `noctalia-shell ipc call toast send '{"title":"Cleaning"}' && ghostty -e echo <yourpasswd> | sudo -S nh clean all && noctalia-shell ipc call toast send '{"title":"Clean Completed"}'`
 
+### Show lyrics
+显示命令输出: `waybar-lyrics`
+
+流: `ON`
+
+将输出解析为JSON: `ON`
+
 # DankMaterialShell配置
 放在底部且自动隐藏，将其当作一个dock栏使用
 ## 插件
