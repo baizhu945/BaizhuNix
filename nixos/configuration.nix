@@ -340,6 +340,20 @@ in
 
   services.udisks2.enable = true;
 
+  programs.yazi = {
+    enable = true;
+    settings = {
+      yazi = {
+        sort_by = "natural";
+        sort_dir_first = true;
+        sort_translit = true;
+        show_hidden = true;
+        show_symlink = true;
+        linemode = "size_and_mtime";
+      };
+    };
+  };
+
   # Allow unfree packages
   nixpkgs.config = {
     allowUnfree = true;
