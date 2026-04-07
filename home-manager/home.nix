@@ -48,7 +48,7 @@ in
     pkgs.voicevox
     pkgs.ekho
     pkgs.stellarium
-    pkgs.localsend
+    stablePkgs.localsend
     pkgs.tokei
     pkgs.kile
     pkgs.kdePackages.kmplot
