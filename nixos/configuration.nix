@@ -458,7 +458,6 @@ in
     pkgs.binutils
     pkgs.piper-tts
     pkgs.ffmpeg-full
-    pkgs.rustdesk-flutter
     pkgs.nirius
     pkgs.chameleos
     pkgs.networkmanagerapplet

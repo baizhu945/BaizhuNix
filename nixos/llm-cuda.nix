@@ -11,7 +11,7 @@ in
 {
   services.ollama = {
     enable = true;
-    package = unstablePkgs.ollama-cuda;
+    package = pkgs.ollama-cuda;
     syncModels = true;
     loadModels = [
       "deepseek-ocr"
