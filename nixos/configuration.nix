@@ -38,7 +38,6 @@ in
       ./neovim.nix
       ./qemu-kvm.nix
       ./flatpak-pkgs.nix
-      #./waydroid.nix
       ./hifi.nix
       ./zsh.nix
       ./customized-pkgs.nix
@@ -521,10 +520,7 @@ in
     enable = true;
   };
 
-  services.asusd = {
-    enable = true;
-    package = pkgs.asusctl;
-  };
+  services.asusd.enable = true;
   services.supergfxd.enable = true;
   services.power-profiles-daemon.enable = true;
 
