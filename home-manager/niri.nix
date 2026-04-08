@@ -526,6 +526,7 @@
           Mod+Alt+H hotkey-overlay-title="Show keys" { spawn-sh "noctalia-shell ipc call plugin:show-keys toggle"; } 
           Mod+Shift+H hotkey-overlay-title="Hide the DesktopWidgets" { spawn-sh "noctalia-shell ipc call desktopWidgets toggle"; }
           Mod+L hotkey-overlay-title="Toggle the lyrics" { spawn-sh "lyrics-toggle"; }
+          Mod+A hotkey-overlay-title="Open Open-WebUI" { spawn-sh "firefox http://127.0.0.1:8080/"; }
           Mod+Ctrl+W hotkey-overlay-title="全屏涂鸦" { spawn-sh "chameleos --stroke-width 4 & noctalia-shell ipc call toast send '{\"title\":\"进入涂鸦模式\"}' & sleep 0.1 && chamel toggle"; }
           Mod+Shift+W hotkey-overlay-title="区域涂鸦" { spawn-sh "noctalia-shell ipc call plugin:screen-toolkit annotate"; }
           Mod+Ctrl+E { spawn-sh "chamel exit && noctalia-shell ipc call toast send '{\"title\":\"退出涂鸦模式\"}'"; }

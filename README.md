@@ -98,6 +98,15 @@ Left click: `noctalia-shell ipc call toast send '{"title":"Cleaning"}' && ghostt
 
 将输出解析为JSON: `ON`
 
+### Show Open-WebUI avalibility
+左键单击: `firefox http://127.0.0.1:8080/`
+
+显示命令输出: `curl -sf http://127.0.0.1:8080/api/version \ | jq -e '.version and (.version | length > 0)'`
+
+流: `ON`
+
+最大文本长度: `0`
+
 # DankMaterialShell配置
 放在底部且自动隐藏，将其当作一个dock栏使用
 ## 插件
