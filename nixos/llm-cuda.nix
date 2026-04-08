@@ -19,6 +19,7 @@ in
       "gemma4:e4b"
     ];
   };
+
   services.open-webui = {
     enable = true;
     port = 8080;
@@ -29,6 +30,7 @@ in
       WEBUI_AUTH = "False"; 
     };
   };
+
   nixpkgs.config = {
     cudaSupport = true;
   };

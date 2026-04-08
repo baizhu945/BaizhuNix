@@ -59,8 +59,8 @@ in
     efi.canTouchEfiVariables = true;
   };
 
-  # Use latest kernel.
   boot.kernelPackages = pkgs.linuxPackagesFor customKernel;
+  # boot.kernelPackages = pkgs.linuxPackages_xanmod_latest;
 
   hardware.cpu.intel.updateMicrocode = true;
 
@@ -441,6 +441,7 @@ in
   environment.systemPackages = [
   #  vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
 
+    pkgs.jq
     pkgs.lsd
     pkgs.lsof
     pkgs.evtest
@@ -537,6 +538,7 @@ in
   hardware.nvidia.open = true;  # see the note above
   hardware.nvidia.nvidiaSettings = true;
   hardware.nvidia.dynamicBoost.enable = true;
+  # hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.latest;
   hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.mkDriver {
     version = "590.48.01";
     # 64位驱动 Hash
