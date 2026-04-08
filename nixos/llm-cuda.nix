@@ -15,7 +15,6 @@ in
     syncModels = true;
     loadModels = [
       "deepseek-ocr"
-      "qwen3.5:4b"
       "gemma4:e4b"
     ];
   };
