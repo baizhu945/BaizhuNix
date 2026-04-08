@@ -71,7 +71,6 @@ in
     pkgs.onedrivegui
     pkgs.ookla-speedtest
     pkgs.mission-center
-    pkgs.peazip
     pkgs.cmatrix
     pkgs.lolcat
     pkgs.qbittorrent

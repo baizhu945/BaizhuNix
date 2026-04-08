@@ -8,6 +8,32 @@ let
     config = config.nixpkgs.config;
   };
 
+  # 把插件 tar 包声明为一个固定输出的 Nix 派生
+  peazipPluginTar = pkgs.fetchurl {
+    url = "https://sourceforge.net/projects/peazip/files/Resources/PeaZip%20Additional%20Formats%20Plugin/peazip-additional-formats-plugin.7.LINUX.tar";
+    # 把这里替换成上一步 nix-prefetch-url 得到的哈希值
+    hash = "sha256-90q/LD2XpyyARX1t/zaZKbz9DfYZsCNdgam4L4iKPUw=";
+  };
+  # 创建一个合并了 peazip + 插件的新派生
+  peazipWithPlugins = pkgs.runCommand "peazip-with-plugins"
+    {
+      # 声明构建依赖
+      nativeBuildInputs = [ pkgs.rsync ];
+    }
+    ''
+      # 把 peazip 的整个目录树复制到输出目录
+      mkdir -p $out
+      rsync -a ${pkgs.peazip}/ $out/
+      chmod -R u+w $out/
+      # 解压插件 tar 包（注意：这是普通 tar，不是 tar.gz）
+      mkdir -p /tmp/peazip-plugin
+      tar -xf ${peazipPluginTar} -C /tmp/peazip-plugin
+      # 把插件里的二进制文件复制到 peazip 的 res 目录
+      mkdir -p $out/share/peazip/res/ 
+      cp -r /tmp/peazip-plugin/* $out/share/peazip/res/
+      chmod -R +x $out/share/peazip/res/
+    '';
+
   # 先把包装脚本定义为一个独立变量，方便后面的 desktop item 引用路径
   freecad-wrapped = pkgs.symlinkJoin {
     name = "freecad-wrapped";
@@ -23,6 +49,8 @@ let
 in
 {
   environment.systemPackages = with pkgs; [
+    peazipWithPlugins
+
     # 包装后的二进制
     freecad-wrapped
     # 对应的 .desktop 文件，Exec 直接指向包装后的绝对路径
