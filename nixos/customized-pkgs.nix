@@ -11,13 +11,11 @@ let
   # 把插件 tar 包声明为一个固定输出的 Nix 派生
   peazipPluginTar = pkgs.fetchurl {
     url = "https://sourceforge.net/projects/peazip/files/Resources/PeaZip%20Additional%20Formats%20Plugin/peazip-additional-formats-plugin.7.LINUX.tar";
-    # 把这里替换成上一步 nix-prefetch-url 得到的哈希值
     hash = "sha256-90q/LD2XpyyARX1t/zaZKbz9DfYZsCNdgam4L4iKPUw=";
   };
   # 创建一个合并了 peazip + 插件的新派生
   peazipWithPlugins = pkgs.runCommand "peazip-with-plugins"
     {
-      # 声明构建依赖
       nativeBuildInputs = [ pkgs.rsync ];
     }
     ''
@@ -25,12 +23,14 @@ let
       mkdir -p $out
       rsync -a ${pkgs.peazip}/ $out/
       chmod -R u+w $out/
-      # 解压插件 tar 包（注意：这是普通 tar，不是 tar.gz）
+      # 解压插件 tar 包
       mkdir -p /tmp/peazip-plugin
       tar -xf ${peazipPluginTar} -C /tmp/peazip-plugin
       # 把插件里的二进制文件复制到 peazip 的 res 目录
-      mkdir -p $out/share/peazip/res/ 
-      cp -r /tmp/peazip-plugin/* $out/share/peazip/res/
+      mkdir -p $out/share/peazip/res # 无这一行会因为不明原因报错
+      mkdir -p $out/lib/peazip/res 
+      mkdir -p $out/lib/peazip/res/bin 
+      cp -r /tmp/peazip-plugin/peazip-additional-formats-plugin.7.LINUX/* $out/lib/peazip/res/bin
       chmod -R +x $out/share/peazip/res/
     '';
 
