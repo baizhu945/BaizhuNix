@@ -37,7 +37,7 @@ let
   # 先把包装脚本定义为一个独立变量，方便后面的 desktop item 引用路径
   freecad-wrapped = pkgs.symlinkJoin {
     name = "freecad-wrapped";
-    paths = [ pkgs.freecad ];  # 或 stablePkgs.freecad
+    paths = [ stablePkgs.freecad ];  # 或 pkgs.freecad
     buildInputs = [ pkgs.makeWrapper ];
     postBuild = ''
       wrapProgram $out/bin/freecad \
