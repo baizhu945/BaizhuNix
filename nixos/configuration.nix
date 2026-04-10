@@ -451,7 +451,6 @@ in
     pkgs.libnotify
     pkgs.tree
     pkgs.friture
-    pkgs.zed-editor
     pkgs.btop-cuda
     pkgs.wget
     pkgs.audacious
