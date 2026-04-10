@@ -89,7 +89,7 @@ Left click: `speak_from_clipboard-zh`
 Right click: `speak_from_clipboard-en`
 
 ### Clean nix cache
-Left click: `noctalia-shell ipc call toast send '{"title":"Cleaning"}' && ghostty -e echo <yourpasswd> | sudo -S nh clean all && noctalia-shell ipc call toast send '{"title":"Clean Completed"}'`
+Left click: `noctalia-shell ipc call toast send '{"title":"Cleaning"}' && echo <yourpasswd> | sudo -S nh clean all && noctalia-shell ipc call toast send '{"title":"Clean Completed"}'`
 
 ### Show lyrics
 显示命令输出: `waybar-lyrics`
