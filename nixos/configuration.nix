@@ -15,14 +15,14 @@ let
   # 定义内核版本和 Hash
   customKernel = (pkgs.linuxKernel.kernels.linux_xanmod.override {
     argsOverride = rec {
-      version = "6.18.20";
+      version = "6.18.21";
       suffix = "xanmod1"; # 根据 Xanmod 习惯，通常会有这个后缀
       modDirVersion = "${version}-${suffix}";
       src = pkgs.fetchFromGitLab {
         owner = "xanmod";
         repo = "linux";
         rev = "${version}-${suffix}";
-        sha256 = "sha256-CVwMRXmDq+vmepTs9Aja7+xJztz2my6Z5AZrUk3VoOA="; 
+        sha256 = "sha256-56cRf+iTX+SbxEelp84q4m9JnJzGWuAaRBgWM+3MLQc="; 
       };
     };
   });
