@@ -441,6 +441,7 @@ in
   environment.systemPackages = [
   #  vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
 
+    pkgs.portaudio
     pkgs.sox
     pkgs.python314Packages.huggingface-hub
     pkgs.jq
@@ -482,7 +483,8 @@ in
     pkgs.psmisc
     pkgs.wl-clipboard
     pkgs.harfbuzz
-    pkgs.winePackages.waylandFull 
+    pkgs.wineWow64Packages.waylandFull
+    pkgs.winetricks
     pkgs.unzip
     pkgs.unrar
     pkgs.mpv-unwrapped
@@ -493,7 +495,6 @@ in
     pkgs.fastfetch
     pkgs.exfatprogs
     pkgs.nodejs
-    pkgs.git
     pkgs.vscode
     pkgs.os-prober
     pkgs.kdePackages.sddm-kcm
@@ -516,6 +517,11 @@ in
       extraPkgs = pkgs: [ ];
     })
   ];
+
+  programs.git = {
+    enable = true;
+    lfs.enable = true;
+  };
 
   programs.steam = {
     enable = true;

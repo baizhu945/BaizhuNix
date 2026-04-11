@@ -125,6 +125,7 @@ in
     (pkgs.writeShellScriptBin "melo-tts" ''
       #!/usr/bin/env bash
       mkdir -p ~/Music/melo
+      cd ~/.conda/envs/tts
       melo "$1" "/home/baizhu945/Music/melo/$(date +%Y%m%d_%H%M%S_%3N).wav" -l zh
     '')
 
