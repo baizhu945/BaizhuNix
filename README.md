@@ -70,12 +70,12 @@ conda create -n latexocr # 创建环境
 
 ## 在conda中安装`melo tts`
 ```
-conda create -n tts
+conda create -n tts python=3.9
 ```
 
 根据 https://pytorch.org/get-started/locally/ 安装pytorch
 
-根据 https://github.com/myshell-ai/MeloTTS 安装melo tts
+根据 https://github.com/myshell-ai/MeloTTS 安装melo tts，其中`git clone`步骤最好先`cd ~/.conda/envs/tts`后再运行，为了保持`home`目录整洁。
 
 运行`python -m unidic download`后，执行
 ```
