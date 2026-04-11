@@ -4,6 +4,7 @@
   home.packages = [
     (pkgs.writeShellScriptBin "speak-zh" ''
       #!/usr/bin/env bash
+      mkdir -p ~/Music/piper/
       MODEL="$HOME/.local/share/piper/zh_CN-huayan-medium.onnx"
       OUT="/home/baizhu945/Music/piper/$(date +%Y%m%d_%H%M%S_%3N).wav"
       echo "$1" | piper -m "$MODEL" -f "$OUT"
@@ -12,6 +13,7 @@
 
     (pkgs.writeShellScriptBin "speak_from_clipboard-zh" ''
       #!/usr/bin/env bash
+      mkdir -p ~/Music/piper/
       MODEL="$HOME/.local/share/piper/zh_CN-huayan-medium.onnx"
       OUT="/home/baizhu945/Music/piper/$(date +%Y%m%d_%H%M%S_%3N).wav"
       wl-paste --no-newline | piper -m "$MODEL" -f "$OUT"
@@ -21,6 +23,7 @@
 
     (pkgs.writeShellScriptBin "speak-en" ''
       #!/usr/bin/env bash
+      mkdir -p ~/Music/piper/
       MODEL="$HOME/.local/share/piper/en_GB-cori-high.onnx"
       OUT="/home/baizhu945/Music/piper/$(date +%Y%m%d_%H%M%S_%3N).wav"
       echo "$1" | piper -m "$MODEL" -f "$OUT"
@@ -29,6 +32,7 @@
 
     (pkgs.writeShellScriptBin "speak_from_clipboard-en" ''
       #!/usr/bin/env bash
+      mkdir -p ~/Music/piper/
       MODEL="$HOME/.local/share/piper/en_GB-cori-high.onnx"
       OUT="/home/baizhu945/Music/piper/$(date +%Y%m%d_%H%M%S_%3N).wav"
       wl-paste --no-newline | piper -m "$MODEL" -f "$OUT"

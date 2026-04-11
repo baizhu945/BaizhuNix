@@ -117,8 +117,15 @@ in
     # '')
     
     (pkgs.writeShellScriptBin "latex-ocr" ''
+      #!/usr/bin/env bash
       export LD_LIBRARY_PATH=/run/current-system/sw/share/nix-ld/lib
       latexocr
+    '')
+
+    (pkgs.writeShellScriptBin "melo-tts" ''
+      #!/usr/bin/env bash
+      mkdir -p ~/Music/melo
+      melo "$1" "/home/baizhu945/Music/melo/$(date +%Y%m%d_%H%M%S_%3N).wav" -l zh
     '')
 
     (pkgs.writeShellScriptBin "mount-win" '' 
