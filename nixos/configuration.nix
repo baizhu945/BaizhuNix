@@ -441,6 +441,8 @@ in
   environment.systemPackages = [
   #  vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
 
+    pkgs.sox
+    pkgs.python314Packages.huggingface-hub
     pkgs.jq
     pkgs.lsd
     pkgs.lsof
@@ -537,6 +539,7 @@ in
   hardware.nvidia.open = true;  # see the note above
   hardware.nvidia.nvidiaSettings = true;
   hardware.nvidia.dynamicBoost.enable = true;
+  hardware.nvidia-container-toolkit.enable = true;
   # hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.latest;
   hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.mkDriver {
     version = "590.48.01";

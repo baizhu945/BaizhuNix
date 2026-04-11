@@ -58,13 +58,44 @@ sudo fc-cache -fv
 ```
 若还有windows系统，则可以复制windows系统的字体到`~/.local/share/fonts/`中，然后运行`rm ~/.local/share/fonts/*.fon`
 
-# 在conda中安装`pix2tex`
+# 使用conda安装一些工具
+
+## 在conda中安装`pix2tex`
 ```
 conda-shell # 进入conda环境
 
 conda create -n latexocr # 创建环境
 ```
 然后按照 https://github.com/lukas-blecher/LaTeX-OCR 进行安装
+
+## 在conda中安装`melo tts`
+```
+conda create -n tts
+```
+
+根据 https://pytorch.org/get-started/locally/ 安装pytorch
+
+根据 https://github.com/myshell-ai/MeloTTS 安装melo tts
+
+运行`python -m unidic download`后，执行
+```
+python #进入python环境
+
+import nltk
+
+nltk.download()
+```
+
+选择all，下载全部模型
+
+将`nltk_data`文件夹移动到`~/.conda/envs/tts/share/`中
+
+分别运行下面两个命令，进行初始化操作
+```
+melo "Hello world 测试一下中英混读" out.wav
+
+melo "Hello world 测试一下中英混读" out.wav --language ZH
+```
 
 # noctalia配置
 ## 插件
