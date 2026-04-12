@@ -45,7 +45,6 @@ in
     pkgs.wtype
     pkgs.xdotool
     pkgs.imagemagick    
-    pkgs.voicevox
     pkgs.ekho
     pkgs.stellarium
     stablePkgs.localsend
@@ -58,7 +57,6 @@ in
     pkgs.octaveFull
     pkgs.maxima
     pkgs.kdePackages.cantor
-    pkgs.openutau
     pkgs.seahorse
     stablePkgs.krita
     pkgs.kdePackages.kdenlive
