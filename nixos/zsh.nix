@@ -11,12 +11,19 @@
     };
     syntaxHighlighting.enable = true;
     histSize = 20000;
-
     shellAliases = {
       ls = "lsd";
       sudo = "sudo ";
     };
-
+    ohMyZsh = {
+      enable = true;
+      theme = "re5et";
+      plugins = [
+        "command-not-found"
+        "colored-man-pages"
+        "fancy-ctrl-z"
+      ];
+    };
     promptInit = ''
       # PROMPT：FAIL 后带两个换行
       PROMPT='%(?,,)%F{109}%n%{$reset_color%}@%F{195}%m%{$reset_color%}: %{$fg_bold[blue]%}%~%}
@@ -34,16 +41,7 @@
     '';
   };
 
-  programs.zsh.ohMyZsh = {
-    enable = true;
-    theme = "re5et";
-    plugins = [
-      "colorize"
-      "command-not-found"
-      "colored-man-pages"
-      "fancy-ctrl-z"
-    ];
-  };
+  programs.command-not-found.enable = true; # Needed by "command-not-found" plugin
 
   users.users.baizhu945.shell = pkgs.zsh;
 }
