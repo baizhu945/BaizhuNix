@@ -217,6 +217,8 @@ in
 
   programs.kdeconnect.enable = true;
 
+  programs.mangowc.enable = true;
+
   programs.niri = {
     enable = true;
     useNautilus = false;

@@ -24,9 +24,9 @@
     ".config/ghostty/shaders/cursor_tail.glsl".text = ''
       // -- CONFIGURATION --
       vec4 TRAIL_COLOR = iCurrentCursorColor; // can change to eg: vec4(0.2, 0.6, 1.0, 0.5);
-      const float DURATION = 0.15; // in seconds
+      const float DURATION = 0.2; // in seconds
       const float MAX_TRAIL_LENGTH = 0.2;
-      const float THRESHOLD_MIN_DISTANCE = 1.5; // min distance to show trail (units of cursor width)
+      const float THRESHOLD_MIN_DISTANCE = 0.2; // min distance to show trail (units of cursor width)
       const float BLUR = 2.0; // blur size in pixels (for antialiasing)
       
       // --- CONSTANTS for easing functions ---

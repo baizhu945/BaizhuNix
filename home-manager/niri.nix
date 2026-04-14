@@ -265,8 +265,8 @@
               // If you enable the border, you probably want to disable the focus ring.
               off
       
-              width 4
-              active-color "#ffc87f"
+              width 1
+              active-color "#0e1443"
               inactive-color "#505050"
       
               // Color of the border around windows that request your attention.
