@@ -135,10 +135,6 @@
           layout {
               // ...layout settings for eDP-1...
           }
-      
-          // Custom modes. Caution: may damage your display.
-          // mode custom=true "1920x1080@100"
-          // modeline 173.00  1920 2048 2248 2576  1080 1083 1088 1120 "-hsync" "+vsync"
       }
       
       output "eDP-1" {
@@ -160,10 +156,6 @@
           layout {
               // ...layout settings for eDP-1...
           }
-
-          // Custom modes. Caution: may damage your display.
-          // mode custom=true "1920x1080@100"
-          // modeline 173.00  1920 2048 2248 2576  1080 1083 1088 1120 "-hsync" "+vsync"
       }
 
       output "HDMI-A-1" {
@@ -287,7 +279,17 @@
       
               // inactive-gradient from="#505050" to="#808080" angle=45 relative-to="workspace-view"
           }
-      
+     
+          tab-indicator {
+              active-color   "#405aa9"
+              inactive-color "#dbe1ff"
+              urgent-color   "#ba1a1a"
+          }
+
+          insert-hint {
+              color "#405aa980"
+          }
+
           // You can enable drop shadows for windows.
           shadow {
               // Uncomment the next line to enable shadows.
@@ -322,7 +324,7 @@
               offset x=0 y=0
       
               // You can also change the shadow color and opacity.
-              color "black"
+              color "#00000070"
           }
       
           // Struts shrink the area occupied by windows, similarly to layer-shell panels.
@@ -335,6 +337,13 @@
               // right 64
               // top 64
               // bottom 64
+          }
+      }
+
+      recent-windows {
+          highlight {
+              active-color "#405aa9"
+              urgent-color "#ba1a1a"
           }
       }
       
@@ -485,13 +494,22 @@
       }
       
       window-rule {
-          match app-id=r#"Alacritty$"#
-          match app-id=r#"kitty$"#
-          match app-id=r#"Zed$"#
-          match app-id=r#"com.mitchellh.ghostty$"#
+          match app-id=r#"Alacritty$"# is-focused=true
+          match app-id=r#"kitty$"# is-focused=true
+          match app-id=r#"com.mitchellh.ghostty$"# is-focused=true
           geometry-corner-radius 8
           clip-to-geometry true
           opacity 0.85
+          default-column-width { proportion 0.5; }
+      }
+
+      window-rule {
+          match app-id=r#"Alacritty$"# is-focused=false
+          match app-id=r#"kitty$"# is-focused=false
+          match app-id=r#"com.mitchellh.ghostty$"# is-focused=false
+          geometry-corner-radius 8
+          clip-to-geometry true
+          opacity 0.82
           default-column-width { proportion 0.5; }
       }
 
@@ -634,49 +652,6 @@
           Mod+Shift+E { quit; }
           Ctrl+Alt+Delete { quit; }
       }
-      
-      include "./noctalia.kdl"
-      
-      //include "dms/cursor.kdl"
-    '';
-      
-    ".config/niri/noctalia.kdl".text = ''
-      layout {
-          focus-ring {
-              active-color   "#405aa9"
-              inactive-color "#fbf8fd"
-              urgent-color   "#ba1a1a"
-          }
-      
-          border {
-              active-color   "#405aa9"
-              inactive-color "#fbf8fd"
-              urgent-color   "#ba1a1a"
-          }
-      
-          shadow {
-              color "#00000070"
-          }
-      
-          tab-indicator {
-              active-color   "#405aa9"
-              inactive-color "#dbe1ff"
-              urgent-color   "#ba1a1a"
-          }
-      
-          insert-hint {
-              color "#405aa980"
-          }
-      }
-      
-      recent-windows {
-          highlight {
-              active-color "#405aa9"
-              urgent-color "#ba1a1a"
-          }
-      }
     '';
   };
 }
-            
-                  

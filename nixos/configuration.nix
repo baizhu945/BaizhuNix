@@ -76,6 +76,7 @@ in
   boot.kernelParams = [ 
     "acpi_backlight=native"
     "nvidia.NVreg_TemporaryFilePath=/var/tmp"
+    "nvidia-drm.modeset=1"
   ];
 
   # 修复3108T的默认F媒体键且无法修改的问题（部分国产机械键盘可能模拟的是Apple键盘协议）
@@ -204,9 +205,9 @@ in
   services.desktopManager.plasma6.enable = true;
   environment.plasma6.excludePackages = with pkgs; [
     kdePackages.elisa
-    kdePackages.kwallet
-    kdePackages.kwallet-pam
-    kdePackages.kwalletmanager
+    # kdePackages.kwallet
+    # kdePackages.kwallet-pam
+    # kdePackages.kwalletmanager
     kdePackages.okular
   ];
 
@@ -222,7 +223,6 @@ in
   programs.niri = {
     enable = true;
     useNautilus = false;
-    package = pkgs.niri;
   };
   services.iio-niri = {
     enable = true;
@@ -441,6 +441,8 @@ in
   environment.systemPackages = [
   #  vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
 
+    pkgs.mesa-demos
+    pkgs.wlr-randr
     pkgs.portaudio
     pkgs.sox
     pkgs.python314Packages.huggingface-hub
