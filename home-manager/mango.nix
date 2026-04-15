@@ -4,7 +4,7 @@
   home.packages = [
     (pkgs.writeShellScriptBin "mango-start" ''
       #!/bin/sh
-      fcitx5 & noctalia-shell & dms run
+      noctalia-shell & dms run & sleep 10 && pkill yakuake
     '')
   ];
 
