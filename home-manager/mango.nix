@@ -16,8 +16,8 @@ env=LC_MESSAGES,zh_CN.UTF-8
 env=XDG_CURRENT_DESKTOP,mango
 env=XDG_SESSION_TYPE,wayland
 
-monitorrule=model:MNG007DA5-3,width:2560,height:1600,refresh:165,scale:1.76,x:0,y:0
-monitorrule=model:F24B40Q,width:2560,height:1440,refresh:59.938,scale:1.6,x:-1600,y:0
+monitorrule=model:F24B40Q,width:2560,height:1440,refresh:59.938,scale:1.6,x:0,y:0
+monitorrule=model:MNG007DA5-3,width:2560,height:1600,refresh:165,scale:1.8,x:1600,y:0
 
 exec-once=mango-start
 
@@ -44,8 +44,8 @@ border_radius = 8
 borderpx = 1
 bordercolor = 0xb8b8b824
 focuscolor = 0xe5e5e524
-gappih = 4
-gappoh = 1
+gappih = 9
+gappoh = 3
 shadows = 1
 shadows_size = 10
 shadows_blur = 15

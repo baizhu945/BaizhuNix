@@ -76,8 +76,8 @@ in
     pkgs.baidupcs-go
     pkgs.texstudio
     pkgs.feishu
-    pkgs.wechat
     pkgs.qq
+    pkgs.wechat
     pkgs.qalculate-gtk
     pkgs.onlyoffice-desktopeditors
     pkgs.brave
