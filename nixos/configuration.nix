@@ -144,6 +144,8 @@ in
       fcitx5-mozc
       fcitx5-gtk
       qt6Packages.fcitx5-chinese-addons
+      fcitx5-pinyin-zhwiki
+      fcitx5-pinyin-moegirl
     ];
   };
 
@@ -511,7 +513,7 @@ in
     pkgs.kdePackages.yakuake
     pkgs.kdePackages.layer-shell-qt
     pkgs.kdePackages.qttools
-    pkgs.thunderbird
+    stablePkgs.thunderbird
     pkgs.kurve
     pkgs.texlivePackages.dvipng
     pkgs.texliveFull
