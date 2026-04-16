@@ -6,6 +6,35 @@
       #!/bin/sh
       noctalia-shell & dms run & sleep 10 && pkill yakuake
     '')
+
+    (pkgs.writeShellScriptBin "focusmon_conditional" ''
+      #!/usr/bin/env bash
+      direction=$1
+      monitors_info=$(mmsg -g -o)
+      current_monitor=$(echo "$monitors_info" | awk '$3 == 1 {print $1}')
+      all_monitors=($(echo "$monitors_info" | awk '{print $1}'))
+      # 手动计算当前索引和数组长度
+      current_index=-1
+      len=''${#all_monitors[@]}
+      for ((i=0; i<len; i++)); do
+          if [[ "''${all_monitors[$i]}" == "$current_monitor" ]]; then
+              current_index=$i
+              break
+          fi
+      done
+      case "$direction" in
+          right|down)
+              if (( current_index > 0 )); then
+                  mmsg -d focusmon,"$direction"
+              fi
+              ;;
+          left|up)
+              if (( current_index < len - 1 )); then
+                  mmsg -d focusmon,"$direction"
+              fi
+              ;;
+      esac
+    '')
   ];
 
   home.file = {
@@ -15,6 +44,12 @@
 env=LC_MESSAGES,zh_CN.UTF-8
 env=XDG_CURRENT_DESKTOP,mango
 env=XDG_SESSION_TYPE,wayland
+env=GTK_IM_MODULE,fcitx
+env=QT_IM_MODULE,fcitx
+env=QT_IM_MODULES,wayland;fcitx
+env=SDL_IM_MODULE,fcitx
+env=XMODIFIERS,@im=fcitx
+env=GLFW_IM_MODULE,ibus
 
 monitorrule=model:F24B40Q,width:2560,height:1440,refresh:59.938,scale:1.6,x:0,y:0
 monitorrule=model:MNG007DA5-3,width:2560,height:1600,refresh:165,scale:1.8,x:1600,y:0
@@ -24,11 +59,15 @@ exec-once=mango-start
 numlockon=1
 disable_while_typing=1
 scroller_proportion_preset=0.33333,0.5,0.66667,0.99999
+scroller_default_proportion = 0.66667
 focus_on_activate=0
 sloppyfocus=0
 cursor_hide_timeout=3
 drag_corner = 0
 enable_hotarea = 0
+exchange_cross_monitor = 0
+trackpad_natural_scrolling = 1
+accel_profile = 0
 
 # 视觉特效与模糊
 blur = 1
@@ -166,10 +205,15 @@ bind = SUPER+Ctrl,Home, exchange_client, first
 bind = SUPER+Ctrl,End, exchange_client, last
 
 # 多显示器焦点
-bind = SUPER+Shift,Left, focusmon, left
-bind = SUPER+Shift,Down, focusmon, down
-bind = SUPER+Shift,Up, focusmon, up
-bind = SUPER+Shift,Right, focusmon, right
+# bind = SUPER+Shift,Left, focusmon, left
+# bind = SUPER+Shift,Down, focusmon, down
+# bind = SUPER+Shift,Up, focusmon, up
+# bind = SUPER+Shift,Right, focusmon, right
+
+bind = SUPER+Shift,Left, spawn_shell, focusmon_conditional left
+bind = SUPER+Shift,Down, spawn_shell, focusmon_conditional down
+bind = SUPER+Shift,Up, spawn_shell, focusmon_conditional up
+bind = SUPER+Shift,Right, spawn_shell, focusmon_conditional right
 
 # 移动列到其他显示器
 bind = SUPER+Shift+Ctrl,Left, tagmon, left
