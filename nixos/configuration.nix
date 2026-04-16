@@ -11,21 +11,6 @@ let
   nix-alien-pkgs = import (
     builtins.fetchTarball "https://github.com/thiagokokada/nix-alien/tarball/master"
   ) { };
-
-  # 定义内核版本和 Hash
-  customKernel = (pkgs.linuxKernel.kernels.linux_xanmod.override {
-    argsOverride = rec {
-      version = "6.18.22";
-      suffix = "xanmod1"; # 根据 Xanmod 习惯，通常会有这个后缀
-      modDirVersion = "${version}-${suffix}";
-      src = pkgs.fetchFromGitLab {
-        owner = "xanmod";
-        repo = "linux";
-        rev = "${version}-${suffix}";
-        sha256 = "sha256-RWLMFCW3dHtTeY+F9LFZpale8FTh5ITSHU/N/CkN5WA="; 
-      };
-    };
-  });
 in
 {
   imports =
@@ -59,8 +44,7 @@ in
     efi.canTouchEfiVariables = true;
   };
 
-  boot.kernelPackages = pkgs.linuxPackagesFor customKernel;
-  # boot.kernelPackages = pkgs.linuxPackages_xanmod_latest;
+  boot.kernelPackages = pkgs.linuxPackages_xanmod_latest;
 
   hardware.cpu.intel.updateMicrocode = true;
 
@@ -112,6 +96,11 @@ in
     fish_greeting = "";
     QS_ICON_THEME = "Fluent";
     NIXOS_OZONE_WL = "1";
+
+    GBM_BACKEND = "nvidia-drm";
+    __GLX_VENDOR_LIBRARY_NAME = "nvidia";
+    LIBVA_DRIVER_NAME = "nvidia";
+    NVD_BACKEND = "direct";
   };
 
   nix.settings = {
@@ -449,6 +438,7 @@ in
   environment.systemPackages = [
   #  vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
 
+    pkgs.libva-utils
     pkgs.brightnessctl
     pkgs.mesa-demos
     pkgs.wlr-randr
@@ -572,21 +562,7 @@ in
   hardware.nvidia.nvidiaSettings = true;
   hardware.nvidia.dynamicBoost.enable = true;
   hardware.nvidia-container-toolkit.enable = true;
-  # hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.latest;
-  hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.mkDriver {
-    version = "590.48.01";
-    # 64位驱动 Hash
-    sha256_64bit = "sha256-ueL4BpN4FDHMh/TNKRCeEz3Oy1ClDWto1LO/LWlr1ok=";
-    # AArch64 驱动 Hash
-    sha256_aarch64 = "sha256-2AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-    # 开源内核模块 Hash
-    openSha256 = "sha256-hECHfguzwduEfPo5pCDjWE/MjtRDhINVr4b1awFdP44=";
-    # 设置程序 Hash
-    settingsSha256 = "sha256-NWsqUciPa4f1ZX6f0By3yScz3pqKJV1ei9GvOF8qIEE=";
-    # 持久化服务 Hash
-    persistencedSha256 = "sha256-5AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-  };
-
+  hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.latest;
 
   hardware.nvidia.prime = {
     intelBusId = "PCI:0@0:2:0";
