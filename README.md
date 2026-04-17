@@ -142,3 +142,12 @@ Left click: `noctalia-shell ipc call toast send '{"title":"Cleaning"}' && echo <
 放在底部且自动隐藏，将其当作一个dock栏使用
 ## 插件
 `Asus Control Centor`、`Display Mirror`、`Display Manager`、`Display Settings`、`Power Usage Monitor`、`Music Lyrics`
+
+# Known BUGs
+## Screen Recording
+在`niri`中，`noctalia`的屏幕录像可用，`obs`的`Wayland output(dmabuf)`不可用，`Wayland output(scpy)`可用但是画面泛黄
+
+在`mangowc`中，`noctalia`的屏幕录像不可用，`obs`的`Wayland output(dmabuf)`可用，`Wayland output(scpy)`不可用
+
+## `ventoy` & `gparted`
+在`mangowc`中，`ventoy`和`gparted`无法启动，但是在其他桌面能够正常启动
