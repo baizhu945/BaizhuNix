@@ -81,7 +81,7 @@ in
   };
 
   services.logind.settings.Login = {
-    HandleLidSwitch = "hibernate";
+    HandleLidSwitch = "suspend";
     HandleLidSwitchExternalPower = "ignore";
     HandleLidSwitchDocked = "ignore";
   };
@@ -96,14 +96,10 @@ in
     fish_greeting = "";
     QS_ICON_THEME = "Fluent";
     NIXOS_OZONE_WL = "1";
-
-    GBM_BACKEND = "nvidia-drm";
-    __GLX_VENDOR_LIBRARY_NAME = "nvidia";
-    LIBVA_DRIVER_NAME = "nvidia";
-    NVD_BACKEND = "direct";
   };
 
   nix.settings = {
+    auto-optimise-store = true;
     experimental-features = [ "nix-command" "flakes" ];
     substituters = [
       "https://cache.nixos-cuda.org"
@@ -217,9 +213,38 @@ in
   };
   services.dbus.implementation = lib.mkForce "dbus";
 
-  programs.niri = {
-    enable = true;
-    useNautilus = false;
+  programs.niri = { 
+    enable = true; 
+    useNautilus = false; 
+    package = 
+      let 
+        src = pkgs.fetchFromGitHub { 
+          owner = "niri-wm"; 
+          repo = "niri"; 
+          rev = "9e5716a9dbf7dbf9622a95a5bd23a898867759c6"; 
+          hash = "sha256-+hK+EgAwuRG+lhqwOkKfXlqMEdELIoTMdjfVosIlLb0="; 
+        }; 
+      in 
+        pkgs.niri.overrideAttrs (old: { 
+          inherit src; 
+          postPatch = ''
+            patchShebangs resources/niri-session
+            substituteInPlace resources/niri.service \
+              --replace 'ExecStart=niri --session' 'ExecStart=${placeholder "out"}/bin/niri --session'
+          '';
+          nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ pkgs.makeWrapper ];
+          postFixup = ''
+            wrapProgram $out/bin/niri \
+              --prefix PATH : ${pkgs.xwayland-satellite}/bin:${pkgs.xorg-server}/bin
+          '';
+          cargoDeps = pkgs.rustPlatform.fetchCargoVendor {
+            inherit src;
+            hash = "sha256-tievZgYwlZ/zUjl/R6B3UFmFiav9tHxAujxPQjP6niU=";
+          };
+          env = (old.env or { }) // {
+            NIRI_BUILD_COMMIT = "Nixpkgs-main";
+          };
+        }); 
   };
   services.iio-niri = {
     enable = true;
@@ -263,6 +288,7 @@ in
 
   xdg = {
     portal = {
+      wlr.enable = true;
       config = {
         niri = {
           "org.freedesktop.impl.portal.FileChooser" = [ "gtk" ]; # or "kde"
@@ -273,6 +299,8 @@ in
         xdg-desktop-portal-wlr
         xdg-desktop-portal-gtk
         xdg-desktop-portal-gnome
+        xdg-desktop-portal-hyprland
+        kdePackages.xdg-desktop-portal-kde
       ];
     };
   };
@@ -436,8 +464,6 @@ in
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = [
-  #  vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
-
     pkgs.libva-utils
     pkgs.brightnessctl
     pkgs.mesa-demos
