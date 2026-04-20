@@ -16,6 +16,7 @@ in
     loadModels = [
       "deepseek-ocr"
       "gemma4:e4b"
+      "qwen3.5:4b"
     ];
   };
 
