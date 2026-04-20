@@ -127,7 +127,7 @@ windowrule=isfloating:1,appid:^one\.alynx\.showmethekey$,title:^Floating Window 
 
 # 4. 通用浮动窗口位置规则 (位于右上角)
 # offsetx/offsety 相对于屏幕中心，20 和 -30 会使窗口出现在右上区域
-windowrule=offsetx:20,offsety:-30,isfloating:1
+windowrule=offsetx:20,offsety:30,isfloating:1,appid:^$,title:^$
 
 windowrule = noblur:1,appid:slurp
 
