@@ -11,6 +11,10 @@ let
   nix-alien-pkgs = import (
     builtins.fetchTarball "https://github.com/thiagokokada/nix-alien/tarball/master"
   ) { };
+
+  fenix = import (
+    builtins.fetchTarball "https://github.com/nix-community/fenix/archive/main.tar.gz"
+  ) { };
 in
 {
   imports =
@@ -26,7 +30,6 @@ in
       ./hifi.nix
       ./zsh.nix
       ./customized-pkgs.nix
-      ./rust.nix
     ];
 
   hardware.bluetooth.enable = true;
@@ -464,6 +467,7 @@ in
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = [
+    pkgs.gcc
     pkgs.libva-utils
     pkgs.brightnessctl
     pkgs.mesa-demos
@@ -491,9 +495,12 @@ in
     pkgs.nirius
     pkgs.chameleos
     pkgs.networkmanagerapplet
+    pkgs.vulnix
+    pkgs.nix-init
     pkgs.nurl
     pkgs.noogle-search
     nix-alien-pkgs.nix-alien
+    fenix.complete.toolchain
     pkgs.nix-index
     pkgs.nix-prefetch
     pkgs.nix-prefetch-hg
