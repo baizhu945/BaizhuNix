@@ -116,7 +116,12 @@ input {
     position x=1280 y=0
 }
 
-output "eDP-2" {
+cursor {
+    hide-when-typing
+    hide-after-inactive-ms 5000
+}
+
+output "China Star Optoelectronics Technology Co., Ltd MNG007DA5-3 Unknown" {
     // off
     mode "2560x1600@165.000"
     scale 1.77
@@ -137,28 +142,7 @@ output "eDP-2" {
     }
 }
 
-output "eDP-1" {
-    // off
-    mode "2560x1600@165.000"
-    scale 1.77
-    position x=0 y=0
-    focus-at-startup
-    backdrop-color "#001100"
-
-    hot-corners {
-        off
-        top-left
-        // top-right
-        // bottom-left
-        // bottom-right
-    }
-
-    layout {
-        // ...layout settings for eDP-1...
-    }
-}
-
-output "HDMI-A-1" {
+output "SKYDATA S.P.A. F24B40Q 0000000000" {
     // ...settings for HDMI-A-1...
     mode "2560x1440@59.938"
     scale 1.6

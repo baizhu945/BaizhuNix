@@ -1,7 +1,6 @@
 { config, lib, pkgs, ... }:
 
 let
-  # 1. 歌词核心脚本（和你现在的一模一样）
   playerctl-bin = "${pkgs.playerctl}/bin/playerctl";
 
   lyrics-script = pkgs.writers.writePython3Bin "waybar-lyrics" {
