@@ -221,8 +221,8 @@ in
         src = pkgs.fetchFromGitHub { 
           owner = "niri-wm"; 
           repo = "niri"; 
-          rev = "9e5716a9dbf7dbf9622a95a5bd23a898867759c6"; 
-          hash = "sha256-+hK+EgAwuRG+lhqwOkKfXlqMEdELIoTMdjfVosIlLb0="; 
+          rev = "e9c182a13c1d12762351ec01ce0ec711d41b0337"; 
+          hash = "sha256-nnv27JD0FOOqs1Hh67kydXFzZoEu8e0QyMf0R9AXaIw="; 
         }; 
       in 
         pkgs.niri.overrideAttrs (old: { 
@@ -239,7 +239,7 @@ in
           '';
           cargoDeps = pkgs.rustPlatform.fetchCargoVendor {
             inherit src;
-            hash = "sha256-tievZgYwlZ/zUjl/R6B3UFmFiav9tHxAujxPQjP6niU=";
+            hash = "sha256-Iaqr19d52MgDkNZyNoE44K7VeZmU8NCp7jpUoaHCYt4=";
           };
           env = (old.env or { }) // {
             NIRI_BUILD_COMMIT = "Nixpkgs-main";
