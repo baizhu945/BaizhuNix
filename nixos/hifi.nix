@@ -4,6 +4,7 @@
   fileSystems."/mnt/T7_Shield" = {
     device = "/dev/disk/by-uuid/601F-0929";
     fsType = "exfat";
+    noCheck = true;
     options = [
       "rw"
       "nofail"

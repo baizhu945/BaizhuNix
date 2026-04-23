@@ -457,7 +457,7 @@ in
       libgcrypt libvpx librsvg libxft libvdpau
       # ...
       # Some more libraries that I needed to run programs
-      pango     cairo      atk      gdk-pixbuf      fontconfig      freetype      dbus      alsa-lib      expat
+      pango      cairo      atk      gdk-pixbuf      fontconfig      freetype      dbus      alsa-lib      expat
       # for blender
       libxkbcommon
 
