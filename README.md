@@ -1,6 +1,6 @@
 **该仓库是nixos-unstable的配置，且是一个去flake的配置，主要用于给自己备份。但是对于qemu/KVM虚拟机包含了一些补丁，有需要的可以借用**
 
-# 安装home-manager
+# 一、安装home-manager
 ```
 nix-channel --add https://github.com/nix-community/home-manager/archive/master.tar.gz home-manager
 
@@ -9,7 +9,7 @@ nix-channel --update
 nix-shell '<home-manager>' -A install
 ```
 
-# 改nix-unstable（如果最初安装的是稳定版而不是unstable版）
+# 二、改nix-unstable（如果最初安装的是稳定版而不是unstable版）
 ```
 sudo nix-channel --remove nixos
 
@@ -18,14 +18,14 @@ sudo nix-channel --add https://channels.nixos.org/nixos-unstable nixos
 sudo nix-channel --update
 ```
 
-# 添加nixpkgs
+# 三、添加nixpkgs
 ```
 nix-channel --add https://nixos.org/channels/nixpkgs-unstable
 
 nix-channel --update
 ```
 
-# 创建virt-manager默认网络
+# 四、创建virt-manager默认网络
 ```
 sudo virsh net-define /var/lib/libvirt/qemu/networks/default.xml
 
@@ -34,14 +34,14 @@ sudo virsh net-create /var/lib/libvirt/qemu/networks/default.xml
 sudo virsh net-autostart default
 ```
 
-# noctalia插件列表无法刷新
+# 五、noctalia插件列表无法刷新
 ```
 git clone https://github.com/noctalia-dev/noctalia-plugins
 
 node noctalia-plugins/registry.json
 ```
 
-# onlyoffice不识别系统安装的中文字体
+# 六、onlyoffice不识别系统安装的中文字体
 `/nix/store`后面的哈希值路径会随着版本变化，需要在自己的系统中查找，与下面的不一定一样
 ```
 mkdir -p ~/.local/share/fonts
@@ -58,7 +58,7 @@ sudo fc-cache -fv
 ```
 若还有windows系统，则可以复制windows系统的字体到`~/.local/share/fonts/`中，然后运行`rm ~/.local/share/fonts/*.fon`
 
-# 使用conda安装一些工具
+# 七、使用conda安装一些工具
 
 ## 在conda中安装`pix2tex`
 ```
@@ -97,7 +97,7 @@ melo "Hello world 测试一下中英混读" out.wav
 melo "Hello world 测试一下中英混读" out.wav --language ZH
 ```
 
-# noctalia配置
+# 八、noctalia配置
 ## 插件
 `Catwalk`、`KDE Connect`、`Keybind Cheatsheet`、`SuperGFX Control`、`Screen Recorder`、`Screen Toolkit`、`Todo List`
 ## CustomButton
@@ -138,12 +138,12 @@ Left click: `noctalia-shell ipc call toast send '{"title":"Cleaning"}' && echo <
 
 最大文本长度: `0`
 
-# DankMaterialShell配置
+# 九、DankMaterialShell配置
 放在底部且自动隐藏，将其当作一个dock栏使用
 ## 插件
 `Asus Control Centor`、`Display Mirror`、`Display Manager`、`Display Settings`、`Power Usage Monitor`、`Music Lyrics`
 
-# Dual boot trouble shooting
+# 十、Dual boot trouble shooting
 ## Windows 时间错乱
 参考 https://wiki.archlinux.org/title/System_time#UTC_in_Microsoft_Windows
 
@@ -153,7 +153,7 @@ Left click: `noctalia-shell ipc call toast send '{"title":"Cleaning"}' && echo <
 sudo efibootmgr -b 0002 --inactive # 把 0002 更换为 Windows 的编号
 ```
 
-# Known BUGs
+# 十一、Known BUGs
 ## Screen Recording
 在`niri`中，`noctalia`的屏幕录像可用，`obs`的`Wayland output(dmabuf)`不可用，`Wayland output(scpy)`可用但是画面泛黄
 
