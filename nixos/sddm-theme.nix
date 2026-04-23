@@ -5,7 +5,7 @@ let
   backgroundImage = pkgs.stdenvNoCC.mkDerivation {
     name = "sddm-bg-image";
     src =
-      builtins.fetchurl "https://static.zerochan.net/Hatsune.Miku.full.4576241.png";
+      builtins.fetchurl "https://w.wallhaven.cc/full/d8/wallhaven-d8pyvo.jpg";
     dontUnpack = true;
     installPhase = ''
       mkdir -p $out

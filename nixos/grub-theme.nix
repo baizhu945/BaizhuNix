@@ -1,9 +1,8 @@
 { config, pkgs, lib,  ... }:
 
 let
-  # https://static.zerochan.net/Hatsune.Miku.full.4576241.png
   originalWallpaper =
-    builtins.fetchurl "https://static.zerochan.net/Hatsune.Miku.full.4576241.png";
+    builtins.fetchurl "https://w.wallhaven.cc/full/d8/wallhaven-d8pyvo.jpg";
 
   # 在构建时用 ImageMagick 生成模糊版本
   # -blur 0x8 中，0 表示半径（自动），8 表示标准差（sigma），值越大越模糊
