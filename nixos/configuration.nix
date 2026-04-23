@@ -381,10 +381,15 @@ in
     };
   };
 
-  # Allow unfree packages
   nixpkgs.config = {
     allowUnfree = true;
     nvidia.acceptLicense = true;
+    packageOverrides = pkgs: {
+      nur = import (
+        builtins.fetchTarball "https://github.com/nix-community/NUR/archive/main.tar.gz") {
+          inherit pkgs;
+      };
+    };
   };
 
   programs.appimage.enable = true;
@@ -467,6 +472,7 @@ in
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = [
+    pkgs.efibootmgr
     pkgs.gcc
     pkgs.libva-utils
     pkgs.brightnessctl
