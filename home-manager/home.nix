@@ -141,6 +141,16 @@ in
     # # symlink to the Nix store copy.
     # ".screenrc".source = dotfiles/screenrc;
 
+    ".config/nixpkgs/config.nix".text = ''
+{
+  packageOverrides = pkgs: {
+    nur = import (builtins.fetchTarball "https://github.com/nix-community/NUR/archive/main.tar.gz") {
+      inherit pkgs;
+    };
+  };
+}
+    '';
+
     ".config/translate-shell/init.trans".text = ''
       {
         :engine          "bing"
