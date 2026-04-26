@@ -91,6 +91,8 @@ in
   powerManagement.enable = true;
   services.thermald.enable = true;
 
+  services.colord.enable = true;
+
   environment.variables = {
     KDE_WALLET_DISABLE = "1";
     KDE_WALLET_BACKEND = "none";
@@ -550,10 +552,8 @@ in
     pkgs.pwvucontrol
     pkgs.coppwr
 
-    (pkgs.lutris.override {
-      # List of additional system libraries
+    (stablePkgs.lutris.override {
       extraLibraries = pkgs: [ ];
-      # List of additional system packages    
       extraPkgs = pkgs: [ ];
     })
 
