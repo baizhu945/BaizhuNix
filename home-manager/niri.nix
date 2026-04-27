@@ -338,6 +338,9 @@ recent-windows {
 // spawn-at-startup "gnome-keyring-daemon" "--start" "--components=secrets"
 //spawn-at-startup "/usr/lib/xdg-desktop-portal-kde"
 //spawn-at-startup "/usr/lib/xdg-desktop-portal"
+spawn-at-startup "fcitx5"
+spawn-at-startup "nm-applet"
+spawn-at-startup "blueman-applet"
 
 // This line starts waybar, a commonly used bar for Wayland compositors.
 
@@ -348,7 +351,6 @@ spawn-sh-at-startup "noctalia-shell"
 spawn-sh-at-startup "dms run"
 spawn-sh-at-startup "niriusd"
 // spawn-sh-at-startup "waypaper --restore"
-spawn-sh-at-startup "sleep 10 && pkill yakuake"
 
 hotkey-overlay {
     // Uncomment this line to disable the "Important Hotkeys" pop-up at startup.

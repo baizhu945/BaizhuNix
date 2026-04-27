@@ -4,7 +4,7 @@
   home.packages = [
     (pkgs.writeShellScriptBin "mango-start" ''
       #!/bin/sh
-      noctalia-shell & dms run & sleep 10 && pkill yakuake
+      fcitx5 & nm-applet & blueman-applet & noctalia-shell & dms run
     '')
 
     (pkgs.writeShellScriptBin "focusmon_conditional" ''
