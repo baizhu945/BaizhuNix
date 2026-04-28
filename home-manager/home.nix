@@ -20,6 +20,7 @@ in
     ./ghostty.nix
     ./lyrics.nix
     ./mango.nix
+    ./fetch.nix
   ];
 
   # Home Manager needs a bit of information about you and the paths it should
