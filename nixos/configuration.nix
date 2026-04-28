@@ -495,6 +495,7 @@ in
     pkgs.friture
     pkgs.btop-cuda
     pkgs.wget
+    pkgs.gh
     pkgs.audacious
     pkgs.audacious-plugins
     pkgs.binutils
@@ -535,6 +536,13 @@ in
     pkgs.alsa-utils
     pkgs.quickshell
     pkgs.fastfetch
+    pkgs.foodfetch
+    pkgs.gitfetch
+    pkgs.cpufetch
+    pkgs.gpufetch
+    pkgs.ramfetch
+    pkgs.microfetch
+    pkgs.onefetch
     pkgs.exfatprogs
     pkgs.nodejs
     pkgs.vscode
