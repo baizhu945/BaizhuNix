@@ -221,35 +221,6 @@ in
   programs.niri = { 
     enable = true; 
     useNautilus = false; 
-    package = 
-      let 
-        src = pkgs.fetchFromGitHub { 
-          owner = "niri-wm"; 
-          repo = "niri"; 
-          rev = "e9c182a13c1d12762351ec01ce0ec711d41b0337"; 
-          hash = "sha256-nnv27JD0FOOqs1Hh67kydXFzZoEu8e0QyMf0R9AXaIw="; 
-        }; 
-      in 
-        pkgs.niri.overrideAttrs (old: { 
-          inherit src; 
-          postPatch = ''
-            patchShebangs resources/niri-session
-            substituteInPlace resources/niri.service \
-              --replace 'ExecStart=niri --session' 'ExecStart=${placeholder "out"}/bin/niri --session'
-          '';
-          nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ pkgs.makeWrapper ];
-          postFixup = ''
-            wrapProgram $out/bin/niri \
-              --prefix PATH : ${pkgs.xwayland-satellite}/bin:${pkgs.xorg-server}/bin
-          '';
-          cargoDeps = pkgs.rustPlatform.fetchCargoVendor {
-            inherit src;
-            hash = "sha256-Iaqr19d52MgDkNZyNoE44K7VeZmU8NCp7jpUoaHCYt4=";
-          };
-          env = (old.env or { }) // {
-            NIRI_BUILD_COMMIT = "Nixpkgs-main";
-          };
-        }); 
   };
   services.iio-niri = {
     enable = true;
