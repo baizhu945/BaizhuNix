@@ -209,15 +209,6 @@ in
 
   programs.kdeconnect.enable = true;
 
-  programs.uwsm = {
-    enable = true;
-    waylandCompositors.mangowc = {
-      binPath = "/run/current-system/sw/bin/mango-uwsm";
-      prettyName = "MangoWC";
-    };
-  };
-  services.dbus.implementation = lib.mkForce "dbus";
-
   programs.niri = { 
     enable = true; 
     useNautilus = false; 
@@ -535,21 +526,6 @@ in
       extraLibraries = pkgs: [ ];
       extraPkgs = pkgs: [ ];
     })
-
-    (pkgs.writeShellScriptBin "mango-uwsm" ''
-      mango &
-      for i in {1..50}; do
-        if [ -S "$XDG_RUNTIME_DIR/wayland-0" ]; then
-          break
-        fi
-        sleep 0.1
-      done
-      export WAYLAND_DISPLAY=wayland-0
-      systemctl --user import-environment WAYLAND_DISPLAY
-      uwsm finalize
-      wait
-    '')
-    pkgs.mangowc
   ];
 
   programs.git = {

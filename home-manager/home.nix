@@ -19,7 +19,6 @@ in
     ./piper.nix
     ./ghostty.nix
     ./lyrics.nix
-    ./mango.nix
     ./fetch.nix
   ];
 
