@@ -1,0 +1,54 @@
+{ config, pkgs, lib,  ... }:
+
+let
+  unstableTarball =
+    fetchTarball
+      "https://nixos.org/channels/nixpkgs-unstable/nixexprs.tar.xz";
+  unstablePkgs = import unstableTarball {
+    config = config.nixpkgs.config;
+  };
+
+  stableTarball =
+    fetchTarball
+      "https://nixos.org/channels/nixos-26.05/nixexprs.tar.xz";
+  stablePkgs = import stableTarball {
+    config = config.nixpkgs.config;
+  };
+
+in
+{
+  services.ollama = {
+    enable = true;
+    package = unstablePkgs.ollama-cuda;
+    syncModels = true;
+    loadModels = [
+      "deepseek-ocr"
+      "gemma4:12b"
+    ];
+  };
+
+  services.open-webui = {
+    enable = true;
+    package = pkgs.open-webui;
+    port = 8080;
+    host = "127.0.0.1";
+    environment = {
+      BYPASS_INSTALLATION_CHECK = "True";
+      OLLAMA_API_BASE_URL = "http://127.0.0.1:11434";
+      WEBUI_AUTH = "False"; 
+    };
+  };
+
+  nixpkgs.config = {
+    cudaSupport = true;
+  };
+  environment.systemPackages = with pkgs; [
+    cudaPackages.cudatoolkit
+    cudaPackages.cuda_nvcc
+    cudaPackages.nvcomp
+    cudaPackages.nvidia_fs
+    cudaPackages.cuda_opencl
+    cudaPackages.cuda_cudart
+    stable-diffusion-cpp-cuda
+  ];
+}
