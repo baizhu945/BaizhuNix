@@ -27,18 +27,6 @@ in
     ];
   };
 
-  services.open-webui = {
-    enable = true;
-    package = pkgs.open-webui;
-    port = 8080;
-    host = "127.0.0.1";
-    environment = {
-      BYPASS_INSTALLATION_CHECK = "True";
-      OLLAMA_API_BASE_URL = "http://127.0.0.1:11434";
-      WEBUI_AUTH = "False"; 
-    };
-  };
-
   nixpkgs.config = {
     cudaSupport = true;
   };
