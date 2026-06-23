@@ -20,7 +20,7 @@ find . -path "./.git" -prune -o -type f -name "*" -exec sed -i 's/<yourpassword>
 - `rm` 命令保护，运行 `rm` 时只有输入 `yes` 才会成功运行，而 `remove-without-permission` 命令依然是原味 `rm`。
 - 在 `dolphin` 中右键可使用 `unar` 预览和解压压缩包。
 - `OpenCode` 和 `cc-connect` 支持。
-- 鼠标拖尾特效支持，[见我另一仓库](https://github.com/<yourusername>/niri-mouse-trail) 。
+- 鼠标拖尾特效支持，[见我另一仓库](https://github.com/baizhu945/niri-mouse-trail) 。
 
 # 一、安装home-manager
 ```

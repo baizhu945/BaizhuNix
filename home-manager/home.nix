@@ -131,8 +131,8 @@ in
           git rm -r --cached --ignore-unmatch "$dir"
       done
 
-      find . -path "./.git" -prune -o -path "./.gitmodules" -prune -o -type f -name "*" -exec sed -i 's/<yourusername>/<yourusername>/g' {} +
-      find . -path "./.git" -prune -o -path "./.gitmodules" -prune -o -type f -name "*" -exec sed -i 's/<yourpassword>/<yourpassword>/g' {} +
+      find . -path "./README.md" -prune -o -path "./.git" -prune -o -path "./.gitmodules" -prune -o -type f -name "*" -exec sed -i 's/<yourusername>/<yourusername>/g' {} +
+      find . -path "./README.md" -prune -o -path "./.git" -prune -o -path "./.gitmodules" -prune -o -type f -name "*" -exec sed -i 's/<yourpassword>/<yourpassword>/g' {} +
 
       7z a -o{~/Documents/BaizhuNix} n\&d.7z noctalia/ DankMaterialShell
 
