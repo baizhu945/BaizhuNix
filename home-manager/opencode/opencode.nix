@@ -23,6 +23,11 @@ let
     url = "https://github.com/anthropics/skills.git";
     ref = "main";
   };
+
+  agent-skills-repo = builtins.fetchGit {
+    url = "https://github.com/addyosmani/agent-skills";
+    ref = "main";
+  };
 in 
 {
   imports = [
@@ -39,11 +44,14 @@ in
       tts-voice-synthesis = "${anbeime-skills-repo}/skills/tts-voice-synthesis";
       chrome-automation = "${anbeime-skills-repo}/skills/chrome-automation/chrome-automation";
       media-processor = "${anbeime-skills-repo}/skills/media-processor/media-processor";
+
       docx = "${anthropics-skills-repo}/skills/docx";
       pptx = "${anthropics-skills-repo}/skills/pptx";
       xlsx = "${anthropics-skills-repo}/skills/xlsx";
       pdf = "${anthropics-skills-repo}/skills/pdf";
       canvas-design = "${anthropics-skills-repo}/skills/canvas-design";
+
+      agent-skills = "${agent-skills-repo}";
     };
 
     settings = {
