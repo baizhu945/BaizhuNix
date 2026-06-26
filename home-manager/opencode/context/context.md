@@ -194,5 +194,6 @@ imports = [
 - 不要更改 `/home/<yourusername>/Documents/BaizhuNix` 文件夹
 - 在更改 `/home/<yourusername>/.config/` 中的文件之前，先考虑是否能从 `/home/<yourusername>/.config/home-manager/` 声明式地、可复现地解决
 - 要保证自己写的每一份 `nix` 代码都是可复现的
+- 使用 `remove-without-permission` 来替代 `rm`
 
 This context captures the comprehensive NixOS setup with home-manager, showcasing the modular configuration approach, code habits, and technical environment that defines the user's development workflow.

@@ -97,8 +97,8 @@ in
         glob = "allow";
         grep = "allow";
         bash = "ask";
-        task = "ask";
-        skill = "ask";
+        task = "allow";
+        skill = "allow";
         webfetch = "allow";
         websearch = "allow";
         question = "allow";
