@@ -32,9 +32,11 @@ in
   home.username = "<yourusername>";
   home.homeDirectory = "/home/<yourusername>";
 
-  home.stateVersion = "25.11"; # Please read the comment before changing.
+  home.stateVersion = "26.11"; # Please read the comment before changing.
 
   programs.onlyoffice.enable = true;
+
+  programs.firefox.enable = true;
 
   home.packages = [
     # # Adds the 'hello' command to your environment. It prints a friendly
@@ -78,7 +80,6 @@ in
     stablePkgs.qalculate-gtk
     pkgs.brave
     pkgs.google-chrome
-    pkgs.firefox
     pkgs.kdePackages.discover
     pkgs.proton-vpn
     pkgs.pciutils
