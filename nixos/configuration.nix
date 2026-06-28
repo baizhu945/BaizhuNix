@@ -112,7 +112,7 @@ in
     GDK_DPI_SCALE = "1.0";
   };
 
-  nix.package = pkgs.lixPackageSets.latest.lix;
+  # nix.package = pkgs.lixPackageSets.latest.lix;
 
   nix.settings = {
     auto-optimise-store = true;

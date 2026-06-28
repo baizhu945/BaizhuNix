@@ -7,13 +7,15 @@ let
 in
 {
   imports = [ nixvim.nixosModules.nixvim ];
-
+  
   security.sudo.extraConfig = ''
     # 保留 Wayland 和 X11 的显示及认证变量，解决剪贴板和显示问题
     Defaults env_keep += "WAYLAND_DISPLAY XAUTHORITY DISPLAY XDG_RUNTIME_DIR"
   '';
 
   programs.nixvim = {
+    nixpkgs.pkgs = pkgs;
+
     enable = true;
     vimAlias = true;
     viAlias = true;
