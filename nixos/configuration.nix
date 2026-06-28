@@ -51,7 +51,8 @@ in
     efi.canTouchEfiVariables = true;
   };
 
-  boot.kernelPackages = pkgs.linuxPackages_zen;
+  boot.kernelPackages = pkgs.linuxPackages_latest; 
+  # boot.kernelPackages = pkgs.linuxPackages_zen;
 
   hardware.cpu.intel.updateMicrocode = true;
 
@@ -112,7 +113,7 @@ in
     GDK_DPI_SCALE = "1.0";
   };
 
-  # nix.package = pkgs.lixPackageSets.latest.lix;
+  nix.package = pkgs.lixPackageSets.latest.lix;
 
   nix.settings = {
     auto-optimise-store = true;
