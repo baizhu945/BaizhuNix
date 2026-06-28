@@ -479,10 +479,6 @@ EOF
     pkgs.python3
     pkgs.vulkan-tools
    
-    pkgs.gtk2 pkgs.gtk3 pkgs.gtk4
-
-    pkgs.glycin-loaders pkgs.glycin-thumbnailer pkgs.libglycin-gtk4 pkgs.libglycin
-
     pkgs.unar pkgs.rar pkgs.unzip pkgs.unrar pkgs.p7zip
     
     pkgs.testdisk
