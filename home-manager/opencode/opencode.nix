@@ -28,6 +28,11 @@ let
     url = "https://github.com/addyosmani/agent-skills";
     ref = "main";
   };
+
+  simulink-agentic-toolkit = builtins.fetchGit {
+    url = "https://github.com/matlab/simulink-agentic-toolkit.git";
+    ref = "main";
+  };
 in 
 {
   imports = [
@@ -52,6 +57,23 @@ in
       canvas-design = "${anthropics-skills-repo}/skills/canvas-design";
 
       agent-skills = "${agent-skills-repo}";
+
+      building-simulink-models = "${simulink-agentic-toolkit}/skills-catalog/model-based-design-core/building-simulink-models";
+      configuring-block-policy = "${simulink-agentic-toolkit}/skills-catalog/model-based-design-core/configuring-block-policy";
+      curating-library-kg = "${simulink-agentic-toolkit}/skills-catalog/model-based-design-core/curating-library-kg";
+      filing-bug-reports = "${simulink-agentic-toolkit}/skills-catalog/model-based-design-core/filing-bug-reports";
+      generate-requirement-drafts = "${simulink-agentic-toolkit}/skills-catalog/model-based-design-core/generate-requirement-drafts";
+      managing-simulink-projects = "${simulink-agentic-toolkit}/skills-catalog/model-based-design-core/managing-simulink-projects";
+      setup-custom-libraries = "${simulink-agentic-toolkit}/skills-catalog/model-based-design-core/setup-custom-libraries";
+      simulating-simulink-models = "${simulink-agentic-toolkit}/skills-catalog/model-based-design-core/simulating-simulink-models";
+      specifying-mbd-algorithms = "${simulink-agentic-toolkit}/skills-catalog/model-based-design-core/specifying-mbd-algorithms";
+      specifying-plant-models = "${simulink-agentic-toolkit}/skills-catalog/model-based-design-core/specifying-plant-models";
+      testing-simulink-models = "${simulink-agentic-toolkit}/skills-catalog/model-based-design-core/testing-simulink-models";
+
+      building-architecture-models = "${simulink-agentic-toolkit}/skills-catalog/model-based-system-engineering/building-architecture-models";
+
+      check-authoring = "${simulink-agentic-toolkit}/skills-catalog/agentic-review/check-authoring";
+      checking-model-compliance = "${simulink-agentic-toolkit}/skills-catalog/agentic-review/checking-model-compliance";
     };
 
     settings = {
