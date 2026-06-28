@@ -6,8 +6,11 @@ let
       url = "https://registry.npmjs.org/opencode-title-gen/-/opencode-title-gen-0.2.0.tgz";
       hash = "sha256-n5Wv/Iy/z3dr8TewAfM1bkBH6B3Qhql1qQrzwckDJEU=";
     };
-  in pkgs.runCommand "opencode-title-gen" {
+  in 
+  pkgs.runCommand "opencode-title-gen" {
     buildInputs = [ pkgs.gnutar pkgs.gzip ];
+    LANG = "C.UTF-8";
+    LC_ALL = "C.UTF-8";
   } ''
     mkdir -p $out
     tar -xzf ${src} -C $out --strip-components=1
@@ -148,7 +151,7 @@ in
     ".config/opencode/smart-title.jsonc".text = ''
       {
         "mode": "continuous",
-        "maxTurns": 3,
+        "maxTurns": 5,
         "maxCharsPerPart": 300,
         "debounceMs": 1500
       }
