@@ -111,6 +111,7 @@ in
     NIXOS_OZONE_WL = "1";
     QT_AUTO_SCREEN_SCALE_FACTOR = "1";
     GDK_DPI_SCALE = "1.0";
+    PATH = "/usr/bin:$PATH"; # Fixed Kazumi in NixOS BUG (Caused by NixOS)
   };
 
   nix.package = pkgs.lixPackageSets.latest.lix;
@@ -305,13 +306,14 @@ EOF
 
   xdg = {
     portal = {
+      enable = true;
       wlr.enable = true;
       config = {
         niri = {
           "org.freedesktop.impl.portal.FileChooser" = [ "gtk" ]; # or "kde"
+          defalut = [ "gtk" ];
         };
       };
-      enable = true;
       extraPortals = with pkgs; [
         xdg-desktop-portal-wlr
         xdg-desktop-portal-gtk
@@ -476,7 +478,11 @@ EOF
     pkgs.yad
     pkgs.python3
     pkgs.vulkan-tools
-    
+   
+    pkgs.gtk2 pkgs.gtk3 pkgs.gtk4
+
+    pkgs.glycin-loaders pkgs.glycin-thumbnailer pkgs.libglycin-gtk4 pkgs.libglycin
+
     pkgs.unar pkgs.rar pkgs.unzip pkgs.unrar pkgs.p7zip
     
     pkgs.testdisk

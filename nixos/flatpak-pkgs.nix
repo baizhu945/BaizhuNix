@@ -13,6 +13,7 @@ in
 
   environment.systemPackages = with pkgs; [
     nix-flatpak
+    flatpak-xdg-utils
   ];
 
   # Configure nix-flatpak

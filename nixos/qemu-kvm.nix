@@ -169,8 +169,6 @@ in
     emulator = "/run/libvirt/nix-emulators/qemu-system-x86_64"
   '';
 
-  environment.variables.PATH = "/run/current-system/sw/bin";
-
   systemd.tmpfiles.rules = [
     "L+ /var/lib/qemu/firmware - - - - ${pkgs.qemu}/share/qemu/firmware"
   ];
