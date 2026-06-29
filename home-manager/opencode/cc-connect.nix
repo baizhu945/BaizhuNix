@@ -3,14 +3,14 @@
 let
   cc-connect = pkgs.buildGoModule rec {
     pname = "cc-connect";
-    version = "1.3.4";
+    version = "1.4.1";
     src = pkgs.fetchFromGitHub {
       owner = "chenhg5";
       repo = "cc-connect";
       rev = "v${version}";
-      hash = "sha256-O2VahCIkhJ+Rh8pNK6g+shnHQq9oiE3WEz6SizuLd5U=";
+      hash = "sha256-Spm1OB0z7+E0JvWOtBAtUrRHiEc+aPjBYVHy0zc7ww4=";
     };
-    vendorHash = "sha256-WcxTCpj9epxGFm21MlMK/p/SrxKjewMhxffRHWaepHc=";
+    vendorHash = "sha256-FgiCP4XuFv1/VQjtZ/rr6Qb5F9BqmzX5ptegKlW5Cv8=";
     tags = [ "no_web" ];
     doCheck = false;
     overrideModAttrs = (_: {
