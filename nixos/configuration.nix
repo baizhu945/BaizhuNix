@@ -34,6 +34,7 @@ in
       ./customized-pkgs.nix
       ./automount.nix
       ./rm-protection.nix
+      # ./g14-kernel.nix
     ];
 
   hardware.bluetooth.enable = true;
@@ -51,9 +52,9 @@ in
     efi.canTouchEfiVariables = true;
   };
 
-  # boot.kernelPackages = pkgs.linuxPackages_latest; 
+  boot.kernelPackages = pkgs.linuxPackages_latest; 
   # boot.kernelPackages = pkgs.linuxPackages_zen;
-  boot.kernelPackages = pkgs.linuxPackages_xanmod_latest;
+  # boot.kernelPackages = pkgs.linuxPackages_xanmod_latest;
 
   hardware.cpu.intel.updateMicrocode = true;
 
