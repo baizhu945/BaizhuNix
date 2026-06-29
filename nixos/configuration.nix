@@ -51,8 +51,9 @@ in
     efi.canTouchEfiVariables = true;
   };
 
-  boot.kernelPackages = pkgs.linuxPackages_latest; 
+  # boot.kernelPackages = pkgs.linuxPackages_latest; 
   # boot.kernelPackages = pkgs.linuxPackages_zen;
+  boot.kernelPackages = pkgs.linuxPackages_xanmod_latest;
 
   hardware.cpu.intel.updateMicrocode = true;
 
