@@ -216,4 +216,4 @@ sudo fc-cache -fv
 
 # 九、Known BUGs
 ## Screen Recording
-在`niri`中，`noctalia`的屏幕录像可用，`obs`的`Wayland output(dmabuf)`不可用，`Wayland output(scpy)`可用但是画面泛黄
+在`niri`中，`noctalia`的屏幕录像不完全可用，`obs`的`Wayland output(dmabuf)`不可用，`Wayland output(scpy)`可用但是要设置 `Flip red and blue`

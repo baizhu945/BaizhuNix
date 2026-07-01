@@ -23,7 +23,6 @@ in
       "org.geogebra.GeoGebra"
       "com.gopeed.Gopeed"
       "cn.feishu.Feishu"
-      "com.logseq.Logseq"
     ];
   };
 }
