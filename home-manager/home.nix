@@ -91,7 +91,7 @@ in
     pkgs.swaybg
     pkgs.noctalia-shell
     pkgs.dms-shell
-    pkgs.bilibili
+    stablePkgs.bilibili
     pkgs.spotify
     pkgs.matugen
     pkgs.dgop
