@@ -74,9 +74,6 @@ in
       testing-simulink-models = "${simulink-agentic-toolkit}/skills-catalog/model-based-design-core/testing-simulink-models";
 
       building-architecture-models = "${simulink-agentic-toolkit}/skills-catalog/model-based-system-engineering/building-architecture-models";
-
-      check-authoring = "${simulink-agentic-toolkit}/skills-catalog/agentic-review/check-authoring";
-      checking-model-compliance = "${simulink-agentic-toolkit}/skills-catalog/agentic-review/checking-model-compliance";
     };
 
     settings = {
