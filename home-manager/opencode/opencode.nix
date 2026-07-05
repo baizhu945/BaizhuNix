@@ -130,7 +130,7 @@ in
     };
 
     # 上下文配置
-    context = ./context/context.md;
+    context = ./agent-context.md;
     
     tui = {
       theme = "system";
