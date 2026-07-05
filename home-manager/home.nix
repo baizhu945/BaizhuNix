@@ -12,6 +12,17 @@ let
     };
     system = pkgs.stdenv.hostPlatform.system;
   };
+
+  bilibiliTarball =
+    fetchTarball
+      "https://github.com/NixOS/nixpkgs/archive/cdb16195ed783fcd8681120639d305b789169b97.tar.gz";
+  bilibiliPkgs = import bilibiliTarball {
+    config = {
+      allowUnfree = true;
+      allowInsecure = true;
+    };
+    system = pkgs.stdenv.hostPlatform.system;
+  };
 in
 {
   imports = [
@@ -91,7 +102,7 @@ in
     pkgs.swaybg
     pkgs.noctalia-shell
     pkgs.dms-shell
-    pkgs.wiliwili
+    bilibiliPkgs.bilibili
     pkgs.spotify
     pkgs.matugen
     pkgs.dgop
