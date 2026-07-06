@@ -8,6 +8,14 @@ let
     config = config.nixpkgs.config;
   };
 
+  oldCudaPkgs = import (builtins.storePath /nix/var/nix/profiles/per-user/root/channels-42-link/nixos) {
+    config = {
+      allowUnfree = true;
+      cudaSupport = true;
+      nvidia.acceptLicense = true;
+    };
+  };
+
   nix-alien-pkgs = import (
     builtins.fetchTarball "https://github.com/thiagokokada/nix-alien/tarball/master"
   ) { };
@@ -397,6 +405,7 @@ EOF
     };
   };
 
+
   programs.appimage.enable = true;
   programs.appimage.binfmt = true;
 
@@ -519,7 +528,7 @@ EOF
     pkgs.audacious
     pkgs.audacious-plugins
     pkgs.binutils
-    pkgs.piper-tts
+    oldCudaPkgs.piper-tts
     pkgs.nirius
     pkgs.chameleos
     pkgs.networkmanagerapplet
