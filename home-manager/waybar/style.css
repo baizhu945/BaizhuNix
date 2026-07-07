@@ -12,7 +12,7 @@
 }
 
 window#waybar {
-  background: @background;
+  background: @background; /* 指向一个未定义的颜色使其透明 */
   font-family: LXGW Wenkai Screen;
   font-size: 18pt;
   font-weight: bold;
