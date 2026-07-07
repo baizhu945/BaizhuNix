@@ -36,7 +36,7 @@ in
     ./showmethekey/showmethekey.nix
     ./opencode/opencode.nix
     ./mouse-trail/mouse-trail.nix
-    ./noctalia-v5.nix
+    # ./noctalia-v5.nix
   ];
 
   # Home Manager needs a bit of information about you and the paths it should
@@ -197,16 +197,6 @@ in
 
     ".config/fcitx5/conf/classicui.conf".text = ''
       Theme=kwinblur-mellow-youlan-dark
-    '';
-
-    ".config/nixpkgs/config.nix".text = ''
-{
-  packageOverrides = pkgs: {
-    nur = import (builtins.fetchTarball "https://github.com/nix-community/NUR/archive/main.tar.gz") {
-      inherit pkgs;
-    };
-  };
-}
     '';
 
     ".config/translate-shell/init.trans".text = ''

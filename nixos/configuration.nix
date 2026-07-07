@@ -8,7 +8,8 @@ let
     config = config.nixpkgs.config;
   };
 
-  oldCudaPkgs = import (builtins.storePath /nix/var/nix/profiles/per-user/root/channels-42-link/nixos) {
+  oldCudaTarball = fetchTarball "https://github.com/NixOS/nixpkgs/archive/ec84054698e3875e23d6057a10283eb9dfa41f1b.tar.gz";
+  oldCudaPkgs = import oldCudaTarball {
     config = {
       allowUnfree = true;
       cudaSupport = true;
@@ -490,7 +491,7 @@ EOF
     pkgs.yad
     pkgs.python3
     pkgs.vulkan-tools
-   
+  
     pkgs.unar pkgs.rar pkgs.unzip pkgs.unrar pkgs.p7zip
     
     pkgs.testdisk
