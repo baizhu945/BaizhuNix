@@ -11,7 +11,7 @@ let
       rev = "5f636c6cbed0ee6858fa6b83a9981a455c6d4d2c";
       sha256 = "sha256-3yP82Djjr//6Mn+Y0AYe/ywo7PpRCMpDqPxHrPqAWn0=";
     };
-
+  
     nativeBuildInputs = with pkgs; [ meson ninja pkg-config wayland-scanner jemalloc ];
     buildInputs = with pkgs; [
       wayland wayland-protocols libGL libglvnd freetype fontconfig

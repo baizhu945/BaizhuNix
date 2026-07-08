@@ -36,7 +36,7 @@ in
     ./showmethekey/showmethekey.nix
     ./opencode/opencode.nix
     ./mouse-trail/mouse-trail.nix
-    # ./noctalia-v5.nix
+    ./noctalia-v5.nix
   ];
 
   # Home Manager needs a bit of information about you and the paths it should
