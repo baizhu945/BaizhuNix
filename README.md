@@ -217,3 +217,6 @@ sudo fc-cache -fv
 # 九、Known BUGs
 ## Screen Recording
 在`niri`中，`noctalia`的屏幕录像不完全可用，`obs`的`Wayland output(dmabuf)`不可用，`Wayland output(scpy)`可用但是要设置 `Flip red and blue`
+
+## Nix Cache Cleaning
+禁止运行 `sudo nh clean all` 命令，这会将 `home-manager` 破坏掉。
