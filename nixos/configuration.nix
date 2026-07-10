@@ -46,6 +46,8 @@ in
       # ./g14-kernel.nix
     ];
 
+  _module.args.stablePkgs = stablePkgs; # 将 stablePkgs 传递给其他文件
+  
   hardware.bluetooth.enable = true;
   services.blueman.enable = true;
 
@@ -393,6 +395,7 @@ EOF
     allowUnfree = true;
     nvidia.acceptLicense = true;
   };
+
 
   programs.appimage.enable = true;
   programs.appimage.binfmt = true;

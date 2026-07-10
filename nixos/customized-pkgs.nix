@@ -1,13 +1,6 @@
-{ config, pkgs, lib,  ... }:
+{ config, pkgs, lib, stablePkgs, ... }:
 
 let
-  stableTarball =
-    fetchTarball
-      "https://nixos.org/channels/nixos-26.05/nixexprs.tar.xz";
-  stablePkgs = import stableTarball {
-    config = config.nixpkgs.config;
-  };
-
   # 先把包装脚本定义为一个独立变量，方便后面的 desktop item 引用路径
   freecad-wrapped = pkgs.symlinkJoin {
     name = "freecad-wrapped";

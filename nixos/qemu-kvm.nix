@@ -1,13 +1,5 @@
 { config, pkgs, lib,  ... }:
 
-let
-  stableTarball =
-    fetchTarball
-      "https://nixos.org/channels/nixos-26.05/nixexprs.tar.xz";
-  stablePkgs = import stableTarball {
-    config = config.nixpkgs.config;
-  };
-in
 {
   boot.binfmt.emulatedSystems = [
     "aarch64-linux"

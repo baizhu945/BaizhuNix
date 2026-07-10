@@ -8,13 +8,6 @@ let
     config = config.nixpkgs.config;
   };
 
-  stableTarball =
-    fetchTarball
-      "https://nixos.org/channels/nixos-26.05/nixexprs.tar.xz";
-  stablePkgs = import stableTarball {
-    config = config.nixpkgs.config;
-  };
-
 in
 {
   services.ollama = {
