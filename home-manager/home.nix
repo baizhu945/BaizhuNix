@@ -77,7 +77,6 @@ in
     pkgs.mpvpaper
     pkgs.slurp
     pkgs.grim
-    pkgs.friture
     pkgs.translate-shell
     pkgs.onedrivegui
     pkgs.ookla-speedtest

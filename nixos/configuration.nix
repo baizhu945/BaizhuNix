@@ -223,10 +223,6 @@ EOF
     dina-font
     proggyfonts
     sarasa-gothic
-    maple-mono.CN
-    maple-mono.NF-CN
-    maple-mono.NL-CN
-    maple-mono.Normal-CN
 
     nerd-fonts.fira-code
     nerd-fonts.fira-mono
@@ -236,7 +232,6 @@ EOF
     nerd-fonts.dejavu-sans-mono
     nerd-fonts.noto
     nerd-fonts.liberation
-    nerd-fonts.hack
   ];
 
   i18n.extraLocaleSettings = {
@@ -323,7 +318,6 @@ EOF
       config = {
         niri = {
           "org.freedesktop.impl.portal.FileChooser" = [ "gtk" ]; # or "kde"
-          defalut = [ "gtk" ];
         };
       };
       extraPortals = with pkgs; [
@@ -398,14 +392,7 @@ EOF
   nixpkgs.config = {
     allowUnfree = true;
     nvidia.acceptLicense = true;
-    packageOverrides = pkgs: {
-      nur = import (
-        builtins.fetchTarball "https://github.com/nix-community/NUR/archive/main.tar.gz") {
-          inherit pkgs;
-      };
-    };
   };
-
 
   programs.appimage.enable = true;
   programs.appimage.binfmt = true;
@@ -488,6 +475,7 @@ EOF
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = [
+    pkgs.sqlite
     pkgs.yad
     pkgs.python3
     pkgs.vulkan-tools
