@@ -30,6 +30,5 @@ in
     cudaPackages.nvidia_fs
     cudaPackages.cuda_opencl
     cudaPackages.cuda_cudart
-    stable-diffusion-cpp-cuda
   ];
 }
