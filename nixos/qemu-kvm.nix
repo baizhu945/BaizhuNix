@@ -1,11 +1,6 @@
 { config, pkgs, lib,  ... }:
 
 {
-  boot.binfmt.emulatedSystems = [
-    "aarch64-linux"
-    "riscv64-linux"
-  ];
-
   boot.extraModprobeConfig = ''
     options kvm_intel nested=1
     options kvm_intel yield_func_stats=0

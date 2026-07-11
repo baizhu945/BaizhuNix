@@ -54,7 +54,6 @@ in
     extraPackages = with pkgs; [ nodejs ];
 
     skills = {
-      tts-voice-synthesis = "${anbeime-skills-repo}/skills/tts-voice-synthesis";
       chrome-automation = "${anbeime-skills-repo}/skills/chrome-automation/chrome-automation";
       media-processor = "${anbeime-skills-repo}/skills/media-processor/media-processor";
 
