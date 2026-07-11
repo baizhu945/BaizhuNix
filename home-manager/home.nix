@@ -122,6 +122,15 @@ in
     #   echo "Hello, ${config.home.username}!"
     # '')
 
+    (pkgs.writeShellScriptBin "nix-clean" ''
+      noctalia-shell ipc call toast send '{"title":"Cleaning"}'
+      echo '<yourpassword>' | sudo -S nix-store --gc
+      nix-store --gc
+      echo '<yourpassword>' | sudo -S nix-collect-garbage --delete-old
+      nix-collect-garbage --delete-old
+      noctalia-shell ipc call toast send '{"title":"Clean Completed"}'
+    '')
+
     (pkgs.writeShellScriptBin "git-update" ''
       cd ~/Documents/BaizhuNix
       remove-without-permission -r nixos

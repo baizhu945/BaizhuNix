@@ -28,8 +28,13 @@ let
   };
 
   agent-skills-repo = builtins.fetchGit {
-    url = "https://github.com/addyosmani/agent-skills";
-    rev = "4e8bd9fde4a38cd009053e649f4cdc7cd36b568b";
+    url = "https://github.com/addyosmani/agent-skills.git";
+    ref = "main";
+  };
+
+  superpowers-plugin = builtins.fetchGit {
+    url = "https://github.com/obra/superpowers.git";
+    rev = "d884ae04edebef577e82ff7c4e143debd0bbec99";
   };
 
   simulink-agentic-toolkit = builtins.fetchGit {
@@ -99,31 +104,16 @@ in
     };
 
     settings = {
-      provider = {
-        ollama = {
-          npm = "@ai-sdk/openai-compatible";
-          name = "Ollama (local)";
-          options = {
-            baseURL = "http://localhost:11434/v1";
-          };
-          models = {
-            "gemma4:12b" = {
-              name = "Gemma 4 12B (local)";
-            };
-          };
-        };
-      };
-
       server = {
         port = 4096;
         hostname = "127.0.0.1";
         mdns = false;
       };
 
-      # 插件配置 - 参考 ~/.config/opencode/plugins/ 中的文件名（无 .js 后缀）
+      # 插件配置
       plugin = [ 
         "opencode-title-gen"
-        "superpowers@git+https://github.com/obra/superpowers.git"
+        "superpowers"
       ];
 
       # 权限配置
@@ -166,6 +156,8 @@ in
 
   home.file = {
     ".config/opencode/plugins/opencode-title-gen.js".source = "${opencodeTitleGenPlugin}/opencode-title-gen.js";
+    ".config/opencode/plugins/superpowers.js".source = "${superpowers-plugin}/.opencode/plugins/superpowers.js";
+    ".config/opencode/skills/superpowers".source = "${superpowers-plugin}/skills";
 
     ".config/opencode/smart-title.jsonc".text = ''
       {
