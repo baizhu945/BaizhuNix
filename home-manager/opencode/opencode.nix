@@ -34,7 +34,7 @@ let
 
   simulink-agentic-toolkit = builtins.fetchGit {
     url = "https://github.com/matlab/simulink-agentic-toolkit.git";
-    ref = "main";
+    rev = "054063b01ae0bdd72e2382e9f1969a7b50b35b4d";
   };
 in 
 {

@@ -54,7 +54,7 @@ Great Wall GT745 1TB (WWN: nvme.1e4b-...-00000001) — Windows 盘:
 configuration.nix      # 主入口，imports 导入所有模块
 hardware-configuration # 自动生成，勿修改
 customized-pkgs.nix   # FreeCAD, Ventoy, GParted 等包装
-llm-cuda.nix          # Ollama, CUDA, stable-diffusion-cpp
+llm-cuda.nix          # Ollama, CUDA
 qemu-kvm.nix          # libvirt, QEMU, binfmt (aarch64/riscv64)
 neovim.nix            # nixvim 配置
 zsh.nix              # ZSH + Oh-My-Zsh
@@ -120,7 +120,7 @@ script/              # niri-config.kdl, fastfetch-config.jsonc, battery-monitor.
 - **数学**: Sage, Octave, Maxima, Cantor (KDE)
 
 ### 多媒体
-- **视频**: mpv (ffmpeg-full), Haruna, SMPlayer, wiliwili (B站)
+- **视频**: mpv (ffmpeg-full), Haruna, SMPlayer, bilibili (B站)
 - **音频**: Audacious, Spotify, melo-tts, piper-tts, sox, friture
 - **图像**: Blender, Krita, GIMP, Kdenlive, ImageMagick
 - **录屏**: OBS Studio (CUDA), gpu-screen-recorder

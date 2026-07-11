@@ -35,14 +35,14 @@ let
 
   ghost-downloader = pkgs.stdenv.mkDerivation {
       pname = "ghost-downloader";
-      version = "3.10.1";
+      version = "4.0.5";
       src = pkgs.fetchurl {
-        url = "https://github.com/XiaoYouChR/Ghost-Downloader-3/releases/download/v3.10.1/Ghost-Downloader-v3.10.1-Linux-x86_64.tar.xz";
-        hash = "sha256-48fM3w5N4BjTPqZhiWADH1ceJ4RbuhJYsZqd7xJjt+8=";
+        url = "https://github.com/XiaoYouChR/Ghost-Downloader-3/releases/download/v4.0.5/Ghost-Downloader-v4.0.5-Linux-x86_64.tar.xz";
+        hash = "sha256-4em0MIMnEnC6/Ew3hq/fxfPEqZuCvLwSheTtYqfmdBU=";
       };
       icon = pkgs.fetchurl {
         url = "https://raw.githubusercontent.com/XiaoYouChR/Ghost-Downloader-3/main/app/assets/logo.png";
-        hash = "sha256-Ezgt6dnb9/+bv/j0R2eX+vyR8DQxFjKo7u3ZyROKva0="; 
+        hash = "sha256-2I+2YzSLK4kzZnN/e0tsIyenFrYJXKNDpBcm34BGXsM="; 
       };
       sourceRoot = ".";
       dontBuild = true;
