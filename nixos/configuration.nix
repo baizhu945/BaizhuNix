@@ -478,6 +478,7 @@ EOF
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = [
+    pkgs.libreoffice
     pkgs.sqlite
     pkgs.yad
     pkgs.python3
