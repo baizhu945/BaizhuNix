@@ -594,10 +594,6 @@ EOF
     nvidiaSettings = true;
     dynamicBoost.enable = true;
     package = config.boot.kernelPackages.nvidiaPackages.latest;
-    prime = {
-      intelBusId = "PCI:0@0:2:0";
-      nvidiaBusId = "PCI:2@0:0:0";
-    };
     modesetting.enable = true;
     powerManagement.enable = true;
   };
