@@ -25,4 +25,12 @@ in
       "cn.feishu.Feishu"
     ];
   };
+
+  # Update flatpak to latest version on every rebuild
+  system.activationScripts.flatpak-update = {
+    text = ''
+      ${pkgs.flatpak}/bin/flatpak update --noninteractive 2>&1 || true
+    '';
+    deps = [ ];
+  };
 }
