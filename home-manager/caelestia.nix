@@ -48,10 +48,4 @@ let
   };
 in {
   home.packages = [ caelestia-shell-pkg caelestia-cli ];
-
-  xdg.configFile."caelestia/shell.json" = {
-    text = builtins.toJSON {
-      enabled = true;
-    };
-  };
 }
