@@ -310,4 +310,14 @@ in
     pix2tex
     latex-ocr-cli
   ];
+
+  xdg.desktopEntries.latexocr = {
+    name = "LaTeX OCR";
+    genericName = "Math Formula OCR";
+    comment = "Take a screenshot and convert math formulas to LaTeX code";
+    exec = "${pix2tex}/bin/latexocr";
+    icon = "accessories-calculator";
+    terminal = false;
+    categories = [ "Education" ];
+  };
 }
