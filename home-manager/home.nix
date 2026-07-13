@@ -26,7 +26,7 @@ let
 in
 {
   imports = [
-    ./piper.nix
+    ./tts/tts.nix
     ./ghostty/ghostty.nix
     ./lyrics/lyrics.nix
     ./theme/theme.nix

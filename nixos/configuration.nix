@@ -521,7 +521,6 @@ EOF
     pkgs.audacious
     pkgs.audacious-plugins
     pkgs.binutils
-    oldCudaPkgs.piper-tts
     pkgs.nirius
     pkgs.chameleos
     pkgs.networkmanagerapplet
