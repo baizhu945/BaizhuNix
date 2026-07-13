@@ -36,13 +36,13 @@ in
       ./grub-theme.nix
       ./llm-cuda.nix
       ./neovim.nix
-      ./qemu-kvm.nix
+      ./qemu-kvm/qemu-kvm.nix
       ./flatpak-pkgs.nix
       ./hifi.nix
       ./zsh.nix
       ./customized-pkgs.nix
       ./automount.nix
-      ./rm-protection.nix
+      ./rm-protection/rm-protection.nix
       # ./g14-kernel.nix
     ];
 

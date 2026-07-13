@@ -176,6 +176,6 @@
     };
 
     path = with pkgs; [ gnused gnugrep coreutils ];
-    script = builtins.readFile ./script/fix-firmware-path.sh;
+    script = builtins.readFile ./fix-firmware-path.sh;
   };
 }

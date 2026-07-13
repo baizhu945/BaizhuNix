@@ -5,7 +5,7 @@ let
   
   rmPackage = pkgs.runCommand "rm-wrapper" {} ''
     mkdir -p $out/bin
-    sed 's|@realRm@|${realRm}|g' ${./script/rm-protection.sh} > $out/bin/rm
+    sed 's|@realRm@|${realRm}|g' ${./rm-protection.sh} > $out/bin/rm
     chmod +x $out/bin/rm
   '';
 
