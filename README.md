@@ -173,9 +173,13 @@ token = "xxx"
 ```
 sudo efibootmgr -b 0002 --inactive # 把 0002 更换为 Windows 的编号
 ```
-若没有生效，则找到挂载到 `NixOS` 的 `Windows` 启动分区 `/mnt/Windows/EFI/EFI/Boot/`，把原来的启动项文件备份，然后
+若没有生效，则找到挂载到 `NixOS` 的 `Windows` 启动分区 `/mnt/Windows/EFI/EFI/Microsoft/Boot/`，然后
 ```
-sudo cp /boot/EFI/NixOS-boot/grubx64.efi /mnt/Windows/EFI/EFI/Boot/bootx64.efi
+# 将原来的文件备份
+sudo mv /mnt/Windows/EFI/EFI/Microsoft/Boot/bootmgr.efi /mnt/Windows/EFI/EFI/Microsoft/Boot/bootmgr.efi.bak
+
+# 替换为 Grub 的文件
+sudo cp /boot/EFI/NixOS-boot/grubx64.efi /mnt/Windows/EFI/EFI/Microsoft/Boot/bootmgr.efi
 ```
 
 ## 在 `Linux` 侧使用 `wine` 运行 `Windows` 游戏无法读取 `Windows` 的存档
@@ -192,9 +196,9 @@ sudo virsh net-autostart default
 
 ## noctalia插件列表无法刷新
 ```
-git clone https://github.com/noctalia-dev/noctalia-plugins
+git clone https://github.com/noctalia-dev/legacy-v4-plugins
 
-node noctalia-plugins/registry.json
+node legacy-v4-plugins/registry.json
 ```
 
 ## onlyoffice不识别系统安装的中文字体
