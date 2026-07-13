@@ -29,10 +29,6 @@ nix-channel --add https://github.com/nix-community/home-manager/archive/master.t
 nix-channel --update
 
 nix-shell '<home-manager>' -A install
-
-nix-channel --add https://nixos.org/channels/nixpkgs-unstable
-
-nix-channel --update
 ```
 
 # 二、改nix-unstable（如果最初安装的是稳定版而不是unstable版）
