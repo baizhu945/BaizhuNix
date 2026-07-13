@@ -228,6 +228,7 @@ let
       pandas
       timm-0_5_4
       albumentations-1_4_24
+      
       # GUI dependencies
       pyqt6
       pyqt6-webengine
