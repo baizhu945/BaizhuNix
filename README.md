@@ -54,35 +54,6 @@ conda create -n latexocr # 创建环境
 ```
 然后按照 https://github.com/lukas-blecher/LaTeX-OCR 进行安装
 
-## 在conda中安装`melo tts`
-```
-conda create -n tts python=3.9
-```
-
-根据 https://pytorch.org/get-started/locally/ 安装pytorch
-
-根据 https://github.com/myshell-ai/MeloTTS 安装melo tts，其中`git clone`步骤最好先`cd ~/.conda/envs/tts`后再运行，为了保持`home`目录整洁。
-
-运行`python -m unidic download`后，执行
-```
-python #进入python环境
-
-import nltk
-
-nltk.download()
-```
-
-选择all，下载全部模型
-
-将`nltk_data`文件夹移动到`~/.conda/envs/tts/share/`中
-
-分别运行下面两个命令，进行初始化操作
-```
-melo "Hello world 测试一下中英混读" out.wav
-
-melo "Hello world 测试一下中英混读" out.wav --language ZH
-```
-
 # 四、noctalia 和 DankMaterialShell 配置
 将 7z 文件解压后，将 `noctalia` 和 `DankMaterialShell` 文件夹复制到 `~/.config/` 路径下。
 
