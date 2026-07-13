@@ -170,13 +170,6 @@ in
       latexocr
     '')
 
-    (pkgs.writeShellScriptBin "melo-tts" ''
-      #!/usr/bin/env bash
-      mkdir -p ~/Music/melo
-      cd ~/.conda/envs/tts
-      melo "$1" "/home/<yourusername>/Music/melo/$(date +%Y%m%d_%H%M%S_%3N).wav" -l zh
-    '')
-
     (pkgs.writeShellScriptBin "mount-win" '' 
       echo "<yourpassword>" | sudo -S mount /dev/disk/by-uuid/241F-8E2D /mnt/Windows/EFI/
       echo "<yourpassword>" | sudo -S mount /dev/disk/by-uuid/545C43E35C43BF0C /mnt/Windows/C
