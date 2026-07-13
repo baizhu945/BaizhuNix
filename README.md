@@ -173,7 +173,7 @@ token = "xxx"
 ```
 sudo efibootmgr -b 0002 --inactive # 把 0002 更换为 Windows 的编号
 ```
-若没有生效，则找到挂载到 `NixOS` 的 `Windows` 启动分区 `/mnt/Win10/EFI/EFI/Boot/`，把原来的启动项文件备份，然后
+若没有生效，则找到挂载到 `NixOS` 的 `Windows` 启动分区 `/mnt/Windows/EFI/EFI/Boot/`，把原来的启动项文件备份，然后
 ```
 sudo cp /boot/EFI/NixOS-boot/grubx64.efi /mnt/Windows/EFI/EFI/Boot/bootx64.efi
 ```
