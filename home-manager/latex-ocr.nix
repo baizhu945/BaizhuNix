@@ -296,6 +296,7 @@ with open(path, 'w') as f:
         cat > "$exe" <<'HEREDOC'
       ''
       + ''
+      #!/usr/bin/env bash
       export QT_QPA_PLATFORM="wayland;xcb"
       export NO_ALBUMENTATIONS_UPDATE="1"
 

@@ -48,6 +48,8 @@ in
 
   home.stateVersion = "26.11"; # Please read the comment before changing.
 
+  nixpkgs.config.cudaSupport = true;
+
   programs.onlyoffice.enable = true;
 
   programs.firefox.enable = true;
