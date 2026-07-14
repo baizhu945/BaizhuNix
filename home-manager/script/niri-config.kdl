@@ -511,12 +511,6 @@ window-rule {
 }
 
 window-rule {
-  match app-id=r#"firefox$"# title="^Picture-in-Picture$"
-  match app-id=r#"google-chrome$"# title="^Picture-in-Picture$"
-  open-floating true
-}
-
-window-rule {
   match app-id=r"^$" title=r"^$" 
   default-floating-position x=20 y=20 relative-to="top-right"
   open-floating true
@@ -524,9 +518,12 @@ window-rule {
 }
 
 window-rule {
+  match app-id=r#"firefox$"# title="^Picture-in-Picture$"
+  match app-id=r#"google-chrome$"# title="^Picture-in-Picture$"
   match app-id=r#"^yad$"# title="^压缩包预览$"
   match app-id=r#"^yad$"# title="^正在解压$"
   match app-id=r#"^org.kde.dolphin$"# title="^正在压缩"
+  match app-id=r#"^python3$"# title="^LaTeX OCR$"
   open-floating true
 }
 

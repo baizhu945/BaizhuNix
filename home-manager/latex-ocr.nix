@@ -283,18 +283,38 @@ with open(path, 'w') as f:
     };
   };
 
-  # Wrapper that sets up the screenshot tool for KDE/Wayland
-  pix2tex = pkgs.symlinkJoin {
+  # Runtime wrapper that detects desktop environment for screenshot tool
+  pix2tex = let
+    grimPath = "${pkgs.grim}/bin:${pkgs.slurp}/bin";
+    spectaclePath = "${pkgs.kdePackages.spectacle}/bin";
+  in pkgs.symlinkJoin {
     name = "pix2tex";
     paths = [ pix2tex-unwrapped ];
-    buildInputs = [ pkgs.makeWrapper ];
     postBuild = ''
       for exe in $out/bin/*; do
-        wrapProgram "$exe" \
-          --set QT_QPA_PLATFORM "wayland;xcb" \
-          --set SCREENSHOT_TOOL "grim" \
-          --set NO_ALBUMENTATIONS_UPDATE "1" \
-          --suffix PATH : ${lib.makeBinPath [ pkgs.grim pkgs.slurp ]}
+        mv "$exe" "$exe.unwrapped"
+        cat > "$exe" <<'HEREDOC'
+      ''
+      + ''
+      export QT_QPA_PLATFORM="wayland;xcb"
+      export NO_ALBUMENTATIONS_UPDATE="1"
+
+      case "''${XDG_CURRENT_DESKTOP:-}" in
+        *KDE*|*Plasma*|*plasma*)
+          export SCREENSHOT_TOOL="spectacle"
+          export PATH="${spectaclePath}:''${PATH}"
+          ;;
+        *)
+          export SCREENSHOT_TOOL="grim"
+          export PATH="${grimPath}:''${PATH}"
+          ;;
+      esac
+
+      exec "$0.unwrapped" "$@"
+      ''
+      + ''
+      HEREDOC
+        chmod +x "$exe"
       done
     '';
   };
@@ -311,13 +331,16 @@ in
     latex-ocr-cli
   ];
 
-  xdg.desktopEntries.latexocr = {
-    name = "LaTeX OCR";
-    genericName = "Math Formula OCR";
-    comment = "Take a screenshot and convert math formulas to LaTeX code";
-    exec = "${pix2tex}/bin/latexocr";
-    icon = "accessories-calculator";
-    terminal = false;
-    categories = [ "Education" ];
-  };
+  home.file.".local/share/applications/latexocr.desktop".text = ''
+    [Desktop Entry]
+    Type=Application
+    Name=LaTeX OCR
+    GenericName=Math Formula OCR
+    Comment=Take a screenshot and convert math formulas to LaTeX code
+    Exec=${pix2tex}/bin/latexocr
+    Icon=accessories-calculator
+    Terminal=false
+    Categories=Office;Science;Math;
+    StartupNotify=false
+  '';
 }
