@@ -341,7 +341,7 @@ in
     Exec=${pix2tex}/bin/latexocr
     Icon=accessories-calculator
     Terminal=false
-    Categories=Office;Science;Math;
+    Categories=Education;
     StartupNotify=false
   '';
 }

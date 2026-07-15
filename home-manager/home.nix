@@ -59,6 +59,7 @@ in
     # # "Hello, world!" when run.
     # pkgs.hello
 
+    pkgs.geogebra6
     pkgs.wtype
     pkgs.xdotool
     pkgs.imagemagick    

@@ -20,7 +20,6 @@ in
   services.flatpak = {
     packages = [
       "io.github.Predidit.Kazumi"
-      "org.geogebra.GeoGebra"
       "com.gopeed.Gopeed"
       "cn.feishu.Feishu"
     ];
