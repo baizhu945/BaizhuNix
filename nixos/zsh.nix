@@ -1,10 +1,13 @@
 { config, pkgs, lib, ... }:
 
+let
+  realRm = "${pkgs.coreutils}/bin/rm";
+in
 {
   programs.zsh = {
     enable = true;
-    enableCompletion = true;
-    enableBashCompletion = true;
+    enableCompletion = false;
+    enableBashCompletion = false;
     autosuggestions = {
       enable = true;
       strategy = [ "history" "completion" ];
@@ -24,6 +27,19 @@
         "fancy-ctrl-z"
       ];
     };
+    interactiveShellInit = ''
+      autoload -Uz add-zsh-hook
+      ZSH_COMPDUMP="$HOME/.cache/zsh/compdump-$HOST"
+      mkdir -p "''${ZSH_COMPDUMP:h}"
+      rm() { ${realRm} "$@"; }
+      _opencode_restore_rm() {
+        unfunction rm 2>/dev/null
+        add-zsh-hook -d precmd _opencode_restore_rm
+      }
+      add-zsh-hook precmd _opencode_restore_rm
+      autoload -U compinit && compinit
+      autoload -U bashcompinit && bashcompinit
+    '';
     promptInit = ''
       # PROMPT：FAIL 后带两个换行
       PROMPT='%(?,,)%F{109}%n%{$reset_color%}@%F{195}%m%{$reset_color%}: %{$fg_bold[blue]%}%~%}
