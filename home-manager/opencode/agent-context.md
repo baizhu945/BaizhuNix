@@ -52,94 +52,119 @@ External: /mnt/T7_Shield — exfat (UUID=601F-0929)
 ### NixOS System Config (`/etc/nixos/`)
 ```
 configuration.nix      # Main entry, imports all modules
-hardware-configuration # Auto-generated, do not modify
-customized-pkgs.nix   # FreeCAD, Ventoy, GParted wrappers
-llm-cuda.nix          # Ollama, CUDA
-qemu-kvm.nix          # libvirt, QEMU, binfmt (aarch64/riscv64)
-neovim.nix            # nixvim config
-zsh.nix              # ZSH + Oh-My-Zsh
-rm-protection    # rm safety wrapper folder
-hifi.nix             # MPD, PipeWire high sample rate
-automount.nix        # Windows partition auto-mount
-sddm-theme.nix       # SDDM theme Arona
-grub-theme.nix       # GRUB wallpaper
-flatpak-pkgs.nix     # Flatpak + nix-flatpak
-g14-kernel.nix       # linux-g14 kernel (commented out)
+hardware-configuration.nix # Auto-generated, do not modify
+customized-pkgs.nix   # FreeCAD, Ventoy, GParted, Ghost Downloader, Spectroterm
+llm-cuda.nix          # Ollama CUDA, syncModels (deepseek-ocr, gemma4:12b)
+qemu-kvm/             # libvirt, QEMU, binfmt, virtiofsd, OVMF
+neovim.nix            # nixvim (cyberdream theme, coc-nvim, telescope, treesitter)
+zsh.nix              # ZSH + Oh-My-Zsh (re5et theme, zsh-autosuggestions)
+rm-protection/        # rm safety wrapper (remove-without-permission)
+hifi.nix              # MPD (DX5 II DAC, DSD), PipeWire (up to 768kHz)
+automount.nix         # Windows partition auto-mount + udev rules
+sddm-theme.nix        # SDDM Arona theme (Wayland + kwin_wayland compositor)
+grub-theme.nix        # GRUB blurred wallpaper (2560x1600)
+flatpak-pkgs.nix      # nix-flatpak (Kazumi, Gopeed, Feishu)
+g14-kernel.nix        # linux-g14 7.0.2 kernel (commented out, ASUS ROG patches)
+script/               # Empty dir (reserved for future scripts)
 ```
 
 ### Home-Manager (`~/.config/home-manager/`)
 ```
-home.nix              # Main entry
-opencode/opencode.nix # OpenCode config
-ghostty/ghostty.nix   # Terminal emulator
-waybar/waybar.nix     # Status bar (lyrics display)
-yazi.nix             # File manager
-piper.nix            # Piper TTS
-noctalia-v5.nix      # Custom Noctalia Shell
-theme/theme.nix      # Wallpaper theme sync
-script/              # niri-config.kdl, fastfetch-config.jsonc, battery-monitor.sh
+home.nix              # Main entry (imports all submodules)
+opencode/             # OpenCode config + agent context + cc-connect
+ghostty/              # Ghostty terminal (custom cursor shader, Bright Lights theme)
+waybar/               # Waybar (top bar with lyrics center module)
+yazi.nix              # Yazi file manager (drag, mount, mediainfo plugins)
+tts/                  # Multi-voice Edge TTS (zh/ja/en, speak/speak-file/speak-clip)
+noctalia-v5.nix       # Noctalia shell v5 (built from source, meson+ninja)
+caelestia.nix         # Caelestia shell + CLI (Material 3, built via quickshell)
+theme/                # Wallpaper → DMS theme sync service + Chrome notif closer
+latex-ocr.nix         # pix2tex (LaTeX OCR) with all pinned Python deps
+latex-ocr/            # Reserved for future OCR resources
+lyrics/               # Waybar lyrics (playerctl + NetEase Cloud Music API)
+mouse-trail/          # Custom Wayland mouse trail overlay (C + Wayland layer-shell)
+showmethekey/         # Keystroke display toggle
+unar/                 # KDE Dolphin right-click unar extract/preview service menu
+script/               # niri-config.kdl, fastfetch-config.jsonc, battery-monitor.sh
 ```
 
-### Nix Channels
-- `nixpkgs` → nixpkgs-unstable
+### Nix Channels & Channelsets
+- `nixpkgs` → nixpkgs-unstable (channel)
 - `home-manager` → master
-- Config references `nixos-26.05` as stablePkgs
-- Some packages come from `nixpkgs-unstable` (llm-cuda.nix)
+- `stablePkgs`: nixos-26.05 (for clash-verge, lutris, localsend, sage, krita, FreeCAD)
+- `oldCudaPkgs`: pinned nixpkgs rev for older CUDA compatibility
+- `bilibiliPkgs`: pinned nixpkgs rev for bilibili package
+- `llm-cuda.nix` also imports from `nixpkgs-unstable` (ollama-cuda)
 
 ## NVIDIA GPU
 
 - **Driver**: nvidia-open (latest), CUDA 13
 - **Container**: nvidia-container-toolkit enabled, Docker CUDA support
-- **Service**: supergfxd (GPU switching), asusd (ROG control)
-- **Video Acceleration**: nvidia-vaapi-driver
-- **OBS**: CUDA acceleration, background removal plugins
+- **Service**: supergfxd (GPU switching), asusd (ROG control), power-profiles-daemon
+- **Video Acceleration**: nvidia-vaapi-driver, intel-media-driver, intel-vaapi-driver
+- **Kernel Params**: `nvidia-drm.modeset=1`, `nvidia_drm.fbdev=1`, `nvidia.NVreg_PreserveVideoMemoryAllocations=1`
+- **OBS**: CUDA acceleration, background removal, wlrobs, waveform, pipewire-audio-capture, vkcapture, 3d-effect, input-overlay
 
 ## Important Services
 
 | Service | Status | Purpose |
 |---------|--------|---------|
-| Ollama | enabled (cuda) | Local LLM (gemma4:12b, deepseek-ocr) |
+| Ollama | enabled (cuda) | Local LLM (gemma4:12b, deepseek-ocr, syncModels) |
 | Docker | enabled | Containerized development |
-| libvirtd | enabled | KVM/QEMU virtualization |
-| Flatpak | enabled | Flathub apps (Kazumi, Feishu, etc.) |
-| MPD | enabled | High-fidelity audio playback (DX5 II DAC) |
-| PipeWire | enabled | Audio (supports 768kHz) |
-| Waybar | enabled | Top bar lyrics display |
-| Noctalia-shell | enabled | Wayland Shell |
-| DankMaterialShell | enabled | Desktop widgets |
-| cc-connect | enabled | Connection service |
+| libvirtd | enabled | KVM/QEMU virtualization (virtiofsd, swtpm, nested KVM) |
+| Flatpak | enabled | Flathub + nix-flatpak (Kazumi, Gopeed, Feishu) |
+| MPD | enabled | High-fidelity audio playback (DX5 II DAC, DSD native) |
+| PipeWire | enabled | Audio (supports up to 768kHz, resample quality 14) |
+| Waybar | enabled | Top bar lyrics display (playerctl + NetEase API) |
+| Noctalia-shell | enabled | Wayland Shell (v5, built from source) |
+| DankMaterialShell | enabled | Desktop widgets (theme auto-synced from Noctalia) |
+| cc-connect | enabled | Connection service (Go binary from home-manager) |
+| Clash Verge | enabled | Proxy/VPN (tun mode, service mode, from stablePkgs) |
+| SDDM | enabled | Display manager (Wayland + kwin_wayland, Arona theme) |
+| GNOME Keyring | enabled | Credential storage |
+| KDE Connect | enabled | Phone integration |
+| atopd | enabled | Process/system monitoring (atopgpu, netatop) |
+| Blueman | enabled | Bluetooth device management |
+| thermald | enabled | Thermal management |
+| iio-niri | enabled | Niri input/output integration |
+| wallpaper-theme-sync | enabled | Auto-sync Noctalia wallpaper palette → DMS theme |
 
 ## Software Ecosystem
 
 ### Development
-- **Editor**: Neovim (nixvim, cyberdream theme), VS Code, Kate
-- **Shell**: ZSH + Oh-My-Zsh (re5et theme)
-- **Git**: git + gh + git-lfs + direnv
-- **Build**: gcc, make, cmake (nix-ld), Rust (fenix toolchain)
-- **LaTeX**: TeX Live Full + MikTeX
-- **Math**: Sage, Octave, Maxima, Cantor (KDE)
+- **Editor**: Neovim (nixvim, cyberdream theme, coc-nvim, telescope, treesitter, ufo fold), VS Code, Kate
+- **Shell**: ZSH + Oh-My-Zsh (re5et theme), Ghostty terminal (cursor_tail shader)
+- **Git**: git + gh + git-lfs + direnv (nix-direnv)
+- **Build**: gcc, make, cmake, binutils (nix-ld for external binaries), Rust (fenix complete toolchain)
+- **Nix Tools**: nh (helper), nix-init, nurl, nix-alien, nix-index, nix-prefetch-*
+- **LaTeX**: TeX Live Full + MikTeX + texstudio + kile
+- **Math**: Sage, Octave, Maxima, Cantor (KDE), labplot, geogebra6, qalculate-gtk
 
 ### Multimedia
-- **Video**: mpv (ffmpeg-full), Haruna, SMPlayer, bilibili
-- **Audio**: Audacious, Spotify, melo-tts, piper-tts, sox, friture
-- **Graphics**: Blender, Krita, GIMP, Kdenlive, ImageMagick
-- **Recording**: OBS Studio (CUDA), gpu-screen-recorder
+- **Video**: mpv (ffmpeg-full overlay), Haruna, SMPlayer, bilibili (from pinned pkg)
+- **Audio**: Audacious, Spotify, Ekho TTS, Edge TTS (zh/ja/en, speak/speak-file/speak-clip), sox, friture
+- **Graphics**: Blender, Krita, GIMP, Kdenlive, ImageMagick, stellarium
+- **Recording**: OBS Studio (CUDA + plugins), gpu-screen-recorder (CUDA)
 
 ### Daily Applications
 - **Browser**: Firefox, Google Chrome, Brave
-- **Communication**: QQ, WeChat, Feishu (Flatpak)
-- **Office**: OnlyOffice, LibreOffice, Qalculate
+- **Communication**: QQ, WeChat, Feishu (Flatpak), Thunderbird
+- **Office**: OnlyOffice, LibreOffice, Qalculate, Joplin (OneDrive sync)
+- **VPN/Proxy**: Clash Verge, Proton VPN
 - **Cloud Storage**: onedrivegui, BaiduPCS-Go
-- **Download**: qBittorrent, Gopeed, Ghost Downloader 3
+- **Download**: qBittorrent, Gopeed (Flatpak), Ghost Downloader 3
+- **Gaming**: Steam, Wine (wayland + staging), winetricks, Mangohud
+- **System**: btop-cuda (cap_sys_ptrace), mission-center, baobab, ookla-speedtest, app2unit, nvtop
 
 ## Declarative Configuration Guidelines
 
 ### Architecture Conventions
-1. One `.nix` file per module, composed via `imports = [...]`
+1. One `.nix` file (or directory) per module, composed via `imports = [...]`
 2. `/etc/nixos/` manages system-level config, `~/.config/home-manager/` manages user-level config
-3. `configuration.nix` and `home.nix` handle imports only; actual logic goes into submodules
-4. Use `let` bindings for reusable values (e.g. stablePkgs, unstablePkgs)
-5. 2-space indentation; comments may use Chinese
+3. `home.nix` handles imports and lightweight inline config; `configuration.nix` handles imports + core system config (boot, graphics, desktop, fonts, etc.)
+4. Some modules use subdirectories (e.g. `qemu-kvm/`, `rm-protection/`) containing the `.nix` file + auxiliary scripts
+5. Use `let` bindings for reusable values: `stablePkgs` (nixos-26.05), `oldCudaPkgs`, `fenix`, `nix-alien-pkgs`, `bilibiliPkgs`
+6. 2-space indentation; comments may use Chinese
 
 ### Nix Writing Patterns
 ```nix
