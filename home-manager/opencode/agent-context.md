@@ -58,7 +58,7 @@ llm-cuda.nix          # Ollama, CUDA
 qemu-kvm.nix          # libvirt, QEMU, binfmt (aarch64/riscv64)
 neovim.nix            # nixvim config
 zsh.nix              # ZSH + Oh-My-Zsh
-rm-protection.nix    # rm safety wrapper
+rm-protection    # rm safety wrapper folder
 hifi.nix             # MPD, PipeWire high sample rate
 automount.nix        # Windows partition auto-mount
 sddm-theme.nix       # SDDM theme Arona
