@@ -65,7 +65,6 @@ sddm-theme.nix        # SDDM Arona theme (Wayland + kwin_wayland compositor)
 grub-theme.nix        # GRUB blurred wallpaper (2560x1600)
 flatpak-pkgs.nix      # nix-flatpak (Kazumi, Gopeed, Feishu)
 g14-kernel.nix        # linux-g14 7.0.2 kernel (commented out, ASUS ROG patches)
-script/               # Empty dir (reserved for future scripts)
 ```
 
 ### Home-Manager (`~/.config/home-manager/`)
@@ -80,7 +79,6 @@ noctalia-v5.nix       # Noctalia shell v5 (built from source, meson+ninja)
 caelestia.nix         # Caelestia shell + CLI (Material 3, built via quickshell)
 theme/                # Wallpaper → DMS theme sync service + Chrome notif closer
 latex-ocr.nix         # pix2tex (LaTeX OCR) with all pinned Python deps
-latex-ocr/            # Reserved for future OCR resources
 lyrics/               # Waybar lyrics (playerctl + NetEase Cloud Music API)
 mouse-trail/          # Custom Wayland mouse trail overlay (C + Wayland layer-shell)
 showmethekey/         # Keystroke display toggle
