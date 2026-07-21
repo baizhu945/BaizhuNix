@@ -63,6 +63,10 @@ in
     pkgs.wtype
     pkgs.xdotool
     pkgs.imagemagick    
+    pkgs.pandoc
+    pkgs.pdftk
+    pkgs.poppler
+    pkgs.qpdf
     pkgs.ekho
     pkgs.stellarium
     stablePkgs.localsend
@@ -113,6 +117,11 @@ in
     pkgs.cava
     pkgs.wl-mirror
     pkgs.glava
+
+    (pkgs.python3.withPackages (p: with p; [
+      defusedxml lxml markitdown openpyxl pandas pdf2image pdfplumber
+      pillow pypdf pytesseract reportlab
+    ]))
 
     # # It is sometimes useful to fine-tune packages, for example, by applying
     # # overrides. You can do that directly here, just don't forget the
