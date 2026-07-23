@@ -68,7 +68,6 @@ in
     pkgs.poppler
     pkgs.qpdf
     pkgs.ekho
-    pkgs.stellarium
     stablePkgs.localsend
     pkgs.tokei
     pkgs.kile
