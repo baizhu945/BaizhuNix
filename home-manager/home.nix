@@ -254,11 +254,6 @@ in
     };
   };
 
-  programs.mangohud = {
-    enable = true;
-    enableSessionWide = true;
-  };
-
   systemd.user.services.battery-monitor = {
     Unit = {
       Description = "Battery discharge action trigger";
