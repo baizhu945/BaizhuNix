@@ -43,6 +43,7 @@ in
       ./customized-pkgs.nix
       ./automount.nix
       ./rm-protection/rm-protection.nix
+      # ./ros2.nix
       # ./g14-kernel.nix
     ];
 
