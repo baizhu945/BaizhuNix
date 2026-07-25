@@ -304,7 +304,7 @@ EOF
     plugins = with pkgs.obs-studio-plugins; [
       wlrobs
       waveform
-      obs-backgroundremoval
+      # obs-backgroundremoval  # temporarily disabled: nixpkgs-unstable CUDA setup broken
       obs-pipewire-audio-capture
       obs-gstreamer
       obs-vkcapture

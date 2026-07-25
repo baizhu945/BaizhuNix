@@ -1,46 +1,45 @@
 { config, pkgs, lib,  ... }:
 
 let
-  unstableTarball =
+  ollamaTarball =
     fetchTarball
-      "https://nixos.org/channels/nixpkgs-unstable/nixexprs.tar.xz";
-
-  overlay = final: prev: {
-    ollama-cuda = prev.ollama-cuda.overrideAttrs (oldAttrs:
-      let
-        cudaLibs = with prev.cudaPackages; [ cuda_cudart libcublas cccl ];
-        cudaMajorVersion = prev.lib.versions.major prev.cudaPackages.cuda_cudart.version;
-        cudaToolkit = prev.buildEnv {
-          name = "cuda-merged-${cudaMajorVersion}";
-          paths = map prev.lib.getLib cudaLibs ++ [
-            (prev.lib.getOutput "static" prev.cudaPackages.cuda_cudart)
-            (prev.lib.getBin (prev.cudaPackages.cuda_nvcc.__spliced.buildHost or prev.cudaPackages.cuda_nvcc))
-          ];
-          ignoreCollisions = true;
-        };
-      in {
-        preBuild = ''
-          export CUDAToolkit_ROOT="${cudaToolkit}"
-          for i in "''${!cmakeFlagsArray[@]}"; do
-            if [[ ''${cmakeFlagsArray[i]} == -DCUDAToolkit_ROOT=* ]]; then
-              cmakeFlagsArray[i]="-DCUDAToolkit_ROOT=${cudaToolkit}"
-            fi
-          done
-          cmakeFlags=''${cmakeFlagsArray[*]}
-        '' + (oldAttrs.preBuild or "");
-      }
-    );
-  };
-
-  unstablePkgs = import unstableTarball {
-    config = config.nixpkgs.config // { allowUnfree = true; };
-    overlays = [ overlay ];
-  };
+      "https://github.com/NixOS/nixpkgs/archive/d6d0c1a3a42e5d56ba5065945a7351f99b8a7ffc.tar.gz";
 in
 {
   services.ollama = {
     enable = true;
-    package = unstablePkgs.ollama-cuda;
+    package = (import ollamaTarball {
+      config = config.nixpkgs.config // { allowUnfree = true; };
+      overlays = [
+        (self: super: {
+          ollama-cuda = super.ollama-cuda.overrideAttrs (oldAttrs:
+            let
+              inherit (super.cudaPackages) cuda_cudart libcublas cccl cuda_nvcc;
+              inherit (super.lib) versions getLib getOutput getBin;
+              cudaMajor = versions.major cuda_cudart.version;
+              cudaToolkit = super.buildEnv {
+                name = "cuda-merged-${cudaMajor}";
+                paths = map getLib [ cuda_cudart libcublas cccl ] ++ [
+                  (getOutput "static" cuda_cudart)
+                  (getBin (cuda_nvcc.__spliced.buildHost or cuda_nvcc))
+                ];
+                ignoreCollisions = true;
+              };
+            in {
+              preBuild = ''
+                export CUDAToolkit_ROOT="${cudaToolkit}"
+                for i in "''${!cmakeFlagsArray[@]}"; do
+                  if [[ ''${cmakeFlagsArray[i]} == -DCUDAToolkit_ROOT=* ]]; then
+                    cmakeFlagsArray[i]="-DCUDAToolkit_ROOT=${cudaToolkit}"
+                  fi
+                done
+                cmakeFlags=''${cmakeFlagsArray[*]}
+              '' + (oldAttrs.preBuild or "");
+            }
+          );
+        })
+      ];
+    }).ollama-cuda;
     syncModels = true;
     loadModels = [
       "deepseek-ocr"
@@ -51,6 +50,7 @@ in
   nixpkgs.config = {
     cudaSupport = true;
   };
+
   environment.systemPackages = with pkgs; [
     cudaPackages.cudatoolkit
     cudaPackages.cuda_nvcc

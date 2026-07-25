@@ -50,6 +50,13 @@ in
 
   nixpkgs.config.cudaSupport = true;
 
+  nixpkgs.overlays = [
+    (final: prev: {
+      onnxruntime = prev.onnxruntime.override { cudaSupport = false; };
+      blender = prev.blender.override { cudaSupport = false; };
+    })
+  ];
+
   programs.onlyoffice.enable = true;
 
   programs.firefox.enable = true;
@@ -117,9 +124,20 @@ in
     pkgs.wl-mirror
     pkgs.glava
 
-    (pkgs.python3.withPackages (p: with p; [
-      defusedxml lxml markitdown openpyxl pandas pdf2image pdfplumber
+    (let
+      pythonWithFix = pkgs.python3.override {
+        packageOverrides = self: super: {
+          pandas-stubs = super.pandas-stubs.overridePythonAttrs (_: {
+            doCheck = false;
+            doInstallCheck = false;
+            pythonImportsCheck = [];
+          });
+        };
+      };
+    in pythonWithFix.withPackages (p: with p; [
+      defusedxml lxml openpyxl pandas pdf2image pdfplumber
       pillow pypdf pytesseract reportlab
+      # markitdown  # temporarily disabled: depends on broken pandas-stubs tests
     ]))
 
     # # It is sometimes useful to fine-tune packages, for example, by applying
