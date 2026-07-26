@@ -59,7 +59,10 @@ in
 
   programs.onlyoffice.enable = true;
 
-  programs.firefox.enable = true;
+  programs.firefox = {
+    enable = true;
+    package = stablePkgs.firefox;
+  };
 
   home.packages = [
     # # Adds the 'hello' command to your environment. It prints a friendly
@@ -112,8 +115,6 @@ in
     pkgs.haruna
     pkgs.smplayer
     pkgs.nvtopPackages.full
-    pkgs.fuzzel
-    pkgs.swaybg
     pkgs.noctalia-shell
     pkgs.dms-shell
     bilibiliPkgs.bilibili

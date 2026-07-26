@@ -16,6 +16,9 @@ in
 {
   home.packages = [ toggle-showmethekey ];
   home.file = {
-    ".local/bin/showmethekey-cli.py".source = ./showmethekey-cli.py;
+    ".local/bin/showmethekey-cli.py" = {
+      source = ./showmethekey-cli.py;
+      executable = true;
+    };
   };
 }
