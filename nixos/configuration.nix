@@ -269,10 +269,18 @@ EOF
 
   programs.kdeconnect.enable = true;
 
-  programs.niri = { 
-    enable = true; 
-    useNautilus = false; 
+  programs.niri = {
+    enable = true;
+    package = let
+      ldi = pkgs."libdisplay-info_0_2";
+    in pkgs.niri.overrideAttrs (oldAttrs: {
+      preBuild = ''
+        export PKG_CONFIG_PATH="${ldi}/lib/pkgconfig:$PKG_CONFIG_PATH"
+      '' + (oldAttrs.preBuild or "");
+    });
+    useNautilus = false;
   };
+
   services.iio-niri = {
     enable = true;
     package = pkgs.iio-niri;

@@ -1,12 +1,12 @@
 **该仓库是nixos-unstable的配置，且是一个去flake的配置，主要用于给自己备份。但是对于qemu/KVM虚拟机包含了一些补丁，有需要的可以借用**
 
-_如果需要，请将 `<yourpassword>` 更换为你的密码，`<yourusername>` 更换为你的用户名之后再 `rebuild`，可以直接 `cd BaizhuNix`到仓库中后运行_
+_如果需要，请将 `wcandxl` 更换为你的密码，`baizhu945` 更换为你的用户名之后再 `rebuild`，可以直接 `cd BaizhuNix`到仓库中后运行_
 ```
 # 运行前先解压 7z 压缩包到该文件夹内
 
-find . -path "./.git" -prune -o -type f -name "*" -exec sed -i 's/<yourusername>/你的用户名/g' {} +
+find . -path "./.git" -prune -o -type f -name "*" -exec sed -i 's/baizhu945/你的用户名/g' {} +
 
-find . -path "./.git" -prune -o -type f -name "*" -exec sed -i 's/<yourpassword>/你的密码/g' {} +
+find . -path "./.git" -prune -o -type f -name "*" -exec sed -i 's/wcandxl/你的密码/g' {} +
 ```
 
 # Features
@@ -43,7 +43,7 @@ sudo nix-channel --update
 # 三、noctalia 和 DankMaterialShell 配置
 将 7z 文件解压后，将 `noctalia` 和 `DankMaterialShell` 文件夹复制到 `~/.config/` 路径下。
 
-_别忘了将 `<yourpassword>` 更换为你的密码，`<yourusername>` 更换为你的用户名_
+_别忘了将 `wcandxl` 更换为你的密码，`baizhu945` 更换为你的用户名_
 
 # 四、Joplin配置
 安装插件 `Katex Input Helper`, `Record`, `Rich Markdown`, `Search & Replace`, `Kity Minder`, `Note Tabs`
@@ -86,7 +86,7 @@ name = "opencode"
 type = "opencode"   # "claudecode", "codex", "cursor", "gemini", "qoder", "opencode", or "iflow"
 
 [projects.agent.options]
-work_dir = "/home/<yourusername>"
+work_dir = "/home/baizhu945"
 mode = "auto"
 # model = "claude-sonnet-4-20250514"
 

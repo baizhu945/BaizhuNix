@@ -154,6 +154,13 @@ in
     #   echo "Hello, ${config.home.username}!"
     # '')
 
+    (pkgs.writeShellScriptBin "nix-update" ''
+      echo '<yourpassword>' | sudo -S nix-channel --update
+      nix-channel --update
+      echo '<yourpassword>' | sudo -S nixos-rebuild boot --upgrade
+      home-manager build switch
+    '')
+
     (pkgs.writeShellScriptBin "nix-clean" ''
       noctalia-shell ipc call toast send '{"title":"Cleaning"}'
       echo '<yourpassword>' | sudo -S nix-store --gc
