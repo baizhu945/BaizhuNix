@@ -238,6 +238,16 @@ EOF
     nerd-fonts.liberation
   ];
 
+  # Firefox 153 wrapper regression: missing GSettings schemas in wrapper.
+  # Prepend schema paths to XDG_DATA_DIRS so Firefox can read
+  # GTK font settings (org.gnome.desktop.interface.font-name) from any
+  # launch method (desktop launcher, Niri keybind, terminal).
+  # extraInit runs AFTER the auto-generated XDG_DATA_DIRS → prepends correctly.
+  environment.extraInit = ''
+    export XDG_DATA_DIRS="${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}:$XDG_DATA_DIRS"
+    export XDG_DATA_DIRS="${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}:$XDG_DATA_DIRS"
+  '';
+
   i18n.extraLocaleSettings = {
     LC_ADDRESS = "zh_CN.UTF-8";
     LC_IDENTIFICATION = "zh_CN.UTF-8";

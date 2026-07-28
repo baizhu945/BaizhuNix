@@ -270,3 +270,25 @@ Correct behavior:
 - Always check for and use skills first
 
 This ensures OpenCode behaves similarly to Claude Code with full workflow enforcement.
+
+---
+
+## cc-connect Media Sending
+
+cc-connect (`https://github.com/chenhg5/cc-connect`) can send images, files, and TTS audio directly to your chat platform (Feishu, Telegram, etc.) via its CLI:
+
+```bash
+cc-connect send --image /absolute/path/to/image.png
+cc-connect send --file /absolute/path/to/file.pdf
+cc-connect send --tts "text to speak"
+cc-connect send --file a.pdf --image b.png  # multiple attachments
+```
+
+**Screenshot workflow** (Wayland / Niri):
+```bash
+grim /tmp/opencode/screenshot.png && cc-connect send --image /tmp/opencode/screenshot.png
+```
+
+Notes:
+- Always use absolute paths
+- Attachments capped at 50 MiB by default (configurable via `max_attachment_size_mb` or `CC_MAX_ATTACHMENT_SIZE_MB`)
