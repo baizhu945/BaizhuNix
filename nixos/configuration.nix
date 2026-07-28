@@ -125,6 +125,7 @@ in
     QT_AUTO_SCREEN_SCALE_FACTOR = "1";
     GDK_DPI_SCALE = "1.0";
     PATH = "/usr/bin:$PATH"; # Fixed Kazumi in NixOS BUG (Caused by NixOS)
+    QT_HTTP2_DISABLE = "1"; # Fixed noctalia-shell V4 BUG
   };
 
   nix.package = pkgs.lixPackageSets.latest.lix;

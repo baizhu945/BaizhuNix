@@ -50,6 +50,16 @@ in
   programs.opencode = {
     enable = true;
 
+    # Permission patch: enables OpenCode in --format json headless mode to
+    # emit permission_asked NDJSON events to stdout and accept replies via
+    # stdin, so cc-connect can relay permission verification cards to Telegram.
+    # See: https://github.com/chenhg5/cc-connect/issues/1420
+    package = pkgs.opencode.overrideAttrs (old: {
+      patches = (old.patches or []) ++ [
+        ./opencode-permission.patch
+      ];
+    });
+
     # 使用 extraPackages 使 nodejs 可用（如果插件需要）
     extraPackages = with pkgs; [ nodejs ];
 
