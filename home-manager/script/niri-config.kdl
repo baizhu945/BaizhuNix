@@ -522,6 +522,8 @@ window-rule {
   match app-id=r#"google-chrome$"# title="^Picture-in-Picture$"
   match app-id=r#"^yad$"# title="^压缩包预览$"
   match app-id=r#"^yad$"# title="^正在解压$"
+  match app-id=r#"^yad$"# title="^OCR$"
+  match app-id=r#"^yad$"# title="^OCR 结果$"
   match app-id=r#"^org.kde.dolphin$"# title="^正在压缩"
   match app-id=r#"^python3$"# title="^LaTeX OCR$"
   open-floating true

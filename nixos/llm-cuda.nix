@@ -42,7 +42,8 @@ in
     }).ollama-cuda;
     syncModels = true;
     loadModels = [
-      "deepseek-ocr"
+      # "deepseek-ocr:3b"
+      "glm-ocr:bf16"
       "gemma4:12b"
     ];
   };

@@ -219,6 +219,65 @@ in
       echo "<yourpassword>" | sudo -S umount /mnt/Windows/D
       echo "<yourpassword>" | sudo -S umount /mnt/Windows/RECOVER/
     '')
+
+    (pkgs.writeShellScriptBin "glm-ocr" ''
+      IMG=$(mktemp /tmp/glm-ocr-XXXXXX.png)
+
+      grim -g "$(slurp)" "$IMG"
+
+      if [ ! -s "$IMG" ]; then
+          remove-without-permission -f "$IMG"
+          exit 0
+      fi
+
+      yad \
+          --progress \
+          --title="OCR" \
+          --text="正在识别..." \
+          --pulsate \
+          --no-buttons \
+          --width=300 \
+          --height=100 &
+      YAD_PID=$!
+
+      RESULT=$(ollama run glm-ocr:bf16 Text Recognition: "$IMG" 2>/dev/null)
+
+      kill "$YAD_PID" 2>/dev/null
+
+      remove-without-permission -f "$IMG"
+
+      if [ -z "$RESULT" ]; then
+          yad \
+              --title="OCR 结果" \
+              --text="OCR 识别失败，请重试。" \
+              --button="关闭:0"
+          ollama stop glm-ocr:bf16 2>/dev/null &
+          exit 1
+      fi
+
+      TEXTFILE=$(mktemp /tmp/glm-ocr-text-XXXXXX.txt)
+      echo "$RESULT" > "$TEXTFILE"
+
+      OUTPUT=$(yad \
+          --title="OCR 结果" \
+          --text-info \
+          --editable \
+          --filename="$TEXTFILE" \
+          --width=700 \
+          --height=500 \
+          --button="复制:0" \
+          --button="关闭:1")
+
+      RET=$?
+
+      remove-without-permission -f "$TEXTFILE"
+
+      if [ "$RET" -eq 0 ]; then
+          echo -n "$OUTPUT" | wl-copy
+      fi
+
+      ollama stop glm-ocr:bf16 2>/dev/null &
+    '')
   ];
 
   home.file = {
