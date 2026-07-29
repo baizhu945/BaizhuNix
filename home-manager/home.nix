@@ -36,8 +36,8 @@ in
     ./showmethekey/showmethekey.nix
     ./opencode/opencode.nix
     ./mouse-trail/mouse-trail.nix
-    ./noctalia-v5.nix
-    ./caelestia.nix
+    # ./noctalia-v5.nix
+    # ./caelestia.nix
     ./latex-ocr.nix
   ];
 
@@ -69,6 +69,8 @@ in
     # # "Hello, world!" when run.
     # pkgs.hello
 
+    pkgs.wlrctl
+    pkgs.agent-browser
     pkgs.geogebra6
     pkgs.wtype
     pkgs.xdotool
