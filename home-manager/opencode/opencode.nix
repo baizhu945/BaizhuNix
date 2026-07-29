@@ -81,7 +81,7 @@ in
     extraPackages = with pkgs; [ nodejs ];
 
     skills = {
-      chrome-automation = "${anbeime-skills-repo}/skills/chrome-automation/chrome-automation";
+      chrome-automation = ./skills/chrome-automation;
       media-processor = "${anbeime-skills-repo}/skills/media-processor/media-processor";
 
       docx = "${anthropics-skills-repo}/skills/docx";
