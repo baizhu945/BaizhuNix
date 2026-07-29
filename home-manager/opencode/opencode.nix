@@ -41,6 +41,20 @@ let
     url = "https://github.com/matlab/simulink-agentic-toolkit.git";
     rev = "054063b01ae0bdd72e2382e9f1969a7b50b35b4d";
   };
+
+  # Pinned nixpkgs revision where opencode is v1.18.4 — remove this
+  # once the upstream PR merges and we update the permission patch.
+  opencodeTarball = fetchTarball {
+    url = "https://github.com/NixOS/nixpkgs/archive/38a4887411571457d700c51c64a6e49ead2ed5ab.tar.gz";
+    sha256 = "0b9v6g6s42y05ixb4q0jjrwzbygwzl8xr8n2jc4mwykvij8gj7cj";
+  };
+  opencodePkgs = import opencodeTarball {
+    config = {
+      allowUnfree = true;
+      allowInsecure = true;
+    };
+    system = pkgs.stdenv.hostPlatform.system;
+  };
 in 
 {
   imports = [
@@ -54,7 +68,10 @@ in
     # emit permission_asked NDJSON events to stdout and accept replies via
     # stdin, so cc-connect can relay permission verification cards to Telegram.
     # See: https://github.com/chenhg5/cc-connect/issues/1420
-    package = pkgs.opencode.overrideAttrs (old: {
+    #
+    # Pinned to v1.18.4 via opencodePkgs — remove the pin once upstream
+    # merges the fix and we update the patch.
+    package = opencodePkgs.opencode.overrideAttrs (old: {
       patches = (old.patches or []) ++ [
         ./opencode-permission.patch
       ];
