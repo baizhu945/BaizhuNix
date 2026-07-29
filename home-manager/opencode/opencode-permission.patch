@@ -1,5 +1,5 @@
 diff --git a/packages/opencode/src/cli/cmd/run.ts b/packages/opencode/src/cli/cmd/run.ts
-index 3927f61..d5d5e40 100644
+index 3927f615a..2451242f3 100644
 --- a/packages/opencode/src/cli/cmd/run.ts
 +++ b/packages/opencode/src/cli/cmd/run.ts
 @@ -24,6 +24,7 @@ import { EOL } from "os"
@@ -15,12 +15,12 @@ index 3927f61..d5d5e40 100644
        }
  
 -      const piped = process.stdin.isTTY ? undefined : await Bun.stdin.text()
-+      // In --format json mode, keep stdin open for permission replies from cc-connect
++      // In --format json mode, keep stdin open for permission reply channel
 +      const piped = (process.stdin.isTTY || args.format === "json") ? undefined : await Bun.stdin.text()
        message = resolveRunInput(message, piped) ?? ""
        const initialInput = resolveRunInput(rawMessage, piped)
  
-@@ -802,6 +804,25 @@ export const RunCommand = effectCmd({
+@@ -802,6 +804,20 @@ export const RunCommand = effectCmd({
                    requestID: permission.id,
                    reply: "once",
                  })
@@ -36,48 +36,33 @@ index 3927f61..d5d5e40 100644
 +                    tool: permission.tool,
 +                  },
 +                })
-+                // Wait for permission reply from cc-connect via stdin
 +                const reply = await readPermissionReply()
-+                if (reply === "always") {
-+                  await client.permission.reply({ requestID: permission.id, reply: "always" })
-+                } else {
-+                  await client.permission.reply({ requestID: permission.id, reply: reply === "once" ? "once" : "reject" })
-+                }
++                await client.permission.reply({ requestID: permission.id, reply })
                } else {
                  UI.println(
                    UI.Style.TEXT_WARNING_BOLD + "!",
-@@ -817,6 +838,35 @@ export const RunCommand = effectCmd({
+@@ -817,6 +833,25 @@ export const RunCommand = effectCmd({
            }
            return error
          }
 +
-+        // Read a single JSON reply line from stdin and return the "reply" field.
-+        // Used in --format json mode to receive permission responses from cc-connect.
-+        // Times out after 120s if no valid reply received, defaulting to "reject".
++        // Read a single JSON reply line from stdin, return the "reply" field.
++        // Used in --format json mode to receive permission responses.
++        // Times out after 120s; defaults to "reject" on timeout or parse failure.
 +        async function readPermissionReply(): Promise<string> {
-+          return new Promise((resolve) => {
++          return new Promise<string>((resolve) => {
 +            const rl = createInterface({ input: process.stdin })
-+            let resolved = false
 +            const timeout = setTimeout(() => {
-+              if (!resolved) {
-+                resolved = true
-+                rl.close()
-+                resolve("reject")
-+              }
++              rl.close()
++              resolve("reject")
 +            }, 120000)
 +            rl.on("line", (line: string) => {
-+              if (resolved || !line.trim()) return
-+              try {
-+                const parsed = JSON.parse(line)
-+                resolved = true
-+                clearTimeout(timeout)
-+                rl.close()
-+                resolve(parsed.reply || "reject")
-+              } catch {
-+                // ignore invalid JSON, wait for next line
-+              }
++              if (!line.trim()) return
++              clearTimeout(timeout)
++              rl.close()
++              resolve(JSON.parse(line).reply || "reject")
 +            })
-+          })
++          }).catch(() => "reject")
 +        }
          const cwd = args.attach ? (directory ?? sess.directory ?? (await current(sdk))) : (directory ?? root)
          const client = args.attach ? attachSDK(cwd) : sdk
