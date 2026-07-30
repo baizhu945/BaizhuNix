@@ -220,8 +220,8 @@ in
       echo "<yourpassword>" | sudo -S umount /mnt/Windows/RECOVER/
     '')
 
-    (pkgs.writeShellScriptBin "glm-ocr" ''
-      IMG=$(mktemp /tmp/glm-ocr-XXXXXX.png)
+    (pkgs.writeShellScriptBin "deepseek-ocr" ''
+      IMG=$(mktemp /tmp/deepseek-ocr-XXXXXX.png)
 
       grim -g "$(slurp)" "$IMG"
 
@@ -240,7 +240,7 @@ in
           --height=100 &
       YAD_PID=$!
 
-      RESULT=$(ollama run glm-ocr:bf16 Text Recognition: "$IMG" 2>/dev/null)
+      RESULT=$(ollama run deepseek-ocr:3b-gpu12 "$IMG\nFree OCR." 2>/dev/null)
 
       kill "$YAD_PID" 2>/dev/null
 
@@ -251,11 +251,11 @@ in
               --title="OCR 结果" \
               --text="OCR 识别失败，请重试。" \
               --button="关闭:0"
-          ollama stop glm-ocr:bf16 2>/dev/null &
+          ollama stop deepseek-ocr:3b-gpu12 2>/dev/null &
           exit 1
       fi
 
-      TEXTFILE=$(mktemp /tmp/glm-ocr-text-XXXXXX.txt)
+      TEXTFILE=$(mktemp /tmp/deepseek-ocr-text-XXXXXX.txt)
       echo "$RESULT" > "$TEXTFILE"
 
       OUTPUT=$(yad \
@@ -276,7 +276,7 @@ in
           echo -n "$OUTPUT" | wl-copy
       fi
 
-      ollama stop glm-ocr:bf16 2>/dev/null &
+      ollama stop deepseek-ocr:3b-gpu12 2>/dev/null &
     '')
   ];
 
