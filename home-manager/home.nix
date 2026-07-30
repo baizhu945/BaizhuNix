@@ -208,7 +208,8 @@ in
       echo "<yourpassword>" | sudo -S mount /dev/disk/by-uuid/241F-8E2D /mnt/Windows/EFI/
       echo "<yourpassword>" | sudo -S mount /dev/disk/by-uuid/545C43E35C43BF0C /mnt/Windows/C
       echo "<yourpassword>" | sudo -S mount /dev/disk/by-uuid/24C073F9C073CF92 /mnt/Windows/D
-      echo "<yourpassword>" | sudo -S mount /dev/disk/by-uuid/000EA90D0EA8FCB2 /mnt/Windows/RECOVER/
+      echo "<yourpassword>" | sudo -S mount /dev/disk/by-uuid/88DEE415DEE3F978 /mnt/Windows/RECOVER_C/
+      echo "<yourpassword>" | sudo -S mount /dev/disk/by-uuid/000EA90D0EA8FCB2 /mnt/Windows/RECOVER_D/
       echo "<yourpassword>" | sudo -S chown -R <yourusername> /mnt/Windows/C
       echo "<yourpassword>" | sudo -S chown -R <yourusername> /mnt/Windows/D
     '')
@@ -217,7 +218,8 @@ in
       echo "<yourpassword>" | sudo -S umount /mnt/Windows/EFI/
       echo "<yourpassword>" | sudo -S umount /mnt/Windows/C
       echo "<yourpassword>" | sudo -S umount /mnt/Windows/D
-      echo "<yourpassword>" | sudo -S umount /mnt/Windows/RECOVER/
+      echo "<yourpassword>" | sudo -S umount /mnt/Windows/RECOVER-C/
+      echo "<yourpassword>" | sudo -S umount /mnt/Windows/RECOVER-D/
     '')
 
     (pkgs.writeShellScriptBin "deepseek-ocr" ''
