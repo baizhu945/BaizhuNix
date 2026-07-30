@@ -12,14 +12,16 @@ find . -path "./.git" -prune -o -type f -name "*" -exec sed -i 's/<yourpassword>
 # Features
 - 纯 `configuration.nix` 和 `home.nix`，无flake；
 - 包括 `Virt_manager` 和 `qemu/KVM` 在内的许多软件的补丁；
-- `noctalia` 和 `dms` 主题色同步；
-- 歌词显示脚本；
-- `conda` 环境中部署 `TTS` 和 `latexocr`；
+- `noctalia` 和 `dms` 以及歌词、鼠标拖尾主题色同步；
+- 基于自定义 `waybar` 的歌词显示脚本；
+- 声明式部署 `TTS` 和 `latexocr`；
 - 双系统的一些修复；
 - `plasma` 和 `niri` 双桌面环境；
-- `rm` 命令保护，运行 `rm` 时只有输入 `yes` 才会成功运行，而 `remove-without-permission` 命令依然是原味 `rm`。
-- 在 `dolphin` 中右键可使用 `unar` 预览和解压压缩包。
-- `OpenCode` 和 `cc-connect` 支持。
+- `rm` 命令保护，运行 `rm` 时只有输入 `yes` 才会成功运行，而 `remove-without-permission` 命令依然是原味 `rm`；
+- 在 `dolphin` 中右键可使用 `unar` 预览和解压压缩包，解决你的同学使用其他压缩编码时解压乱码的问题；
+- `deepseek-ocr` 脚本快速 OCR 识别；
+- `OpenCode` 和 `cc-connect` 支持及其权限请求卡片补丁；
+- 华硕 `linux-g14` 内核支持；
 - 鼠标拖尾特效支持，[见我另一仓库](https://github.com/baizhu945/niri-mouse-trail) 。
 
 # 一、安装home-manager
@@ -87,7 +89,7 @@ type = "opencode"   # "claudecode", "codex", "cursor", "gemini", "qoder", "openc
 
 [projects.agent.options]
 work_dir = "/home/baizhu945"
-mode = "auto"
+mode = "default"
 # model = "claude-sonnet-4-20250514"
 
 # --- Choose at least one platform below ---
@@ -97,26 +99,14 @@ mode = "auto"
 model = "deepseek/deepseek-v4-pro"
 
 [[projects.platforms]]
-type = "telegram"
-
-[projects.platforms.options]
-token = "xxx"
-allow_from  = [xxx]
-admin_from  = [xxx]
-
-[[projects.platforms]]
 type = "feishu"
 
 [projects.platforms.options]
 app_id = "xxx"
 app_secret = "xxx"
-
-[[projects.platforms]]
-type = "discord"
-
-[projects.platforms.options]
-token = "xxx"
 ```
+
+以及运行 `cc-connect weixin setup` 扫码绑定微信。
 
 # 七、Trouble shooting
 ## Windows 时间错乱
