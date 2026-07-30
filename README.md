@@ -4,9 +4,9 @@ _如果需要，请将 `wcandxl` 更换为你的密码，`baizhu945` 更换为�
 ```
 # 运行前先解压 7z 压缩包到该文件夹内
 
-find . -path "./.git" -prune -o -type f -name "*" -exec sed -i 's/baizhu945/你的用户名/g' {} +
+find . -path "./.git" -prune -o -type f -name "*" -exec sed -i 's/<yourusername>/你的用户名/g' {} +
 
-find . -path "./.git" -prune -o -type f -name "*" -exec sed -i 's/wcandxl/你的密码/g' {} +
+find . -path "./.git" -prune -o -type f -name "*" -exec sed -i 's/<yourpassword>/你的密码/g' {} +
 ```
 
 # Features
