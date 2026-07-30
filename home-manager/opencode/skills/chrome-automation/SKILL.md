@@ -301,7 +301,7 @@ Start with additional flags:
 
 ```bash
 google-chrome-stable --remote-debugging-port=9222 \
-  --user-data-dir=$HOME/.config/chrome-automation \
+  --user-data-dir=$HOME/.config/google-chrome \
   --no-first-run --disable-vulkan --disable-gpu \
   --disable-software-rasterizer --ozone-platform-hint=auto
 ```
