@@ -563,7 +563,6 @@ EOF
     
     pkgs.exfatprogs pkgs.ntfsprogs-plus pkgs.ntfs3g
     pkgs.nodejs
-    pkgs.vscode
     pkgs.os-prober
     
     pkgs.kdePackages.sddm-kcm pkgs.kdePackages.kate pkgs.kdePackages.yakuake pkgs.kdePackages.layer-shell-qt pkgs.kdePackages.qttools  pkgs.kdePackages.kscreen pkgs.kdePackages.kdialog pkgs.kdePackages.plasma-sdk pkgs.kdePackages.drkonqi pkgs.kurve
