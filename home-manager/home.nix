@@ -50,19 +50,7 @@ in
 
   nixpkgs.config.cudaSupport = true;
 
-  nixpkgs.overlays = [
-    (final: prev: {
-      onnxruntime = prev.onnxruntime.override { cudaSupport = false; };
-      blender = prev.blender.override { cudaSupport = false; };
-    })
-  ];
-
   programs.onlyoffice.enable = true;
-
-  programs.firefox = {
-    enable = true;
-    package = stablePkgs.firefox;
-  };
 
   home.packages = [
     # # Adds the 'hello' command to your environment. It prints a friendly
@@ -85,7 +73,6 @@ in
     pkgs.kile
     pkgs.kdePackages.kmplot
     pkgs.labplot
-    pkgs.blender
     stablePkgs.sage
     pkgs.octaveFull
     pkgs.maxima
@@ -140,7 +127,6 @@ in
     in pythonWithFix.withPackages (p: with p; [
       defusedxml lxml openpyxl pandas pdf2image pdfplumber
       pillow pypdf pytesseract reportlab
-      markitdown
     ]))
 
     # # It is sometimes useful to fine-tune packages, for example, by applying
@@ -218,8 +204,8 @@ in
       echo "<yourpassword>" | sudo -S umount /mnt/Windows/EFI/
       echo "<yourpassword>" | sudo -S umount /mnt/Windows/C
       echo "<yourpassword>" | sudo -S umount /mnt/Windows/D
-      echo "<yourpassword>" | sudo -S umount /mnt/Windows/RECOVER-C/
-      echo "<yourpassword>" | sudo -S umount /mnt/Windows/RECOVER-D/
+      echo "<yourpassword>" | sudo -S umount /mnt/Windows/RECOVER_C/
+      echo "<yourpassword>" | sudo -S umount /mnt/Windows/RECOVER_D/
     '')
 
     (pkgs.writeShellScriptBin "deepseek-ocr" ''

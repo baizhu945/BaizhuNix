@@ -39,7 +39,13 @@ in
     ];
 
   _module.args.stablePkgs = stablePkgs; # 将 stablePkgs 传递给其他文件
-  
+ 
+  swapDevices = [{
+    device = "/var/lib/swapfile";
+    size = 32*1024; # 16 GiB
+    priority = 1;
+  }];
+
   hardware.bluetooth.enable = true;
   services.blueman.enable = true;
 
@@ -500,7 +506,9 @@ EOF
     pkgs.vulkan-tools
   
     pkgs.unar pkgs.rar pkgs.unzip pkgs.unrar pkgs.p7zip
-    
+
+    pkgs.ungoogled-chromium
+    stablePkgs.blender
     pkgs.testdisk
     pkgs.ext4magic
     pkgs.mediainfo
