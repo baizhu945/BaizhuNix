@@ -667,8 +667,8 @@ binds {
     Mod+Shift+V { switch-focus-between-floating-and-tiling; }
 
 
-    Mod+Shift+P hotkey-overlay-title="Region Screenshot" { spawn-sh "grim -l 0 -g \"$(slurp)\" -c /home/<yourusername>/Pictures/Screenshots/$(date +'%s_grim.png') && wl-copy < ~/Pictures/Screenshots/$(date +'%s_grim.png') && noctalia-shell ipc call toast send '{\"title\":\"区域截图\"}'"; }
-    Mod+Ctrl+P hotkey-overlay-title="Screen Screenshot" { spawn-sh "grim -l 0 -c $(xdg-user-dir PICTURES)/Screenshots/$(date +'%s_grim.png') && wl-copy < ~/Pictures/Screenshots/$(date +'%s_grim.png') && noctalia-shell ipc call toast send '{\"title\":\"屏幕截图\"}'"; }
+    Mod+Shift+P hotkey-overlay-title="Region Screenshot" { spawn-sh "grim -g \"$(slurp)\" -c /home/<yourusername>/Pictures/Screenshots/$(date +'%s_grim.png') && wl-copy < ~/Pictures/Screenshots/$(date +'%s_grim.png') && noctalia-shell ipc call toast send '{\"title\":\"区域截图\"}'"; }
+    Mod+Ctrl+P hotkey-overlay-title="Screen Screenshot" { spawn-sh "grim -c $(xdg-user-dir PICTURES)/Screenshots/$(date +'%s_grim.png') && wl-copy < ~/Pictures/Screenshots/$(date +'%s_grim.png') && noctalia-shell ipc call toast send '{\"title\":\"屏幕截图\"}'"; }
     Mod+Alt+P hotkey-overlay-title="Screen Pin" { spawn-sh "noctalia-shell ipc call plugin:screen-toolkit pin"; }
 
     Mod+Escape allow-inhibiting=false { toggle-keyboard-shortcuts-inhibit; }

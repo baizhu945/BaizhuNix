@@ -42,7 +42,7 @@ in
     }).ollama-cuda;
     syncModels = true;
     loadModels = [
-      # "deepseek-ocr:3b"
+      "deepseek-ocr:3b"
       "glm-ocr:bf16"
       "gemma4:12b"
     ];
@@ -50,6 +50,29 @@ in
 
   nixpkgs.config = {
     cudaSupport = true;
+  };
+
+  systemd.services.ollama-create-gpu-models = {
+    description = "Create GPU-limited Ollama models";
+    wantedBy = [ "multi-user.target" ];
+    after = [ "ollama.service" ];
+    requires = [ "ollama.service" ];
+    path = [ config.services.ollama.package ];
+    environment.HOME = "/var/lib/ollama";
+    script = ''
+      ollama list 2>/dev/null | grep -q 'deepseek-ocr:3b-gpu12' && exit 0
+      cat > /tmp/deepseek-ocr-gpu12.Modelfile << 'EOF'
+FROM deepseek-ocr:3b
+PARAMETER num_gpu 12
+EOF
+      ollama create deepseek-ocr:3b-gpu12 -f /tmp/deepseek-ocr-gpu12.Modelfile
+    '';
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      User = "ollama";
+      Group = "ollama";
+    };
   };
 
   environment.systemPackages = with pkgs; [

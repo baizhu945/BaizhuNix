@@ -112,12 +112,88 @@ ss -tlnp | grep 9222
 
 ## Checking Download Status
 
+### Basic check
+
 ```bash
 agent-browser --cdp 9222 open "chrome://downloads"
 sleep 2
 agent-browser --cdp 9222 snapshot -i
 # If only heading and searchbox show — nothing is downloading
 # If download items appear — something is downloading
+```
+
+> **Note:** `chrome://downloads` uses shadow DOM. The `snapshot -i` command may fail to detect download items inside shadow roots. Always use JavaScript eval as a fallback to verify.
+
+### Detect downloads via JavaScript (shadow DOM)
+
+Use `eval` to query the `downloads-manager` shadow root — this is more reliable than `snapshot -i`:
+
+```bash
+agent-browser --cdp 9222 eval "\
+var root = document.querySelector('downloads-manager').shadowRoot; \
+root ? root.querySelectorAll('downloads-item').length + ' items' : 'no manager'"
+```
+
+If items exist, the `#no-downloads` placeholder will be hidden:
+
+```bash
+agent-browser --cdp 9222 eval "\
+var root = document.querySelector('downloads-manager').shadowRoot; \
+root ? 'no-downloads hidden: ' + root.getElementById('no-downloads').hidden : 'no root'"
+```
+
+### Detect interrupted downloads via filesystem
+
+A `.crdownload` file in `~/Downloads/` that no longer grows indicates an interrupted download:
+
+```bash
+stat --format="%s %y" ~/Downloads/*.crdownload 2>/dev/null
+# Check if file size changes over a 5-second interval
+sleep 5
+stat --format="%s %y" ~/Downloads/*.crdownload 2>/dev/null
+```
+
+Check which Chrome process holds the file descriptor:
+
+```bash
+lsof ~/Downloads/*.crdownload 2>/dev/null
+ls -la /proc/<PID>/fd/ 2>/dev/null | grep crdownload
+```
+
+### Resume an interrupted download
+
+1. Open `chrome://downloads` and find the download item via JavaScript:
+
+```bash
+agent-browser --cdp 9222 open "chrome://downloads"
+sleep 2
+```
+
+2. Click the three-dot menu (`more-actions`) in the download item's shadow DOM:
+
+```bash
+agent-browser --cdp 9222 eval "\
+var root = document.querySelector('downloads-manager').shadowRoot; \
+var item = root.querySelector('downloads-item'); \
+var menuBtn = item.shadowRoot.getElementById('more-actions'); \
+if (menuBtn) { menuBtn.click(); 'menu opened' } else { 'not found' }"
+```
+
+3. Click "继续" (Continue) / "pause-or-resume" button:
+
+```bash
+agent-browser --cdp 9222 eval "\
+var root = document.querySelector('downloads-manager').shadowRoot; \
+var item = root.querySelector('downloads-item'); \
+var btn = item.shadowRoot.getElementById('pause-or-resume'); \
+if (btn) { btn.click(); 'resume clicked' } else { 'not found' }"
+```
+
+4. Verify the download resumed by checking file growth:
+
+```bash
+sleep 5
+stat --format="%s %y" ~/Downloads/*.crdownload 2>/dev/null
 ```
 
 ## Screenshot with grim (Wayland)
@@ -236,6 +312,18 @@ google-chrome-stable --remote-debugging-port=9222 \
 agent-browser --cdp 9222 open "about:blank"
 sleep 2
 ```
+
+### Remote debugging port not listening after starting Chrome
+
+If Chrome starts but port 9222 is not listening, check the log:
+
+```bash
+cat /tmp/opencode/chrome.log | grep -i "remote debugging"
+```
+
+If you see `DevTools remote debugging requires a non-default data directory`, Chrome refuses remote debugging on the default profile (`~/.config/google-chrome`). You must explicitly pass `--user-data-dir` pointing to a non-default directory (e.g. `~/.config/chrome-automation`).
+
+**Important trade-off:** Restarting Chrome with a different profile means the user's original session (tabs, active downloads) is lost. If a download was in progress, it will be interrupted and should be resumed via `chrome://downloads` after the restart (see "Checking Download Status & Resuming" above).
 
 ## Best Practices
 
