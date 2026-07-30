@@ -140,7 +140,7 @@ in
     in pythonWithFix.withPackages (p: with p; [
       defusedxml lxml openpyxl pandas pdf2image pdfplumber
       pillow pypdf pytesseract reportlab
-      # markitdown  # temporarily disabled: depends on broken pandas-stubs tests
+      markitdown
     ]))
 
     # # It is sometimes useful to fine-tune packages, for example, by applying

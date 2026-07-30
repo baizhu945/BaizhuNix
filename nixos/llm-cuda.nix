@@ -11,10 +11,6 @@
     ];
   };
 
-  nixpkgs.config = {
-    cudaSupport = true;
-  };
-
   systemd.services.ollama-create-gpu-models = {
     description = "Create GPU-limited Ollama models";
     wantedBy = [ "multi-user.target" ];

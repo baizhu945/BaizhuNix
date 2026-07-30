@@ -8,15 +8,6 @@ let
     config = config.nixpkgs.config;
   };
 
-  oldCudaTarball = fetchTarball "https://github.com/NixOS/nixpkgs/archive/ec84054698e3875e23d6057a10283eb9dfa41f1b.tar.gz";
-  oldCudaPkgs = import oldCudaTarball {
-    config = {
-      allowUnfree = true;
-      cudaSupport = true;
-      nvidia.acceptLicense = true;
-    };
-  };
-
   nix-alien-pkgs = import (
     builtins.fetchTarball "https://github.com/thiagokokada/nix-alien/tarball/master"
   ) { };
@@ -130,6 +121,10 @@ in
 
   nix.package = pkgs.lixPackageSets.latest.lix;
 
+
+  nixpkgs.config = {
+    cudaSupport = true;
+  };
   nix.settings = {
     auto-optimise-store = true;
     experimental-features = [ "nix-command" "flakes" ];
@@ -324,7 +319,6 @@ EOF
     plugins = with pkgs.obs-studio-plugins; [
       wlrobs
       waveform
-      # obs-backgroundremoval  # temporarily disabled: nixpkgs-unstable CUDA setup broken
       obs-pipewire-audio-capture
       obs-gstreamer
       obs-vkcapture
@@ -416,9 +410,10 @@ EOF
     nvidia.acceptLicense = true;
   };
 
-
-  programs.appimage.enable = true;
-  programs.appimage.binfmt = true;
+  programs.appimage = {
+    enable = true;
+    binfmt = true;
+  };
 
   programs.direnv = {
     enable = true;

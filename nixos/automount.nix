@@ -32,6 +32,20 @@
     after = [ "ntfsfix-win10-c.service" ];
   }];
 
+  fileSystems."/mnt/Windows/RECOVER_C" = {
+    device = "/dev/disk/by-uuid/88DEE415DEE3F978";
+    fsType = "ntfs3";
+    options = [
+      "rw"
+      "nofail"
+      "users"
+      "uid=1000"
+      "gid=1000"
+      "umask=0022"
+      "noauto"
+    ];
+  };
+
   fileSystems."/mnt/Windows/D" = {
     device = "/dev/disk/by-uuid/24C073F9C073CF92";
     fsType = "ntfs3";
@@ -46,7 +60,7 @@
     ];
   };
 
-  fileSystems."/mnt/Windows/RECOVER" = {
+  fileSystems."/mnt/Windows/RECOVER_D" = {
     device = "/dev/disk/by-uuid/000EA90D0EA8FCB2";
     fsType = "ntfs3";
     options = [
@@ -77,8 +91,11 @@
 
   services.udev.extraRules = ''
     ACTION=="add", SUBSYSTEM=="block", ENV{ID_FS_UUID}=="000EA90D0EA8FCB2", \
-    TAG+="systemd", ENV{SYSTEMD_WANTS}+="mnt-Windows-RECOVER.mount"
-    
+    TAG+="systemd", ENV{SYSTEMD_WANTS}+="mnt-Windows-RECOVER_D.mount"
+
+    ACTION=="add", SUBSYSTEM=="block", ENV{ID_FS_UUID}=="88DEE415DEE3F978", \
+    TAG+="systemd", ENV{SYSTEMD_WANTS}+="mnt-Windows-RECOVER_C.mount"
+
     ACTION=="add", SUBSYSTEM=="block", ENV{ID_FS_UUID}=="241F-8E2D", \
     TAG+="systemd", ENV{SYSTEMD_WANTS}+="mnt-Windows-EFI.mount"
 
