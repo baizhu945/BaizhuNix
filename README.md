@@ -111,7 +111,18 @@ app_secret = "xxx"
 以及运行 `cc-connect weixin setup` 扫码绑定微信。
 
 ## `Codex` 配置
-https://api-docs.deepseek.com/zh-cn/quick_start/agent_integrations/codex
+接入 `DeepSeek`： https://api-docs.deepseek.com/zh-cn/quick_start/agent_integrations/codex
+
+管理写入权限：在 `~/.codex/config.toml` 开头加上：
+```
+# 权限管理规则：codex 仅只读，任何写操作与命令执行均需用户批准
+sandbox_mode = "read-only"
+approval_policy = "on-request"
+```
+
+## `Reasonix` 配置
+
+将 `~/.reasonix/config.toml` 的 `bash = "enforce"` 改为 `bash = "off"` 以允许 Reasonix 运行命令。
 
 # 七、Trouble shooting
 ## Windows 时间错乱
