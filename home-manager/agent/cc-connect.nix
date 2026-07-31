@@ -13,13 +13,13 @@ let
     vendorHash = "sha256-FgiCP4XuFv1/VQjtZ/rr6Qb5F9BqmzX5ptegKlW5Cv8=";
     tags = [ "no_web" ];
     doCheck = false;
-    # patches = [
+    patches = [
       # Permission patch: enables cc-connect's OpenCode agent to handle
       # permission_asked NDJSON events and relay permission replies to
       # OpenCode's stdin, enabling permission verification cards on Telegram.
       # See: https://github.com/chenhg5/cc-connect/issues/1420
-      # ./cc-connect-permission.patch
-    # ];
+      ./cc-connect-permission.patch
+    ];
     overrideModAttrs = (_: {
       GOPROXY = "https://goproxy.cn,direct";
     });
