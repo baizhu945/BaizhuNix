@@ -63,7 +63,9 @@ http://tracker.bt4g.com:2095/announce
 udp://tracker.torrent.eu.org:451/announce
 ```
 
-# 六、`cc-connect` 配置
+# 六、AGENT 配置
+
+## `cc-connect` 配置
 在 `~/.cc-connect` 下放置如下 `config.toml` 文件
 ```
 # cc-connect configuration
@@ -82,10 +84,10 @@ tool_messages = true
 level = "debug"
 
 [[projects]]
-name = "opencode"
+name = "baizhu945"
 
 [projects.agent]
-type = "opencode"   # "claudecode", "codex", "cursor", "gemini", "qoder", "opencode", or "iflow"
+type = "codex"   # "claudecode", "codex", "cursor", "gemini", "qoder", "opencode", or "iflow"
 
 [projects.agent.options]
 work_dir = "/home/baizhu945"
@@ -107,6 +109,9 @@ app_secret = "xxx"
 ```
 
 以及运行 `cc-connect weixin setup` 扫码绑定微信。
+
+## `Codex` 配置
+https://api-docs.deepseek.com/zh-cn/quick_start/agent_integrations/codex
 
 # 七、Trouble shooting
 ## Windows 时间错乱
