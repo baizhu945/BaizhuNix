@@ -1,6 +1,22 @@
-{ config, lib, pkgs, ... }:
+{ config, pkgs, lib, ... }:
 
 let
+  opencodeTitleGenPlugin = let
+    src = pkgs.fetchurl {
+      url = "https://registry.npmjs.org/opencode-title-gen/-/opencode-title-gen-0.2.0.tgz";
+      hash = "sha256-n5Wv/Iy/z3dr8TewAfM1bkBH6B3Qhql1qQrzwckDJEU=";
+    };
+  in 
+    pkgs.runCommand "opencode-title-gen" {
+      buildInputs = [ pkgs.gnutar pkgs.gzip ];
+      LANG = "C.UTF-8";
+      LC_ALL = "C.UTF-8";
+    } ''
+      mkdir -p $out
+      tar -xzf ${src} -C $out --strip-components=1
+      cp $out/dist/bundle.js $out/opencode-title-gen.js
+    '';
+
   anbeime-skills-repo = builtins.fetchGit {
     url = "https://github.com/anbeime/skill.git";
     ref = "main";
@@ -25,15 +41,47 @@ let
     url = "https://github.com/matlab/simulink-agentic-toolkit.git";
     rev = "054063b01ae0bdd72e2382e9f1969a7b50b35b4d";
   };
-in
+
+  # Pinned nixpkgs revision where opencode is v1.18.4 — remove this
+  # once the upstream PR merges and we update the permission patch.
+  opencodeTarball = fetchTarball {
+    url = "https://github.com/NixOS/nixpkgs/archive/38a4887411571457d700c51c64a6e49ead2ed5ab.tar.gz";
+    sha256 = "0b9v6g6s42y05ixb4q0jjrwzbygwzl8xr8n2jc4mwykvij8gj7cj";
+  };
+  opencodePkgs = import opencodeTarball {
+    config = {
+      allowUnfree = true;
+      allowInsecure = true;
+    };
+    system = pkgs.stdenv.hostPlatform.system;
+  };
+in 
 {
-  programs.codex = {
+  imports = [
+    ../cc-connect.nix
+  ];
+
+  programs.opencode = {
     enable = true;
-    context = ./agent-context.md;
+
+    # Permission patch: enables OpenCode in --format json headless mode to
+    # emit permission_asked NDJSON events to stdout and accept replies via
+    # stdin, so cc-connect can relay permission verification cards to Telegram.
+    # See: https://github.com/chenhg5/cc-connect/issues/1420
+    #
+    # Pinned to v1.18.4 via opencodePkgs — remove the pin once upstream
+    # merges the fix and we update the patch.
+    package = opencodePkgs.opencode.overrideAttrs (old: {
+      patches = (old.patches or []) ++ [
+        ./opencode-permission.patch
+      ];
+    });
+
+    # 使用 extraPackages 使 nodejs 可用（如果插件需要）
+    extraPackages = with pkgs; [ nodejs ];
 
     skills = {
-      chrome-automation = ./skills/chrome-automation;
-      
+      chrome-automation = ../skills/chrome-automation;
       media-processor = "${anbeime-skills-repo}/skills/media-processor/media-processor";
 
       docx = "${anthropics-skills-repo}/skills/docx";
@@ -80,5 +128,70 @@ in
       testing-simulink-models = "${simulink-agentic-toolkit}/skills-catalog/model-based-design-core/testing-simulink-models";
       building-architecture-models = "${simulink-agentic-toolkit}/skills-catalog/model-based-system-engineering/building-architecture-models";
     };
+
+    settings = {
+      server = {
+        port = 4096;
+        hostname = "127.0.0.1";
+        mdns = false;
+      };
+
+      # 插件配置
+      plugin = [ 
+        "opencode-title-gen"
+        "superpowers"
+      ];
+
+      # 权限配置
+      permission = {
+        read = {
+          "*" = "allow";
+          "*.env" = "deny";
+          "*.env.*" = "deny";
+          "*.env.example" = "allow";
+          "*.key" = "deny";
+          "*.pem" = "deny";
+          "id_rsa*" = "deny";
+        };
+        edit = "ask";
+        glob = "allow";
+        grep = "allow";
+        bash = "ask";
+        task = "allow";
+        skill = "allow";
+        webfetch = "allow";
+        websearch = "allow";
+        question = "allow";
+        lsp = "allow";
+      };
+
+    };
+
+    # 上下文配置
+    context = ../agent-context.md;
+    
+    tui = {
+      theme = "system";
+    };
+
+    web = {
+      enable = true;
+      extraArgs = [ "--hostname" "127.0.0.1" "--port" "4096" ];
+    };
+  };
+
+  home.file = {
+    ".config/opencode/plugins/opencode-title-gen.js".source = "${opencodeTitleGenPlugin}/opencode-title-gen.js";
+    ".config/opencode/plugins/superpowers.js".source = "${superpowers-plugin}/.opencode/plugins/superpowers.js";
+    ".config/opencode/skills/superpowers".source = "${superpowers-plugin}/skills";
+
+    ".config/opencode/smart-title.jsonc".text = ''
+      {
+        "mode": "continuous",
+        "maxTurns": 5,
+        "maxCharsPerPart": 300,
+        "debounceMs": 1500
+      }
+    '';
   };
 }
