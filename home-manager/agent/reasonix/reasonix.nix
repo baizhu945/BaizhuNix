@@ -194,6 +194,35 @@ in
     reasonix-desktop
   ];
 
+  # bot 服务 .env:从用户主 .env 复制密钥,避免密钥进入 nix store
+  home.activation.reasonixBotEnv = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    if [ ! -f "$HOME/.reasonix-bot/.env" ]; then
+      $DRY_RUN_CMD install -m 600 "$HOME/.reasonix/.env" "$HOME/.reasonix-bot/.env"
+    fi
+  '';
+
+  # Reasonix bot 网关：飞书 websocket 长连接，登录后开机自启。
+  # 依赖 ~/.reasonix/.env 中的 FEISHU_BOT_APP_SECRET / REASONIX_BOT_CONTROL_TOKEN。
+  systemd.user.services.reasonix-bot = {
+    Unit = {
+      Description = "Reasonix bot gateway (Feishu websocket)";
+      After = [ "network-online.target" ];
+      Wants = [ "network-online.target" ];
+    };
+    Service = {
+      # REASONIX_HOME 指向独立配置目录,与桌面版隔离;
+      # bot 会话工作目录保持 /home/<yourusername>。
+      Environment = "REASONIX_HOME=%h/.reasonix-bot";
+      ExecStart =
+        "${reasonix}/bin/reasonix bot start --channels feishu --dir /home/<yourusername>/";
+      Restart = "always";
+      RestartSec = 5;
+    };
+    Install = {
+      WantedBy = [ "default.target" ];
+    };
+  };
+
   # 与 codex 使用相同的 context 和 skills：
   # - context：AGENTS.md 不能软链（reasonix 拒绝指向 ~/.reasonix 之外的符号链接，
   #   instruction.document_symlink_escape），必须在 activation 中复制为真实文件

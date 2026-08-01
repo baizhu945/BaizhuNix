@@ -35,7 +35,6 @@ in
     ./waybar/waybar.nix
     ./showmethekey/showmethekey.nix
     ./agent/opencode/opencode.nix
-    ./agent/codex/codex.nix
     ./agent/reasonix/reasonix.nix
     ./mouse-trail/mouse-trail.nix
     # ./noctalia-v5.nix
