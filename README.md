@@ -87,7 +87,7 @@ level = "debug"
 name = "baizhu945"
 
 [projects.agent]
-type = "codex"   # "claudecode", "codex", "cursor", "gemini", "qoder", "opencode", or "iflow"
+type = "codex"   # "claudecode", "codex", "cursor", "gemini", "qoder", "opencode", "reasonix" or "iflow"
 
 [projects.agent.options]
 work_dir = "/home/baizhu945"
@@ -110,21 +110,9 @@ app_secret = "xxx"
 
 以及运行 `cc-connect weixin setup` 扫码绑定微信。_但是微信每个消息的回复上限为 10 条_
 
-## `Codex` 配置
-接入 `DeepSeek`： https://api-docs.deepseek.com/zh-cn/quick_start/agent_integrations/codex
-
-管理写入权限：在 `~/.codex/config.toml` 开头加上：
-```
-# 权限管理规则：codex 仅只读，任何写操作与命令执行均需用户批准
-sandbox_mode = "read-only"
-approval_policy = "on-request"
-```
-
 ## `Reasonix` 配置
 
 将 `~/.reasonix/config.toml` 的 `bash = "enforce"` 改为 `bash = "off"` 以允许 Reasonix 运行命令。
-
-飞书扫码后将 `config.toml` 中的 `[bot.feishu].mode` 的 `webhook` 改为 `websocket`，在远程会话中将 `mode` 改为 `yolo`。 _图片等媒体消息还是只能够通过 `cc-connect` 发送_
 
 # 七、Trouble shooting
 ## Windows 时间错乱
