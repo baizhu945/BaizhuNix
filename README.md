@@ -124,6 +124,8 @@ approval_policy = "on-request"
 
 将 `~/.reasonix/config.toml` 的 `bash = "enforce"` 改为 `bash = "off"` 以允许 Reasonix 运行命令。
 
+飞书扫码后将 `config.toml` 中的 `[bot.feishu].mode` 的 `webhook` 改为 `websocket`，在远程会话中将 `mode` 改为 `yolo`。 _图片等媒体消息还是只能够通过 `cc-connect` 发送_
+
 # 七、Trouble shooting
 ## Windows 时间错乱
 参考 https://wiki.archlinux.org/title/System_time#UTC_in_Microsoft_Windows
