@@ -82,6 +82,7 @@ in
 
     skills = {
       chrome-automation = ../skills/chrome-automation;
+      cc-connect-cron = ../skills/cc-connect-cron;
       media-processor = "${anbeime-skills-repo}/skills/media-processor/media-processor";
 
       docx = "${anthropics-skills-repo}/skills/docx";

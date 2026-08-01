@@ -24,16 +24,19 @@ let
 
   # DeepSeek-Reasonix 无 nixpkgs 包，从 GitHub 源码构建。
   # 仓库默认分支 main-v2（Reasonix 1.0 Go 重写版），这里固定到最新 release 标签 v1.18.0。
+  # 注：v1.18.0 与 desktop-v1.18.0 指向同一 commit，CLI 与 desktop 共用此源码（desktop 是仓库内的嵌套 Go module）。
+  reasonix-src = pkgs.fetchFromGitHub {
+    owner = "esengine";
+    repo = "DeepSeek-Reasonix";
+    rev = "v1.18.0";
+    hash = "sha256-DlWO5/YJO5QIxKYqcqXiiwKy83V8knZ0fzGgY2zoJzw=";
+  };
+
   reasonix = pkgs.buildGoModule rec {
     pname = "reasonix";
     version = "1.18.0";
 
-    src = pkgs.fetchFromGitHub {
-      owner = "esengine";
-      repo = "DeepSeek-Reasonix";
-      rev = "v${version}";
-      hash = "sha256-DlWO5/YJO5QIxKYqcqXiiwKy83V8knZ0fzGgY2zoJzw=";
-    };
+    src = reasonix-src;
 
     vendorHash = "sha256-Byt7/DbSHZ+PJ8evWARRQHds/kyuydTyYH98pFwAxNY=";
 
@@ -69,10 +72,126 @@ let
       mainProgram = "reasonix";
     };
   };
+
+  # reasonix-desktop：Wails v2 桌面壳（嵌套 module reasonix/desktop，CGO + WebKitGTK）。
+  # 构建方式与 nixpkgs 的 gui-for-singbox 相同：
+  #   - frontend 用 pnpmConfigHook 单独构建出 dist（React+Vite，pnpm-lock.yaml lockfileVersion 9）
+  #   - Go 侧用 wails CLI（nixpkgs 2.12.0，与 go.mod 的 wails/v2 v2.12.0 匹配）build，
+  #     `-s` 跳过前端构建（dist 已复制），`-skipbindings` 跳过 wailsjs 生成
+  #     （bridge.ts 对缺失的 wailsjs 用 @ts-ignore + drift-check fallback，tsc 仍通过），
+  #     `-tags webkit2_41` 链接 WebKitGTK 4.1
+  reasonix-desktop-frontend = pkgs.stdenv.mkDerivation {
+    pname = "reasonix-desktop-frontend";
+    version = "1.18.0";
+
+    src = reasonix-src;
+
+    sourceRoot = "source/desktop/frontend";
+
+    nativeBuildInputs = [
+      pkgs.nodejs
+      pkgs.pnpmConfigHook
+      pkgs.pnpm_10
+    ];
+
+    pnpmDeps = pkgs.fetchPnpmDeps {
+      pname = "reasonix-desktop-frontend";
+      version = "1.18.0";
+      src = reasonix-src;
+      sourceRoot = "source/desktop/frontend";
+      pnpm = pkgs.pnpm_10;
+      fetcherVersion = 3;
+      hash = "sha256-leoj1tOwvIMX8C3y+KTcW6v+CXVlbm1M89Tikq8PkzQ=";
+    };
+
+    buildPhase = ''
+      runHook preBuild
+      pnpm run build
+      runHook postBuild
+    '';
+
+    installPhase = ''
+      runHook preInstall
+      cp -r dist $out
+      runHook postInstall
+    '';
+
+    meta = {
+      description = "Reasonix desktop frontend (React + Vite)";
+      homepage = "https://github.com/esengine/DeepSeek-Reasonix";
+      license = lib.licenses.mit;
+    };
+  };
+
+  reasonix-desktop = pkgs.buildGoModule {
+    pname = "reasonix-desktop";
+    version = "1.18.0";
+
+    src = reasonix-src;
+
+    # 嵌套 module 位于仓库 desktop/ 目录
+    modRoot = "desktop";
+
+    vendorHash = "sha256-S0rsPFIWZ5Oa8gtvJIMV7pNXdI2Lh/GbAgx+c8qbzyo=";
+
+    nativeBuildInputs = [
+      pkgs.pkg-config
+      pkgs.wails
+      pkgs.wrapGAppsHook3
+      pkgs.autoPatchelfHook
+    ];
+
+    buildInputs = [
+      pkgs.glib-networking
+      pkgs.webkitgtk_4_1
+    ];
+
+    # 国内网络使用 goproxy.cn 拉取 Go 模块依赖（与 CLI 相同做法）
+    overrideModAttrs = (_: {
+      GOPROXY = "https://goproxy.cn,direct";
+    });
+
+    preBuild = ''
+      cp -r ${reasonix-desktop-frontend} frontend/dist
+    '';
+
+    buildPhase = ''
+      runHook preBuild
+      HOME=$TMPDIR wails build -m -s -trimpath -skipbindings -devtools -tags webkit2_41 -o reasonix-desktop
+      runHook postBuild
+    '';
+
+    installPhase = ''
+      runHook preInstall
+      install -Dm0755 build/bin/reasonix-desktop "$out/bin/reasonix-desktop"
+      install -Dm0644 build/appicon.png "$out/share/icons/hicolor/256x256/apps/reasonix-desktop.png"
+      mkdir -p "$out/share/applications"
+      cat > "$out/share/applications/reasonix-desktop.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Reasonix Desktop
+Comment=Reasonix desktop — a Wails shell around the Go kernel
+Exec=reasonix-desktop
+Icon=reasonix-desktop
+Categories=Development;Utility;
+Terminal=false
+StartupWMClass=reasonix-desktop
+EOF
+      runHook postInstall
+    '';
+
+    meta = {
+      description = "Reasonix desktop — a Wails shell around the Reasonix Go kernel";
+      homepage = "https://github.com/esengine/DeepSeek-Reasonix";
+      license = lib.licenses.mit;
+      mainProgram = "reasonix-desktop";
+    };
+  };
 in
 {
   home.packages = [
     reasonix
+    reasonix-desktop
   ];
 
   # 与 codex 使用相同的 context 和 skills：
@@ -82,6 +201,7 @@ in
   home.file = {
     # 本地技能
     ".reasonix/skills/chrome-automation".source = ../skills/chrome-automation;
+    ".reasonix/skills/cc-connect-cron".source = ../skills/cc-connect-cron;
 
     # anbeime/skill
     ".reasonix/skills/media-processor".source = "${anbeime-skills-repo}/skills/media-processor/media-processor";
