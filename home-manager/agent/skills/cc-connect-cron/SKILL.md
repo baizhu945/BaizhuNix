@@ -9,6 +9,11 @@ description: Create and manage cc-connect scheduled tasks (cron jobs) from chat 
 
 把聊天消息中的自然语言定时需求转换为 cc-connect 定时任务：先向用户确认，得到同意后再执行 `cc-connect cron` 命令创建，最后汇报任务信息。
 
+## 辅助脚本与参考
+
+- `scripts/cc-cron.sh`：cron 子命令封装（自动校验守护进程、参数透传），用法见 `scripts/README.md`
+- `references/commands.md`：全部 cron 命令参数、频率→cron 对照表、聊天斜杠命令与排错
+
 ## 工作流程
 
 ### 1. 解析需求，先确认再创建

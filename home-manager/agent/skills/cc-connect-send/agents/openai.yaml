@@ -1,0 +1,4 @@
+interface:
+  display_name: "cc-connect 媒体发送"
+  short_description: "把截图/图片/文件/语音通过 cc-connect 发回当前聊天"
+  default_prompt: "使用 $cc-connect-send 把生成的附件发回聊天"

@@ -201,20 +201,22 @@ in
     fi
   '';
 
-  # Reasonix bot 网关：飞书 websocket 长连接，登录后开机自启。
-  # 依赖 ~/.reasonix/.env 中的 FEISHU_BOT_APP_SECRET / REASONIX_BOT_CONTROL_TOKEN。
-  systemd.user.services.reasonix-bot = {
+  # Reasonix serve：HTTP/SSE 后端，供 cc-connect 的 reasonix agent 接入
+  # (cc-connect 负责飞书等 IM 平台 + 权限卡片，reasonix serve 只做执行)。
+  # 依赖 ~/.reasonix-bot/.env 中的 DEEPSEEK_API_KEY；
+  # config.toml 需要 [permissions] mode = "ask" 与 [sandbox] bash = "off"。
+  systemd.user.services.reasonix-serve = {
     Unit = {
-      Description = "Reasonix bot gateway (Feishu websocket)";
+      Description = "Reasonix serve (HTTP/SSE agent backend for cc-connect)";
       After = [ "network-online.target" ];
       Wants = [ "network-online.target" ];
     };
     Service = {
       # REASONIX_HOME 指向独立配置目录,与桌面版隔离;
-      # bot 会话工作目录保持 /home/<yourusername>。
+      # 仅绑定本机回环,cc-connect 的 reasonix agent 无需认证直接接入。
       Environment = "REASONIX_HOME=%h/.reasonix-bot";
       ExecStart =
-        "${reasonix}/bin/reasonix bot start --channels feishu --dir /home/<yourusername>/";
+        "${reasonix}/bin/reasonix serve --addr 127.0.0.1:8787 --auth none";
       Restart = "always";
       RestartSec = 5;
     };
@@ -231,6 +233,7 @@ in
     # 本地技能
     ".reasonix/skills/chrome-automation".source = ../skills/chrome-automation;
     ".reasonix/skills/cc-connect-cron".source = ../skills/cc-connect-cron;
+    ".reasonix/skills/cc-connect-send".source = ../skills/cc-connect-send;
 
     # anbeime/skill
     ".reasonix/skills/media-processor".source = "${anbeime-skills-repo}/skills/media-processor/media-processor";
@@ -281,11 +284,64 @@ in
     ".reasonix/skills/specifying-plant-models".source = "${simulink-agentic-toolkit}/skills-catalog/model-based-design-core/specifying-plant-models";
     ".reasonix/skills/testing-simulink-models".source = "${simulink-agentic-toolkit}/skills-catalog/model-based-design-core/testing-simulink-models";
     ".reasonix/skills/building-architecture-models".source = "${simulink-agentic-toolkit}/skills-catalog/model-based-system-engineering/building-architecture-models";
+
+    # serve 的独立 REASONIX_HOME(~/.reasonix-bot)需要同样的 skills:
+    # cc-connect 的 reasonix agent 经 serve 会话加载 skills,serve 的 skills 根
+    # 是 ~/.reasonix-bot/skills(非主 ~/.reasonix/skills),否则会话只剩内置 8 个。
+    ".reasonix-bot/skills/chrome-automation".source = ../skills/chrome-automation;
+    ".reasonix-bot/skills/cc-connect-cron".source = ../skills/cc-connect-cron;
+    ".reasonix-bot/skills/cc-connect-send".source = ../skills/cc-connect-send;
+    ".reasonix-bot/skills/media-processor".source = "${anbeime-skills-repo}/skills/media-processor/media-processor";
+    ".reasonix-bot/skills/docx".source = "${anthropics-skills-repo}/skills/docx";
+    ".reasonix-bot/skills/pptx".source = "${anthropics-skills-repo}/skills/pptx";
+    ".reasonix-bot/skills/xlsx".source = "${anthropics-skills-repo}/skills/xlsx";
+    ".reasonix-bot/skills/pdf".source = "${anthropics-skills-repo}/skills/pdf";
+    ".reasonix-bot/skills/canvas-design".source = "${anthropics-skills-repo}/skills/canvas-design";
+    ".reasonix-bot/skills/using-agent-skills".source = "${agent-skills-repo}/skills/using-agent-skills";
+    ".reasonix-bot/skills/api-and-interface-design".source = "${agent-skills-repo}/skills/api-and-interface-design";
+    ".reasonix-bot/skills/browser-testing-with-devtools".source = "${agent-skills-repo}/skills/browser-testing-with-devtools";
+    ".reasonix-bot/skills/ci-cd-and-automation".source = "${agent-skills-repo}/skills/ci-cd-and-automation";
+    ".reasonix-bot/skills/code-review-and-quality".source = "${agent-skills-repo}/skills/code-review-and-quality";
+    ".reasonix-bot/skills/code-simplification".source = "${agent-skills-repo}/skills/code-simplification";
+    ".reasonix-bot/skills/context-engineering".source = "${agent-skills-repo}/skills/context-engineering";
+    ".reasonix-bot/skills/debugging-and-error-recovery".source = "${agent-skills-repo}/skills/debugging-and-error-recovery";
+    ".reasonix-bot/skills/deprecation-and-migration".source = "${agent-skills-repo}/skills/deprecation-and-migration";
+    ".reasonix-bot/skills/documentation-and-adrs".source = "${agent-skills-repo}/skills/documentation-and-adrs";
+    ".reasonix-bot/skills/doubt-driven-development".source = "${agent-skills-repo}/skills/doubt-driven-development";
+    ".reasonix-bot/skills/frontend-ui-engineering".source = "${agent-skills-repo}/skills/frontend-ui-engineering";
+    ".reasonix-bot/skills/git-workflow-and-versioning".source = "${agent-skills-repo}/skills/git-workflow-and-versioning";
+    ".reasonix-bot/skills/idea-refine".source = "${agent-skills-repo}/skills/idea-refine";
+    ".reasonix-bot/skills/incremental-implementation".source = "${agent-skills-repo}/skills/incremental-implementation";
+    ".reasonix-bot/skills/interview-me".source = "${agent-skills-repo}/skills/interview-me";
+    ".reasonix-bot/skills/observability-and-instrumentation".source = "${agent-skills-repo}/skills/observability-and-instrumentation";
+    ".reasonix-bot/skills/performance-optimization".source = "${agent-skills-repo}/skills/performance-optimization";
+    ".reasonix-bot/skills/planning-and-task-breakdown".source = "${agent-skills-repo}/skills/planning-and-task-breakdown";
+    ".reasonix-bot/skills/security-and-hardening".source = "${agent-skills-repo}/skills/security-and-hardening";
+    ".reasonix-bot/skills/shipping-and-launch".source = "${agent-skills-repo}/skills/shipping-and-launch";
+    ".reasonix-bot/skills/source-driven-development".source = "${agent-skills-repo}/skills/source-driven-development";
+    ".reasonix-bot/skills/spec-driven-development".source = "${agent-skills-repo}/skills/spec-driven-development";
+    ".reasonix-bot/skills/test-driven-development".source = "${agent-skills-repo}/skills/test-driven-development";
+    ".reasonix-bot/skills/building-simulink-models".source = "${simulink-agentic-toolkit}/skills-catalog/model-based-design-core/building-simulink-models";
+    ".reasonix-bot/skills/configuring-block-policy".source = "${simulink-agentic-toolkit}/skills-catalog/model-based-design-core/configuring-block-policy";
+    ".reasonix-bot/skills/curating-library-kg".source = "${simulink-agentic-toolkit}/skills-catalog/model-based-design-core/curating-library-kg";
+    ".reasonix-bot/skills/filing-bug-reports".source = "${simulink-agentic-toolkit}/skills-catalog/model-based-design-core/filing-bug-reports";
+    ".reasonix-bot/skills/generate-requirement-drafts".source = "${simulink-agentic-toolkit}/skills-catalog/model-based-design-core/generate-requirement-drafts";
+    ".reasonix-bot/skills/managing-simulink-projects".source = "${simulink-agentic-toolkit}/skills-catalog/model-based-design-core/managing-simulink-projects";
+    ".reasonix-bot/skills/setup-custom-libraries".source = "${simulink-agentic-toolkit}/skills-catalog/model-based-design-core/setup-custom-libraries";
+    ".reasonix-bot/skills/simulating-simulink-models".source = "${simulink-agentic-toolkit}/skills-catalog/model-based-design-core/simulating-simulink-models";
+    ".reasonix-bot/skills/specifying-mbd-algorithms".source = "${simulink-agentic-toolkit}/skills-catalog/model-based-design-core/specifying-mbd-algorithms";
+    ".reasonix-bot/skills/specifying-plant-models".source = "${simulink-agentic-toolkit}/skills-catalog/model-based-design-core/specifying-plant-models";
+    ".reasonix-bot/skills/testing-simulink-models".source = "${simulink-agentic-toolkit}/skills-catalog/model-based-design-core/testing-simulink-models";
+    ".reasonix-bot/skills/building-architecture-models".source = "${simulink-agentic-toolkit}/skills-catalog/model-based-system-engineering/building-architecture-models";
   };
 
   # context：把 agent-context.md 复制为 ~/.reasonix/AGENTS.md（真实文件，每次 switch 刷新）
+  # 同时复制到 ~/.reasonix-bot/AGENTS.md：reasonix serve 以 REASONIX_HOME=~/.reasonix-bot
+  # 运行，cc-connect 的 reasonix agent 依赖 serve 的 context 了解 skills/cc-connect 用法。
   home.activation.reasonixContext = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     $DRY_RUN_CMD mkdir -p "$HOME/.reasonix"
     $DRY_RUN_CMD install -m 600 ${../agent-context.md} "$HOME/.reasonix/AGENTS.md"
+    $DRY_RUN_CMD mkdir -p "$HOME/.reasonix-bot"
+    $DRY_RUN_CMD install -m 600 ${../agent-context.md} "$HOME/.reasonix-bot/AGENTS.md"
   '';
 }

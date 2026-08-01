@@ -1,25 +1,21 @@
 { config, pkgs, lib, ... }:
 
 let
+  # 用户 fork:在 upstream main 基础上包含 reasonix agent (#1281) +
+  # opencode permission bridge(71cd028/b9673a5)。旧 v1.4.1 无 reasonix agent。
+  # commit b9673a5 与 fork 的 feat/opencode-permission-bridge 分支 HEAD 一致。
   cc-connect = pkgs.buildGoModule rec {
     pname = "cc-connect";
-    version = "1.4.1";
+    version = "1.5.0-fork";
     src = pkgs.fetchFromGitHub {
-      owner = "chenhg5";
+      owner = "<yourusername>";
       repo = "cc-connect";
-      rev = "v${version}";
-      hash = "sha256-Spm1OB0z7+E0JvWOtBAtUrRHiEc+aPjBYVHy0zc7ww4=";
+      rev = "78672ecd76f451e4a4bddc440c63529fe6287d1b";
+      hash = "sha256-TM3ePdze98cwtoaD5eUu9E+h+bLvzCG5ZawfGxgNCu4=";
     };
-    vendorHash = "sha256-FgiCP4XuFv1/VQjtZ/rr6Qb5F9BqmzX5ptegKlW5Cv8=";
+    vendorHash = "sha256-j5o5fhhPNw8VY7mhDkNzdzulowaqH5Yghpkk5Ap4RUQ=";
     tags = [ "no_web" ];
     doCheck = false;
-    patches = [
-      # Permission patch: enables cc-connect's OpenCode agent to handle
-      # permission_asked NDJSON events and relay permission replies to
-      # OpenCode's stdin, enabling permission verification cards on Telegram.
-      # See: https://github.com/chenhg5/cc-connect/issues/1420
-      ./cc-connect-permission.patch
-    ];
     overrideModAttrs = (_: {
       GOPROXY = "https://goproxy.cn,direct";
     });
