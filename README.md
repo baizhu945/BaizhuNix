@@ -108,7 +108,7 @@ app_id = "xxx"
 app_secret = "xxx"
 ```
 
-以及运行 `cc-connect weixin setup` 扫码绑定微信。
+以及运行 `cc-connect weixin setup` 扫码绑定微信。_但是微信每个消息的回复上限为 10 条_
 
 ## `Codex` 配置
 接入 `DeepSeek`： https://api-docs.deepseek.com/zh-cn/quick_start/agent_integrations/codex
