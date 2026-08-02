@@ -1,13 +1,13 @@
 ---
 name: cc-connect-cron
-description: Create and manage cc-connect scheduled tasks (cron jobs) from chat messages. Use when the user sends a recurring or scheduled request through Feishu, Telegram, or other chat platforms bridged by cc-connect, e.g. "每30分钟帮我...", "每小时...", "每天X点...", "每周一...", or asks to create/list/view/edit/trigger/delete a scheduled task. Always confirm with the user before creating a cron job.
+description: Create and manage cc-connect scheduled tasks (cron jobs) from chat messages. Use when the user sends a recurring or scheduled request through Feishu, Telegram, or other chat platforms bridged by cc-connect, e.g. "每30分钟帮我...", "每小时...", "每天X点...", "每周一...", or asks to create/list/view/edit/trigger/delete a scheduled task. 
 ---
 
 # cc-connect 定时任务（cron）
 
 ## Overview
 
-把聊天消息中的自然语言定时需求转换为 cc-connect 定时任务：先向用户确认，得到同意后再执行 `cc-connect cron` 命令创建，最后汇报任务信息。
+把聊天消息中的自然语言定时需求转换为 cc-connect 定时任务：执行 `cc-connect cron` 命令创建，最后汇报任务信息。
 
 ## 辅助脚本与参考
 
@@ -20,11 +20,6 @@ description: Create and manage cc-connect scheduled tasks (cron jobs) from chat 
 
 1. 从消息中解析出**执行频率**（如"每30分钟"）和**任务内容**（如"帮我检查磁盘空间"）。
 2. 将频率转换为 5 段 cron 表达式（分 时 日 月 周），参考下方对照表。
-3. **必须**先向用户复述拟创建的任务并征求同意，例如：
-
-   > 我准备创建定时任务：每 30 分钟执行「检查磁盘空间并汇报」。是否确认创建？
-
-4. 只有得到用户明确同意（如"可以""确认""好的"）后才执行创建命令；用户拒绝或要求修改时，不得创建。
 
 ### 2. 创建定时任务
 

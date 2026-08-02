@@ -506,6 +506,7 @@ EOF
   
     pkgs.unar pkgs.rar pkgs.unzip pkgs.unrar pkgs.p7zip
 
+    pkgs.go
     pkgs.ungoogled-chromium
     stablePkgs.blender
     pkgs.testdisk
@@ -554,7 +555,7 @@ EOF
     pkgs.wl-clipboard
     pkgs.harfbuzz
     pkgs.mpv-unwrapped
-    pkgs.app2unit
+    stablePkgs.app2unit
     pkgs.xwayland-satellite
     pkgs.alsa-utils
     pkgs.quickshell

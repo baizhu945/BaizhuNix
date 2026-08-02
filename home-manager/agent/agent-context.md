@@ -79,6 +79,7 @@ script/               # niri-config.kdl, fastfetch-config.jsonc, battery-monitor
 3. **Prefer declarative config** — check if home-manager `home.file` can manage a file under `~/.config/` before editing it directly
 4. **Reproducibility** — all `fetchTarball`/`fetchFromGitHub`/`fetchurl` must pin a fixed hash; git refs must use `rev` not branches; fill hash by empty-first then confirm
 5. **Use `remove-without-permission` instead of `rm`** — the pre-installed rm wrapper (functionally identical)
+6. **No flake** - only use traditional nix configs
 
 ## Search Resources
 

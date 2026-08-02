@@ -71,7 +71,7 @@ in
     #
     # Pinned to v1.18.4 via opencodePkgs — remove the pin once upstream
     # merges the fix and we update the patch.
-    package = opencodePkgs.opencode.overrideAttrs (old: {
+    package = pkgs.opencode.overrideAttrs (old: {
       patches = (old.patches or []) ++ [
         ./opencode-permission.patch
       ];
@@ -84,6 +84,7 @@ in
       chrome-automation = ../skills/chrome-automation;
       cc-connect-cron = ../skills/cc-connect-cron;
       cc-connect-send = ../skills/cc-connect-send;
+      
       media-processor = "${anbeime-skills-repo}/skills/media-processor/media-processor";
 
       docx = "${anthropics-skills-repo}/skills/docx";
@@ -94,8 +95,6 @@ in
 
       using-agent-skills = "${agent-skills-repo}/skills/using-agent-skills";
       api-and-interface-design = "${agent-skills-repo}/skills/api-and-interface-design";
-      browser-testing-with-devtools = "${agent-skills-repo}/skills/browser-testing-with-devtools";
-      ci-cd-and-automation = "${agent-skills-repo}/skills/ci-cd-and-automation";
       code-review-and-quality = "${agent-skills-repo}/skills/code-review-and-quality";
       code-simplification = "${agent-skills-repo}/skills/code-simplification";
       context-engineering = "${agent-skills-repo}/skills/context-engineering";

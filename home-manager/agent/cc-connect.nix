@@ -10,8 +10,8 @@ let
     src = pkgs.fetchFromGitHub {
       owner = "<yourusername>";
       repo = "cc-connect";
-      rev = "78672ecd76f451e4a4bddc440c63529fe6287d1b";
-      hash = "sha256-TM3ePdze98cwtoaD5eUu9E+h+bLvzCG5ZawfGxgNCu4=";
+      rev = "0728e4e594acdf62aa9e7001c002398cc5476965";
+      hash = "sha256-xLNPfbYprpPU5BhSoyyS0HIzyAKOQGWRzBZ2aFiCs9U=";
     };
     vendorHash = "sha256-j5o5fhhPNw8VY7mhDkNzdzulowaqH5Yghpkk5Ap4RUQ=";
     tags = [ "no_web" ];

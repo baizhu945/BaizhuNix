@@ -248,8 +248,6 @@ in
     # addyosmani/agent-skills
     ".reasonix/skills/using-agent-skills".source = "${agent-skills-repo}/skills/using-agent-skills";
     ".reasonix/skills/api-and-interface-design".source = "${agent-skills-repo}/skills/api-and-interface-design";
-    ".reasonix/skills/browser-testing-with-devtools".source = "${agent-skills-repo}/skills/browser-testing-with-devtools";
-    ".reasonix/skills/ci-cd-and-automation".source = "${agent-skills-repo}/skills/ci-cd-and-automation";
     ".reasonix/skills/code-review-and-quality".source = "${agent-skills-repo}/skills/code-review-and-quality";
     ".reasonix/skills/code-simplification".source = "${agent-skills-repo}/skills/code-simplification";
     ".reasonix/skills/context-engineering".source = "${agent-skills-repo}/skills/context-engineering";
