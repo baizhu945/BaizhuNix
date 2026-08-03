@@ -46,8 +46,8 @@ zsh.nix · rm-protection/ · grub-theme.nix
 ### Home-Manager (`~/.config/home-manager/`) — user-level
 ```
 home.nix              # Main entry + packages, scripts (mount-win, deepseek-ocr, nix-update)
-agent/                # opencode.nix (web UI :4096) · reasonix.nix (serve :8787) · cc-connect.nix
-                      # agent-context.md (this file) · skills/ (cc-connect-cron, chrome-automation)
+agent/                # pi/pi.nix · cc-connect.nix
+                      # agent-context.md (this file) · skills/
 ghostty/              # Bright Lights theme, cursor_tail shader
 waybar/ · lyrics/     # Top bar with NetEase lyrics module
 yazi.nix · unar/ · tts/ · latex-ocr.nix · showmethekey/
