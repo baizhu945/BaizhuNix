@@ -19,6 +19,11 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 const READ_ONLY_TOOLS = new Set(["read", "grep", "ls", "find"]);
 const MUTATING_TOOLS = new Set(["write", "edit"]);
+// 安全工具（调度/状态类）：自身不直接改动文件或执行命令，副作用受到二次把关：
+// - subagent 工具 spawn 的 explore 子代理只有只读工具；general 子代理的
+//   write/edit/bash 在无 UI 时同样会被这里拦截。
+// - todo 工具只维护会话内任务列表（session entries），不碰文件系统。
+const SAFE_TOOLS = new Set(["subagent", "todo"]);
 
 export default function (pi: ExtensionAPI) {
   // "Always allow" 状态：仅对当前对话生效
@@ -39,6 +44,11 @@ export default function (pi: ExtensionAPI) {
     }
 
     if (READ_ONLY_TOOLS.has(toolName)) {
+      return undefined;
+    }
+
+    // 安全工具放行（subagent 调度、todo 状态管理等），副作用仍受本 gate 约束
+    if (SAFE_TOOLS.has(toolName)) {
       return undefined;
     }
 
