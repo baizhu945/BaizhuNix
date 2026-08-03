@@ -568,7 +568,7 @@ binds {
     Mod+Alt+H hotkey-overlay-title="Hide Showmethekey" { spawn-sh "showmethekey-toggle"; }
     Mod+M hotkey-overlay-title="Toggle mouse trail" { spawn-sh "mouse-trail-toggle"; }
     Mod+L hotkey-overlay-title="Toggle the lyrics" { spawn-sh "lyrics-toggle"; }
-    Mod+A hotkey-overlay-title="Open OpenCode" { spawn-sh "ghostty -e opencode"; }
+    Mod+A hotkey-overlay-title="Open coding agent" { spawn-sh "ghostty -e pi"; }
     Mod+Ctrl+W hotkey-overlay-title="全屏涂鸦" { spawn-sh "chameleos --stroke-width 4 & noctalia-shell ipc call toast send '{\"title\":\"进入涂鸦模式\"}' & sleep 0.1 && chamel toggle"; }
     Mod+Shift+W hotkey-overlay-title="区域涂鸦" { spawn-sh "noctalia-shell ipc call plugin:screen-toolkit annotate"; }
     Mod+Ctrl+E { spawn-sh "chamel exit && noctalia-shell ipc call toast send '{\"title\":\"退出涂鸦模式\"}'"; }

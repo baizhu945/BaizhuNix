@@ -34,8 +34,7 @@ in
     ./unar/unar.nix
     ./waybar/waybar.nix
     ./showmethekey/showmethekey.nix
-    ./agent/opencode/opencode.nix
-    ./agent/reasonix/reasonix.nix
+    ./agent/pi/pi.nix
     ./mouse-trail/mouse-trail.nix
     # ./noctalia-v5.nix
     # ./caelestia.nix
