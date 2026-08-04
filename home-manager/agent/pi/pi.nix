@@ -14,6 +14,7 @@
 
   imports = [
     ./skills.nix
+    ../cc-connect.nix
   ];
 
   programs.pi-coding-agent = {

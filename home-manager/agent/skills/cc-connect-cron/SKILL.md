@@ -74,6 +74,22 @@ cc-connect cron del <job-id>                 # 删除任务
 
 其他频率按 cron 语法（分 时 日 月 周）转换；转换结果不确定时，把拟用的表达式连同任务一起发给用户确认。
 
+## Avoiding Cron Collisions Between Jobs
+
+**Problem:** When two or more scheduled jobs share trigger minutes, they fire simultaneously and interfere with each other — shared temp files get overwritten, and one job's run can be clobbered or fail because of the other.
+
+Real example: a Chrome download monitor on `*/30 * * * *` (fires at :00 and :30) plus a screenshot task on `*/15 * * * *` (fires at :00, :15, :30, :45) both fired at :00 and :30, causing one task to overwrite the other.
+
+**Solution — stagger the trigger minutes:**
+
+1. Always run `cc-connect cron list` first and note the existing jobs' trigger minutes before creating a new one.
+2. Offset a new job's minutes so they never coincide with an existing job. For "every 15 minutes starting at :20", use an explicit minute list:
+   `5,20,35,50 * * * *` → fires at :05, :20, :35, :50 (never collides with :00/:30).
+3. De-collide an existing job by editing its schedule:
+   `cc-connect cron edit <job-id> cron_expr "5,20,35,50 * * * *"`
+
+**Cron syntax gotcha:** `20-59/15 * * * *` only matches minutes 20–59 of each hour, so between :50 of hour N and :20 of hour N+1 there is a 30-minute gap (the :05 run is skipped) — the interval is no longer every 15 minutes. To keep a true "every 15 minutes starting at :20" schedule across hour boundaries, always use an explicit minute list (`5,20,35,50 * * * *`), never a range step.
+
 ## 注意事项
 
 - `cc-connect cron` 依赖本机正在运行的 cc-connect 守护进程（Unix socket：`~/.cc-connect/run/api.sock`）。命令报连接失败时，提示用户检查 systemd 用户服务：`systemctl --user status cc-connect`。
