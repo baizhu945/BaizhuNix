@@ -7,7 +7,7 @@
   nixpkgs.overlays = [
     (final: prev: {
       pi-coding-agent = prev.pi-coding-agent.overrideAttrs (old: {
-        patches = (old.patches or [ ]) ++ [ ./cost-cny.patch ];
+        patches = (old.patches or [ ]) ++ [ ./patches/cost-cny.patch ./patches/sidebar-layout.patch ];
       });
     })
   ];
@@ -53,6 +53,9 @@
 
     # ---- 实时汇率扩展：为打补丁的 footer 提供实时 USD→CNY 汇率 ----
     ".pi/agent/extensions/currency-rate.ts".source = ./extensions/currency-rate.ts;
+
+    # ---- 右侧侧边栏：footer 信息 + todo 列表（宽屏显示，窄屏自动回退到底部）----
+    ".pi/agent/extensions/sidebar.ts".source = ./extensions/sidebar.ts;
 
     # agents 定义在 ~/.pi/agent/agents/ 下（见下方），工具描述已在 index.ts 中改写为中文说明
     ".pi/agent/extensions/subagent/index.ts".source = ./extensions/subagent/index.ts;
