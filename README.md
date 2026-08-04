@@ -85,14 +85,15 @@ level = "debug"
 
 [[projects]]
 name = "baizhu945"
+admin_from = "xxx" # 通过飞书发 /whoami 获取的 USER_ID
 
 [projects.agent]
-type = "codex"   # "claudecode", "codex", "cursor", "gemini", "qoder", "opencode", "reasonix" or "iflow"
+type = "pi"   # "claudecode", "codex", "cursor", "gemini", "qoder", "opencode", "reasonix" or "iflow"
 
 [projects.agent.options]
 work_dir = "/home/baizhu945"
 mode = "default"
-# model = "claude-sonnet-4-20250514"
+rpc = true
 
 # --- Choose at least one platform below ---
 

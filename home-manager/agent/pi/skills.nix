@@ -45,24 +45,16 @@ in
 
     # ---- addyosmani/agent-skills ----
     ".pi/agent/skills/using-agent-skills".source = "${agent-skills-repo}/skills/using-agent-skills";
-    ".pi/agent/skills/api-and-interface-design".source = "${agent-skills-repo}/skills/api-and-interface-design";
     ".pi/agent/skills/code-review-and-quality".source = "${agent-skills-repo}/skills/code-review-and-quality";
     ".pi/agent/skills/code-simplification".source = "${agent-skills-repo}/skills/code-simplification";
     ".pi/agent/skills/context-engineering".source = "${agent-skills-repo}/skills/context-engineering";
     ".pi/agent/skills/debugging-and-error-recovery".source = "${agent-skills-repo}/skills/debugging-and-error-recovery";
-    ".pi/agent/skills/deprecation-and-migration".source = "${agent-skills-repo}/skills/deprecation-and-migration";
     ".pi/agent/skills/documentation-and-adrs".source = "${agent-skills-repo}/skills/documentation-and-adrs";
     ".pi/agent/skills/doubt-driven-development".source = "${agent-skills-repo}/skills/doubt-driven-development";
     ".pi/agent/skills/frontend-ui-engineering".source = "${agent-skills-repo}/skills/frontend-ui-engineering";
     ".pi/agent/skills/git-workflow-and-versioning".source = "${agent-skills-repo}/skills/git-workflow-and-versioning";
     ".pi/agent/skills/idea-refine".source = "${agent-skills-repo}/skills/idea-refine";
-    ".pi/agent/skills/incremental-implementation".source = "${agent-skills-repo}/skills/incremental-implementation";
-    ".pi/agent/skills/interview-me".source = "${agent-skills-repo}/skills/interview-me";
-    ".pi/agent/skills/observability-and-instrumentation".source = "${agent-skills-repo}/skills/observability-and-instrumentation";
     ".pi/agent/skills/performance-optimization".source = "${agent-skills-repo}/skills/performance-optimization";
-    ".pi/agent/skills/planning-and-task-breakdown".source = "${agent-skills-repo}/skills/planning-and-task-breakdown";
-    ".pi/agent/skills/security-and-hardening".source = "${agent-skills-repo}/skills/security-and-hardening";
-    ".pi/agent/skills/shipping-and-launch".source = "${agent-skills-repo}/skills/shipping-and-launch";
     ".pi/agent/skills/source-driven-development".source = "${agent-skills-repo}/skills/source-driven-development";
     ".pi/agent/skills/spec-driven-development".source = "${agent-skills-repo}/skills/spec-driven-development";
     ".pi/agent/skills/test-driven-development".source = "${agent-skills-repo}/skills/test-driven-development";
