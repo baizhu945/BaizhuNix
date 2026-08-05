@@ -506,6 +506,7 @@ EOF
   
     pkgs.unar pkgs.rar pkgs.unzip pkgs.unrar pkgs.p7zip
 
+    pkgs.file
     pkgs.go
     pkgs.ungoogled-chromium
     stablePkgs.blender
