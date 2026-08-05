@@ -35,14 +35,14 @@ in
       ./automount.nix
       ./rm-protection/rm-protection.nix
       # ./ros2.nix
-      ./g14-kernel.nix
+      # ./g14-kernel.nix
     ];
 
   _module.args.stablePkgs = stablePkgs; # 将 stablePkgs 传递给其他文件
  
   swapDevices = [{
     device = "/var/lib/swapfile";
-    size = 32*1024; # 16 GiB
+    size = 32*1024;
     priority = 1;
   }];
 
@@ -62,7 +62,7 @@ in
   };
 
   # boot.kernelPackages = pkgs.linuxPackages_latest; 
-  # boot.kernelPackages = pkgs.linuxPackages_zen;
+  boot.kernelPackages = pkgs.linuxPackages_zen;
 
   hardware.cpu.intel.updateMicrocode = true;
 

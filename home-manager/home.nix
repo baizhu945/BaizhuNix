@@ -26,7 +26,7 @@ let
 in
 {
   imports = [
-    ./tts/tts.nix
+    ./tts/tts-qwen.nix
     ./ghostty/ghostty.nix
     ./lyrics/lyrics.nix
     ./theme/theme.nix
