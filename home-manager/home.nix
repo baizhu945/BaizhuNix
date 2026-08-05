@@ -39,6 +39,7 @@ in
     # ./noctalia-v5.nix
     # ./caelestia.nix
     ./latex-ocr.nix
+    ./shell-services.nix
   ];
 
   # Home Manager needs a bit of information about you and the paths it should

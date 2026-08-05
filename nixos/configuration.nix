@@ -35,7 +35,7 @@ in
       ./automount.nix
       ./rm-protection/rm-protection.nix
       # ./ros2.nix
-      # ./g14-kernel.nix
+      ./g14-kernel.nix
     ];
 
   _module.args.stablePkgs = stablePkgs; # 将 stablePkgs 传递给其他文件
@@ -62,7 +62,7 @@ in
   };
 
   # boot.kernelPackages = pkgs.linuxPackages_latest; 
-  boot.kernelPackages = pkgs.linuxPackages_zen;
+  # boot.kernelPackages = pkgs.linuxPackages_zen;
 
   hardware.cpu.intel.updateMicrocode = true;
 
@@ -280,7 +280,7 @@ EOF
 
   programs.kdeconnect.enable = true;
 
-  services.displayManager.defaultSession = lib.mkForce "niri";
+  services.displayManager.defaultSession = lib.mkForce "niri"; # Fix defaultSession ERROR BUG
   programs.niri = {
     enable = true;
     package = let
@@ -345,8 +345,8 @@ EOF
       extraPortals = with pkgs; [
         xdg-desktop-portal-wlr
         xdg-desktop-portal-gtk
-        xdg-desktop-portal-gnome
-        kdePackages.xdg-desktop-portal-kde
+        # xdg-desktop-portal-gnome
+        # kdePackages.xdg-desktop-portal-kde
       ];
     };
   };
@@ -605,6 +605,9 @@ EOF
   services.asusd.enable = true;
   services.supergfxd.enable = true;
   services.power-profiles-daemon.enable = true;
+  # ppd 默认仅 D-Bus 懒激活（Type=dbus），开机早期激活超时(>25s)导致 noctalia/dms 启动时
+  # PowerProfiles 初始化失败、插件异常；改为开机自启，保证 shell 启动时它已就绪
+  systemd.services.power-profiles-daemon.wantedBy = [ "multi-user.target" ];
 
   networking.firewall.enable = false;
 
