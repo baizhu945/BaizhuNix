@@ -66,6 +66,7 @@
     # ---- subagent agents：OpenCode general/explore subagent 的 Pi 移植 ----
     ".pi/agent/agents/general.md".source = ./agents/general.md;
     ".pi/agent/agents/explore.md".source = ./agents/explore.md;
+    ".pi/agent/agents/vision.md".source = ./agents/vision.md;
 
     # ---- 快捷键：思维链折叠/展开（alt+t 为未占用的新键，ctrl+t 为内置默认）----
     ".pi/agent/keybindings.json".source = ./keybindings.json;
