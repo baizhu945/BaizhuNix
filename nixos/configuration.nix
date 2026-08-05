@@ -280,6 +280,7 @@ EOF
 
   programs.kdeconnect.enable = true;
 
+  services.displayManager.defaultSession = lib.mkForce "niri";
   programs.niri = {
     enable = true;
     package = let
