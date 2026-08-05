@@ -22,7 +22,7 @@
 
 import type { AssistantMessage } from "@earendil-works/pi-ai";
 import { VERSION, type ExtensionAPI, type ExtensionContext, type Theme } from "@earendil-works/pi-coding-agent";
-import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import { truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 
 /** Terminal width threshold (same as opencode's `wide` memo: width > 120). */
 const MIN_WIDTH = 120;
@@ -152,16 +152,17 @@ export default function (pi: ExtensionAPI) {
 					: "text";
 				push(th.fg("muted", "think  ") + th.fg(levelColor, thinkingLevel));
 			}
-			// input / output tokens on separate lines (DeepSeek-Reasonix style:
-			// cache-hit and fresh input tokens broken out)
-			const promptTotal = stats.input + stats.cacheRead + stats.cacheWrite;
-			const hitRate = promptTotal > 0 ? (stats.cacheRead / promptTotal) * 100 : 0;
+			// input / output tokens on separate lines. Input is the TOTAL input
+			// token count (cache hits + misses combined); the cache hit rate is
+			// shown on its own line below.
+			const totalInput = stats.input + stats.cacheRead + stats.cacheWrite;
+			const hitRate = totalInput > 0 ? (stats.cacheRead / totalInput) * 100 : 0;
 			push(
-				th.fg("muted", "tokens ") +
-					th.fg("text", `in  ↑${fmt(stats.input)}`) +
-					th.fg("dim", ` R${fmt(stats.cacheRead)} W${fmt(stats.cacheWrite)}`),
+				th.fg("muted", "tokens ") + th.fg("text", `in  ↑${fmt(totalInput)}`),
 			);
-			push(th.fg("muted", "        ") + th.fg("text", `out ↓${fmt(stats.output)}`));
+			push(
+				th.fg("muted", "tokens ") + th.fg("text", `out ↓${fmt(stats.output)}`),
+			);
 			push(
 				th.fg("muted", "hit    ") +
 					th.fg(stats.cacheRead > 0 ? "success" : "dim", `${hitRate.toFixed(2)}%`),
@@ -201,7 +202,16 @@ export default function (pi: ExtensionAPI) {
 					// opencode TodoItem: in_progress -> warning, else muted
 					const color = t.status === "in_progress" ? "warning" : "muted";
 					const mark = t.status === "completed" ? "✓" : t.status === "in_progress" ? "•" : " ";
-					push(th.fg(color, `[${mark}] `) + th.fg(color, truncateToWidth(t.text, contentW - 6)));
+					// Wrap long todo text onto continuation lines instead of truncating.
+					const wrapped = wrapTextWithAnsi(t.text, Math.max(4, contentW - 6));
+					wrapped.forEach((wl, idx) => {
+						if (idx === 0) {
+							push(th.fg(color, `[${mark}] `) + th.fg(color, wl));
+						} else {
+							// align continuation lines with the todo text (after "[x] ")
+							push(th.fg(color, "    ") + th.fg(color, wl));
+						}
+					});
 				}
 				if (todos.length > MAX_TODOS) {
 					push(th.fg("muted", `... ${todos.length - MAX_TODOS} more`));
