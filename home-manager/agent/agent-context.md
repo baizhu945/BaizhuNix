@@ -2,8 +2,6 @@
 
 _Read this carefully. This is the guideline for operating this machine._
 
----
-
 ## Hardware Overview
 
 | Component | Model |
@@ -86,8 +84,6 @@ script/               # niri-config.kdl, fastfetch-config.jsonc, battery-monitor
 - NixOS Options: https://search.nixos.org/options?channel=unstable
 - NixOS Packages: https://search.nixos.org/packages?channel=unstable
 - Home-Manager Options: https://nix-community.github.io/home-manager/options.html
-
----
 
 ## Skill-Driven Workflow
 

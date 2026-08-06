@@ -42,15 +42,10 @@
       retry.enabled = true;
       retry.maxRetries = 5;
 
-      # pi 包：ask_user 工具（@d3ara1n/pi-ask-user）
-      # 有多个方案需要用户决策时，在底部编辑器槽位渲染可折叠面板列出选项（单/多选、可自定义输入），
-      # 不遮住上方的对话记录。版本已固定；pi 启动时若 ~/.pi/agent/npm/ 下未安装会自动安装。
-      # pi 包：pi-web-access（web_search / fetch_content / get_search_content / source_check）
-      # Web 搜索 + URL 抓取 + GitHub 克隆 + PDF 提取 + 视频理解；零配置（Exa 兜底），
-      # 可选在 ~/.pi/web-search.json 配 API key；ffmpeg/yt-dlp 仅视频抽帧时可选需要。
       packages = [
         "npm:@d3ara1n/pi-ask-user@2.4.2"
         "npm:pi-web-access@0.18.0"
+        "git:github.com/obra/superpowers"
       ];
     };
   };
