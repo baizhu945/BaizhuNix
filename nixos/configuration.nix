@@ -283,13 +283,13 @@ EOF
   services.displayManager.defaultSession = lib.mkForce "niri"; # Fix defaultSession ERROR BUG
   programs.niri = {
     enable = true;
-    package = let
-      ldi = pkgs."libdisplay-info_0_2";
-    in pkgs.niri.overrideAttrs (oldAttrs: {
-      preBuild = ''
-        export PKG_CONFIG_PATH="${ldi}/lib/pkgconfig:$PKG_CONFIG_PATH"
-      '' + (oldAttrs.preBuild or "");
-    });
+    # package = let
+      # ldi = pkgs."libdisplay-info_0_2";
+    # in pkgs.niri.overrideAttrs (oldAttrs: {
+      # preBuild = ''
+        # export PKG_CONFIG_PATH="${ldi}/lib/pkgconfig:$PKG_CONFIG_PATH"
+      # '' + (oldAttrs.preBuild or "");
+    # });
     useNautilus = false;
   };
 
