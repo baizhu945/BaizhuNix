@@ -20,22 +20,30 @@ cp -r ~/.config/noctalia/ ~/Documents/BaizhuNix/
 cp -r ~/.config/DankMaterialShell/ ~/Documents/BaizhuNix/
 cp -r /etc/nixos/ ~/Documents/BaizhuNix/
 
-# 若子模块是嵌入式仓库(.git 目录),先转为标准子模块布局(.git/modules)
+# 若存在嵌入式 .git 目录,先清掉残留的 .git/modules 目标,再转为标准子模块布局
+for sm in $SUBMODULES; do
+    [ -d "$sm/.git" ] && remove-without-permission -rf ".git/modules/$sm" 2>/dev/null || true
+done
 git submodule absorbgitdirs 2>/dev/null || true
 
-# 重建/更新子模块工作区,HEAD 跟随本地 clone,内容与本地一致
+# 重建/更新子模块工作区:HEAD 跟随本地 clone,工作区保持干净(不镜像未提交修改)
 for sm in $SUBMODULES; do
     [ -n "$sm" ] || continue
-    git submodule update --init --recursive "$sm" >/dev/null 2>&1 || true
+    # 工作区缺失或损坏时重新初始化(首次需要网络)
+    if [ ! -e "$sm/.git" ]; then
+        remove-without-permission -rf "$sm"
+        git submodule update --init --recursive "$sm" >/dev/null 2>&1 || true
+    fi
+    [ -e "$sm/.git" ] || continue
     local_src="$HOME/.config/$sm"
-    if [ -f "$sm/.git" ] && [ -d "$local_src" ]; then
-        # 内容覆盖为本地工作区(排除 .git)
-        rsync -a --delete --exclude='.git' "$local_src/" "$sm/"
-        # HEAD 跟随本地 clone(对象缺失时先从本地拉取)
+    if [ -d "$local_src" ]; then
         local_head=$(git -C "$local_src" rev-parse HEAD 2>/dev/null || true)
         if [ -n "$local_head" ]; then
+            # 对象缺失时先从本地 clone 拉取(离线可用)
             git -C "$sm" cat-file -e "$local_head" 2>/dev/null || git -C "$sm" fetch "$local_src" "$local_head" >/dev/null 2>&1 || true
+            # HEAD 跟随本地 clone,再硬重置工作区到该 commit,丢弃残留脏内容
             git -C "$sm" update-ref HEAD "$local_head" 2>/dev/null || true
+            git -C "$sm" reset --hard >/dev/null 2>&1 || true
         fi
     fi
 done
