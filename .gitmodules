@@ -1,3 +1,6 @@
 [submodule "home-manager/mouse-trail"]
 	path = home-manager/mouse-trail
 	url = https://github.com/baizhu945/niri-mouse-trail
+[submodule "home-manager/agent/pi"]
+	path = home-manager/agent/pi
+	url = https://github.com/baizhu945/Baizhu-Pi.git
