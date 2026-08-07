@@ -12,6 +12,9 @@
 #   中 fetch 并固定 rev/sha256 —— 不依赖 pi agent 的运行时安装，任何没有 pi
 #   的机器上用此配置都能独立构建出完整的技能集（可复现）。
 #   注：pi 的 skills.nix 用的是 fetchGit ref="main"（未固定），此处全部固定。
+# - 桌面启动器 .desktop 与图标由 home-manager 声明式管理：hermes 的 cmd_gui
+#   生成的 .desktop 写死当时的 store 路径，包重建后即失效（启动器无法启动）；
+#   Exec 用稳定的 ~/.nix-profile 路径 + Icon 由 hicolor 目录提供
 { config, pkgs, lib, ... }:
 
 let
@@ -47,6 +50,9 @@ let
     fetchSubmodules = false;
   };
 
+  # hermes-agent 包（含 desktop 集成）
+  hermesPkg = import ./package.nix { inherit pkgs lib; };
+
   # 自包含的 seed 数据目录：context + 全部技能（真实文件，非符号链接）
   hermes-seed = pkgs.runCommand "hermes-seed" { } ''
     mkdir -p $out/skills
@@ -73,9 +79,32 @@ let
     # obra/superpowers（pi 经 git 包安装的同源仓库）
     cp -r ${superpowers-repo}/skills/* $out/skills/
   '';
+
+  # 桌面启动器（home-manager 管理；Exec 用稳定的 ~/.nix-profile 路径，
+  # 不随 store 包路径变化）
+  desktopEntry = ''
+    [Desktop Entry]
+    Type=Application
+    Name=Hermes
+    GenericName=Hermes Desktop
+    Comment=Launch Hermes Desktop
+    Exec=/home/<yourusername>/.nix-profile/bin/hermes desktop
+    Icon=hermes
+    Terminal=false
+    Categories=Utility;
+    StartupNotify=true
+    StartupWMClass=Hermes
+  '';
 in
 {
-  home.packages = [ (import ./package.nix { inherit pkgs lib; }) ];
+  home.packages = [ hermesPkg ];
+
+  # 桌面启动器 + 图标（freedesktop hicolor 规范，Icon=hermes 可被桌面环境解析）
+  home.file = {
+    ".local/share/applications/hermes.desktop".text = desktopEntry;
+    ".local/share/icons/hicolor/1024x1024/apps/hermes.png".source =
+      "${hermesPkg}/share/icons/hicolor/1024x1024/apps/hermes.png";
+  };
 
   home.activation.hermes-seed = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     hermes_dir="$HOME/.hermes"
@@ -98,5 +127,14 @@ in
         echo "hermes-seed: skill '$name' copied"
       fi
     done
+
+    # ---- Skills Hub 初始化（hermes doctor 检查 ~/.hermes/skills/.hub）----
+    mkdir -p "$hermes_dir/skills/.hub"
+
+    # ---- desktop 构建 stamp：hermes desktop 据此跳过 npm 构建（nix 已预构建），
+    # 每次 switch 用当前 store 的 hash 覆盖，保证与源码一致 ----
+    hermes_pkg="${hermesPkg}"
+    # install 强制替换（旧 stamp 可能因 store 源权限为只读）
+    install -m 0644 "$hermes_pkg/share/hermes-agent/desktop-build-stamp.json" "$hermes_dir/desktop-build-stamp.json"
   '';
 }
