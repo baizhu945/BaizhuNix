@@ -158,37 +158,7 @@ in
       noctalia-shell ipc call toast send '{"title":"Clean Completed"}'
     '')
 
-    (pkgs.writeShellScriptBin "git-update" ''
-      cd ~/Documents/BaizhuNix
-      remove-without-permission -r nixos
-      remove-without-permission n\&d.7z
-      cd ~/Documents/BaizhuNix/home-manager
-      find . -maxdepth 1 -not -name ".git" -exec remove-without-permission -rf {} +
-
-      cd ~/Documents/BaizhuNix
-     
-      cp -r ~/.config/home-manager/ ~/Documents/BaizhuNix/
-      cp -r ~/.config/noctalia/ ~/Documents/BaizhuNix/
-      cp -r ~/.config/DankMaterialShell/ ~/Documents/BaizhuNix/
-      cp -r /etc/nixos/ ~/Documents/BaizhuNix/
-
-      shopt -s nullglob
-      for dir in DankMaterialShell/plugins/*; do
-          [ -d "$dir" ] || continue
-          remove-without-permission -rf "$dir/.git"
-          git rm -r --cached --ignore-unmatch "$dir"
-      done
-
-      find . -path "./README.md" -prune -o -path "./.git" -prune -o -path "./.gitmodules" -prune -o -type f -name "*" -exec sed -i 's/<yourusername>/<yourusername>/g' {} +
-      find . -path "./README.md" -prune -o -path "./.git" -prune -o -path "./.gitmodules" -prune -o -type f -name "*" -exec sed -i 's/<yourpassword>/<yourpassword>/g' {} +
-
-      7z a -o{~/Documents/BaizhuNix} n\&d.7z noctalia/ DankMaterialShell
-
-      remove-without-permission -r noctalia/
-      remove-without-permission -r  DankMaterialShell/
-      
-      git status
-    '')
+    (pkgs.writeShellScriptBin "git-update" (builtins.readFile ./script/git-update.sh))
 
     (pkgs.writeShellScriptBin "mount-win" '' 
       echo "<yourpassword>" | sudo -S mount /dev/disk/by-uuid/AEDB-5D56 /mnt/Windows/EFI/
