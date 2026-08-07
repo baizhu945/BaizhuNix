@@ -35,6 +35,7 @@ in
     ./waybar/waybar.nix
     ./showmethekey/showmethekey.nix
     ./agent/pi/pi.nix
+    # ./agent/hermes/hermes.nix
     ./mouse-trail/mouse-trail.nix
     # ./noctalia-v5.nix
     ./latex-ocr.nix
