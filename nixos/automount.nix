@@ -2,7 +2,7 @@
 
 {
   fileSystems."/mnt/Windows/EFI" = {
-    device = "/dev/disk/by-uuid/241F-8E2D";
+    device = "/dev/disk/by-uuid/AEDB-5D56";
     fsType = "vfat";
     options = [
       "rw"
@@ -19,11 +19,11 @@
     description = "Clear NTFS dirty state on Windows C partition before mounting";
     serviceConfig = {
       Type = "oneshot";
-      ExecStart = "${pkgs.ntfs3g}/bin/ntfsfix /dev/disk/by-uuid/545C43E35C43BF0C";
+      ExecStart = "${pkgs.ntfs3g}/bin/ntfsfix /dev/disk/by-uuid/7CFAFFF4FAFFA892";
     };
   };
   systemd.mounts = [{
-    what = "/dev/disk/by-uuid/545C43E35C43BF0C";
+    what = "/dev/disk/by-uuid/7CFAFFF4FAFFA892";
     where = "/mnt/Windows/C";
     type = "ntfs3";
     options = "rw,uid=1000,gid=1000,umask=0022,nofail,force";
@@ -32,8 +32,8 @@
     after = [ "ntfsfix-win10-c.service" ];
   }];
 
-  fileSystems."/mnt/Windows/RECOVER_C" = {
-    device = "/dev/disk/by-uuid/88DEE415DEE3F978";
+  fileSystems."/mnt/Windows/RECOVER" = {
+    device = "/dev/disk/by-uuid/8A324B9F324B8F5F";
     fsType = "ntfs3";
     options = [
       "rw"
@@ -47,21 +47,7 @@
   };
 
   fileSystems."/mnt/Windows/D" = {
-    device = "/dev/disk/by-uuid/24C073F9C073CF92";
-    fsType = "ntfs3";
-    options = [
-      "rw"
-      "nofail"
-      "users"
-      "uid=1000"
-      "gid=1000"
-      "umask=0022"
-      "noauto"
-    ];
-  };
-
-  fileSystems."/mnt/Windows/RECOVER_D" = {
-    device = "/dev/disk/by-uuid/000EA90D0EA8FCB2";
+    device = "/dev/disk/by-uuid/00D8E718D8E70AAC";
     fsType = "ntfs3";
     options = [
       "rw"
@@ -90,19 +76,16 @@
   };
 
   services.udev.extraRules = ''
-    ACTION=="add", SUBSYSTEM=="block", ENV{ID_FS_UUID}=="000EA90D0EA8FCB2", \
-    TAG+="systemd", ENV{SYSTEMD_WANTS}+="mnt-Windows-RECOVER_D.mount"
+    ACTION=="add", SUBSYSTEM=="block", ENV{ID_FS_UUID}=="8A324B9F324B8F5F", \
+    TAG+="systemd", ENV{SYSTEMD_WANTS}+="mnt-Windows-RECOVER.mount"
 
-    ACTION=="add", SUBSYSTEM=="block", ENV{ID_FS_UUID}=="88DEE415DEE3F978", \
-    TAG+="systemd", ENV{SYSTEMD_WANTS}+="mnt-Windows-RECOVER_C.mount"
-
-    ACTION=="add", SUBSYSTEM=="block", ENV{ID_FS_UUID}=="241F-8E2D", \
+    ACTION=="add", SUBSYSTEM=="block", ENV{ID_FS_UUID}=="AEDB-5D56", \
     TAG+="systemd", ENV{SYSTEMD_WANTS}+="mnt-Windows-EFI.mount"
 
-    ACTION=="add", SUBSYSTEM=="block", ENV{ID_FS_UUID}=="545C43E35C43BF0C", \
+    ACTION=="add", SUBSYSTEM=="block", ENV{ID_FS_UUID}=="7CFAFFF4FAFFA892", \
     TAG+="systemd", ENV{SYSTEMD_WANTS}+="mnt-Windows-C.mount"
 
-    ACTION=="add", SUBSYSTEM=="block", ENV{ID_FS_UUID}=="24C073F9C073CF92", \
+    ACTION=="add", SUBSYSTEM=="block", ENV{ID_FS_UUID}=="00D8E718D8E70AAC", \
     TAG+="systemd", ENV{SYSTEMD_WANTS}+="mnt-Windows-D.mount"
 
     ACTION=="add", SUBSYSTEM=="block", ENV{ID_FS_UUID}=="601F-0929", \

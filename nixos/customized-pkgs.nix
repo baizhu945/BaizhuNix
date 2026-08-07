@@ -16,10 +16,10 @@ let
 
   spectroterm = pkgs.stdenv.mkDerivation {
     pname = "spectroterm";
-    version = "0.7.0";
+    version = "0.7.2";
     src = pkgs.fetchurl {
-      url = "https://github.com/sparklost/spectroterm/releases/download/0.7.0/spectroterm-0.7.0-linux.tar.gz";
-      hash = "sha256-GR7erpsu1OMF9+P4yptbG7+KXiyUa+/kS8yR/HcpmgY=";
+      url = "https://github.com/sparklost/spectroterm/releases/download/0.7.2/spectroterm-0.7.2-linux.tar.gz";
+      hash = "sha256-RnZOoGokB6aB4ujDZNRN8OmJdhHstqvYW+0xVh9SJro=";
     };
     sourceRoot = ".";  # 文件直接在压缩包根目录
     dontBuild = true;

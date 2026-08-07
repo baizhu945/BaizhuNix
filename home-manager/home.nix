@@ -37,7 +37,6 @@ in
     ./agent/pi/pi.nix
     ./mouse-trail/mouse-trail.nix
     # ./noctalia-v5.nix
-    # ./caelestia.nix
     ./latex-ocr.nix
     ./shell-services.nix
   ];
@@ -192,11 +191,10 @@ in
     '')
 
     (pkgs.writeShellScriptBin "mount-win" '' 
-      echo "<yourpassword>" | sudo -S mount /dev/disk/by-uuid/241F-8E2D /mnt/Windows/EFI/
-      echo "<yourpassword>" | sudo -S mount /dev/disk/by-uuid/545C43E35C43BF0C /mnt/Windows/C
-      echo "<yourpassword>" | sudo -S mount /dev/disk/by-uuid/24C073F9C073CF92 /mnt/Windows/D
-      echo "<yourpassword>" | sudo -S mount /dev/disk/by-uuid/88DEE415DEE3F978 /mnt/Windows/RECOVER_C/
-      echo "<yourpassword>" | sudo -S mount /dev/disk/by-uuid/000EA90D0EA8FCB2 /mnt/Windows/RECOVER_D/
+      echo "<yourpassword>" | sudo -S mount /dev/disk/by-uuid/AEDB-5D56 /mnt/Windows/EFI/
+      echo "<yourpassword>" | sudo -S mount /dev/disk/by-uuid/7CFAFFF4FAFFA892 /mnt/Windows/C
+      echo "<yourpassword>" | sudo -S mount /dev/disk/by-uuid/00D8E718D8E70AAC /mnt/Windows/D
+      echo "<yourpassword>" | sudo -S mount /dev/disk/by-uuid/8A324B9F324B8F5F /mnt/Windows/RECOVER
       echo "<yourpassword>" | sudo -S chown -R <yourusername> /mnt/Windows/C
       echo "<yourpassword>" | sudo -S chown -R <yourusername> /mnt/Windows/D
     '')
@@ -205,8 +203,7 @@ in
       echo "<yourpassword>" | sudo -S umount /mnt/Windows/EFI/
       echo "<yourpassword>" | sudo -S umount /mnt/Windows/C
       echo "<yourpassword>" | sudo -S umount /mnt/Windows/D
-      echo "<yourpassword>" | sudo -S umount /mnt/Windows/RECOVER_C/
-      echo "<yourpassword>" | sudo -S umount /mnt/Windows/RECOVER_D/
+      echo "<yourpassword>" | sudo -S umount /mnt/Windows/RECOVER/
     '')
 
     (pkgs.writeShellScriptBin "deepseek-ocr" ''
