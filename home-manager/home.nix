@@ -53,6 +53,57 @@ in
 
   programs.onlyoffice.enable = true;
 
+
+  nixpkgs.overlays = with pkgs; [
+    # nixpkgs 更新把 frei0r 包升到 3.2.1（CMake 构建），
+    # 其 find_package(OpenCV) 在 CUDA 版 opencv 下硬性要求 CUDAToolkit/nvcc，
+    # 导致构建失败（上游回归，release-25.11 仍为 2.5.1）。
+    # 这里 pin 回 2.5.1（与 release-25.11 相同的表达式），
+    # 与旧系统产物 drv 哈希一致，直接复用本地缓存，零编译。
+    # 注意：ffmpeg-full 依赖的属性名是 frei0r（by-name 包），
+    # frei0r-plugins 是别名，两个都覆盖以确保一致。
+    (self: super: let
+      # 注意：必须用 callPackage（而非裸 stdenv.mkDerivation）包装，
+      # 新版 nixpkgs 的 override/overrideAttrs 由 callPackage/makeOverridable 注入，
+      # mlt 等包会调用 frei0r.override { opencv = ...; }，裸 mkDerivation 产物没有该属性。
+      frei0r-251 = super.callPackage (
+        { lib, config, stdenv, fetchFromGitHub, cairo, cmake, opencv, pkg-config
+        , cudaSupport ? config.cudaSupport, cudaPackages
+        }:
+        stdenv.mkDerivation (finalAttrs: {
+          pname = "frei0r-plugins";
+          version = "2.5.1";
+          src = fetchFromGitHub {
+            owner = "dyne";
+            repo = "frei0r";
+            rev = "v${finalAttrs.version}";
+            hash = "sha256-3gUWvO5izOrJt+XwcNBNiLfu+iMqo4nuPbx++TYzao0=";
+          };
+          nativeBuildInputs = [ cmake pkg-config ];
+          buildInputs = [ cairo opencv ]
+            ++ lib.optionals cudaSupport [
+              cudaPackages.cuda_cudart
+              cudaPackages.cuda_nvcc
+            ];
+          postInstall = lib.optionalString stdenv.hostPlatform.isDarwin ''
+            for f in $out/lib/frei0r-1/*.so* ; do
+              ln -s $f "''${f%.*}.dylib"
+            done
+          '';
+          meta = {
+            homepage = "https://frei0r.dyne.org";
+            description = "Minimalist, cross-platform, shared video plugins";
+            license = lib.licenses.gpl2Plus;
+            platforms = lib.platforms.unix;
+          };
+        })
+      ) { };
+    in {
+      frei0r = frei0r-251;
+      frei0r-plugins = frei0r-251;
+    })
+  ];
+
   home.packages = [
     # # Adds the 'hello' command to your environment. It prints a friendly
     # # "Hello, world!" when run.
