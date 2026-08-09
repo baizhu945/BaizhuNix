@@ -4,8 +4,12 @@ let
   stableTarball =
     fetchTarball
       "https://nixos.org/channels/nixos-26.05/nixexprs.tar.xz";
+  # 注：新版 nixos-unstable 的 nixpkgs.config 会通过 deferredModuleWith 泄漏
+  # pkgs/top-level/config.nix 的全部默认值（含 rewriteURL = null），而 nixos-26.05
+  # 已把 rewriteURL 改为 function 类型，不再接受 null，导致 nixos-rebuild 报错。
+  # 因此传给 stable nixpkgs 前剔除 rewriteURL（stable 会用自身默认 lib.id）。
   stablePkgs = import stableTarball {
-    config = config.nixpkgs.config;
+    config = builtins.removeAttrs config.nixpkgs.config [ "rewriteURL" ];
   };
 
   nix-alien-pkgs = import (
@@ -283,13 +287,6 @@ EOF
   services.displayManager.defaultSession = lib.mkForce "niri"; # Fix defaultSession ERROR BUG
   programs.niri = {
     enable = true;
-    # package = let
-      # ldi = pkgs."libdisplay-info_0_2";
-    # in pkgs.niri.overrideAttrs (oldAttrs: {
-      # preBuild = ''
-        # export PKG_CONFIG_PATH="${ldi}/lib/pkgconfig:$PKG_CONFIG_PATH"
-      # '' + (oldAttrs.preBuild or "");
-    # });
     useNautilus = false;
   };
 
