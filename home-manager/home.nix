@@ -131,7 +131,7 @@ in
     pkgs.kdePackages.cantor
     pkgs.seahorse
     stablePkgs.krita
-    pkgs.kdePackages.kdenlive
+    stablePkgs.kdePackages.kdenlive
     pkgs.gnome-calendar
     pkgs.mpvpaper
     pkgs.slurp

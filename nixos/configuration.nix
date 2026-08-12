@@ -464,7 +464,7 @@ EOF
       
       # # Without these it silently fails
       libxinerama libxcursor libxrender libxscrnsaver libxi libsm libice 
-      gnome2.GConf nspr nss cups libcap SDL2 libusb1 dbus-glib ffmpeg
+      nspr nss cups libcap SDL2 libusb1 dbus-glib ffmpeg
       # Only libraries are needed from those two
       libudev0-shim
       
