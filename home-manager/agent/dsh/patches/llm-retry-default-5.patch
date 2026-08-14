@@ -1,0 +1,22 @@
+diff --git a/packages/llm/llm/src/retry-policy.ts b/packages/llm/llm/src/retry-policy.ts
+index ad9c7af65cade8ef7461c91b74a96925c8843f7f..71355d702033194660e82c41cbebce144fbc989b 100644
+--- a/packages/llm/llm/src/retry-policy.ts
++++ b/packages/llm/llm/src/retry-policy.ts
+@@ -14,7 +14,7 @@ const DEFAULT_MAX_RETRIES = 2
+-const DEFAULT_MAX_RETRIES = 2
++const DEFAULT_MAX_RETRIES = 5
+ const DEFAULT_INITIAL_DELAY_MS = 500
+ const DEFAULT_MAX_DELAY_MS = 10_000
+ const DEFAULT_JITTER_RATIO = 0.1
+ const DEFAULT_RETRYABLE_CODES = Object.freeze([
+   EMPTY_RESPONSE_CODE,
+   'RATE_LIMIT',
+@@ -37,7 +37,7 @@
+ export interface NormalRetryPolicyConfig {
+   /** Retry only configured transient failure codes. */
+   mode: 'normal'
+-  /** Maximum eligible retries after the first request (default 2). */
++  /** Maximum eligible retries after the first request (default 5). */
+   maxRetries?: number
+   /** Stable failure codes eligible for this policy. */
+   retryableCodes?: string[]

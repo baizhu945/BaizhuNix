@@ -1,5 +1,5 @@
 diff --git a/packages/client/ui-conversation/src/client/chat/ReasoningRow.tsx b/packages/client/ui-conversation/src/client/chat/ReasoningRow.tsx
-index f8a340d..3d683d0 100644
+index f8a340d..ad295b3 100644
 --- a/packages/client/ui-conversation/src/client/chat/ReasoningRow.tsx
 +++ b/packages/client/ui-conversation/src/client/chat/ReasoningRow.tsx
 @@ -25,7 +25,11 @@ function latestLine(text: string): string {
@@ -7,16 +7,16 @@ index f8a340d..3d683d0 100644
   */
  export function ReasoningRow({ text, running, t }: { text: string; running: boolean; t: ChatViewSlotProps['t'] }) {
 -  const [expanded, setExpanded] = useState(false)
-+  // [dsh-harness-auto-expand-running] 进行中的思考过程默认展开;已结束的默认折叠
++  // [dsh-harness-auto-expand-running] 思考过程:运行中自动展开,结束后自动折叠
 +  const [expanded, setExpanded] = useState(running)
 +  useEffect(() => {
-+    if (running) setExpanded(true)
++    setExpanded(running)
 +  }, [running])
    const summaryRef = useRef<HTMLSpanElement>(null)
    const summary = running ? latestLine(text) : firstLine(text)
    const scheduleSummaryScroll = useThrottledVisualUpdate(() => {
 diff --git a/packages/client/ui-tool/src/client/tool/components/ToolRow.tsx b/packages/client/ui-tool/src/client/tool/components/ToolRow.tsx
-index bd4add4..6283935 100644
+index bd4add4..15b7335 100644
 --- a/packages/client/ui-tool/src/client/tool/components/ToolRow.tsx
 +++ b/packages/client/ui-tool/src/client/tool/components/ToolRow.tsx
 @@ -17,7 +17,7 @@
@@ -28,16 +28,17 @@ index bd4add4..6283935 100644
  import clsx from 'clsx'
  import {
    CodeBlock, DiffBlock, DisclosureRow, IconInspectOutline12, ReadBlock, SearchBlock, StateDot, TerminalBlock, WebBlock,
-@@ -146,7 +146,11 @@ export function ToolRow({
+@@ -146,7 +146,12 @@ export function ToolRow({
    onOpenFile,
    inspect,
  }: ToolRowProps) {
 -  const [expanded, setExpanded] = useState(false)
-+  // [dsh-harness-auto-expand-running] 进行中的调用/命令默认展开;已结束的默认折叠
-+  const [expanded, setExpanded] = useState(state === 'running')
++  // [dsh-harness-auto-expand-running] 工具卡片:运行中自动展开(结束后保持);
++  // bash 命令卡片始终展开、不折叠
++  const [expanded, setExpanded] = useState(state === 'running' || variant === 'bash')
 +  useEffect(() => {
-+    if (state === 'running') setExpanded(true)
-+  }, [state])
++    if (state === 'running' || variant === 'bash') setExpanded(true)
++  }, [state, variant])
    const terminalBody = terminal ?? null
    const diffBody = diff ?? null
    const readBody = read ?? null

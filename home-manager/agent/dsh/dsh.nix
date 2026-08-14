@@ -43,10 +43,15 @@ let
     # --model / --mode 三个选项,使 cc-connect 的 agent/dsh 可以跨轮次恢复同一
     # 个持久化会话、切换模型与权限模式(headless-cc-connect.patch 修改
     # packages/bundle/headless 的 startup.ts / index.ts / cordis.patch.yml)
+    # 重试补丁:网络不良时 LLM 请求默认只重试 2 次(provider 未显式配置
+    # retryPolicy 时取 DEFAULT_MAX_RETRIES),这里提升到 5 次
+    # (llm-retry-default-5.patch 修改 packages/llm/llm/src/retry-policy.ts)
     patches = [
       ./patches/expand-running.patch
       ./patches/approval-always-allow.patch
+      ./patches/approval-keyboard.patch
       ./patches/headless-cc-connect.patch
+      ./patches/llm-retry-default-5.patch
     ];
 
     nativeBuildInputs = [
