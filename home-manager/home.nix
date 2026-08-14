@@ -35,6 +35,7 @@ in
     ./waybar/waybar.nix
     ./showmethekey/showmethekey.nix
     ./agent/pi/pi.nix
+    ./agent/dsh/dsh.nix
     # ./agent/hermes/hermes.nix
     ./mouse-trail/mouse-trail.nix
     # ./noctalia-v5.nix
@@ -126,7 +127,7 @@ in
     pkgs.kdePackages.kmplot
     pkgs.labplot
     stablePkgs.sage
-    pkgs.octaveFull
+    stablePkgs.octaveFull
     pkgs.maxima
     pkgs.kdePackages.cantor
     pkgs.seahorse

@@ -476,7 +476,7 @@ EOF
       # Other things from runtime
       flac freeglut libjpeg libpng libpng12 libsamplerate libmikmod libtheora 
       libtiff pixman speex SDL_image SDL_ttf SDL_mixer SDL2_ttf SDL2_mixer 
-      libappindicator-gtk2 libdbusmenu-gtk2 libindicator-gtk2 libcaca libcanberra      
+      libcaca libcanberra      
       libgcrypt libvpx librsvg libxft libvdpau
       # ...
       # Some more libraries that I needed to run programs
