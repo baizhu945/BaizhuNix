@@ -2,20 +2,22 @@
 
 let
   # 用户 fork:在 upstream main 基础上包含 reasonix agent (#1281) +
-  # opencode permission bridge(71cd028/b9673a5)。旧 v1.4.1 无 reasonix agent。
-  # commit b9673a5 与 fork 的 feat/opencode-permission-bridge 分支 HEAD 一致。
+  # opencode permission bridge + dsh(DeepSeek Harness)agent。
+  # 分支 feat/dsh-agent(46541ff)= bf12b06 + jsonl 事件流/审批转发/会话标题。
+  # dsh agent 通过 `dsh --profile headless --jsonl`(需 dsh.nix 的
+  # headless-cc-connect.patch 支持 --session-id/--model/--mode/--jsonl)驱动:
+  # /model、/mode 可用,confirm 模式的工具调用会以飞书审批卡片转发,
+  # /session 显示 dsh 会话标题。
   cc-connect = pkgs.buildGoModule rec {
     pname = "cc-connect";
     version = "1.5.0-fork";
-    # fork 分支 feat/opencode-permission-bridge（含 pi agent、reasonix、opencode 权限桥接）
-    # 1c9c6b9 = 0728e4e + fix(pi): models-store.json 回退（已提交上游 PR，见下）
     src = pkgs.fetchFromGitHub {
       owner = "<yourusername>";
       repo = "cc-connect";
-      rev = "d9a1e120a631e75b4bb53da796aafdbf20f12f16";
-      hash = "sha256-/19b/56HdwDf4gxql9MiNPcjMuRDv88kLBcAd7YOp0A=";
+      rev = "46541ff2fa3d734bc52c5f2f5e48ab05b13db2bc";
+      hash = "sha256-ss124d3JeIcgWCs0f05GXNwh/+ygn6C26shVRImv09w=";
     };
-    vendorHash = "sha256-j5o5fhhPNw8VY7mhDkNzdzulowaqH5Yghpkk5Ap4RUQ=";
+    vendorHash = "sha256-pkjITb62Waok+aR8WhSAmLOSwms/denexIIVRAPV5GY=";
     tags = [ "no_web" ];
     doCheck = false;
     overrideModAttrs = (_: {

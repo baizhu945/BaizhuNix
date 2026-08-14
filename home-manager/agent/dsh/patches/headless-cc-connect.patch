@@ -1,0 +1,619 @@
+diff --git a/packages/bundle/headless/src/startup.ts b/packages/bundle/headless/src/startup.ts
+--- a/packages/bundle/headless/src/startup.ts
++++ b/packages/bundle/headless/src/startup.ts
+@@ -22,6 +22,27 @@
+ export interface HeadlessStartupValues {
+   /** The task text this invocation asked for. */
+   task: string
++  /**
++   * Explicit session id. The runner resumes the persisted session when one
++   * exists and creates the session with this exact id otherwise, so an
++   * external driver (e.g. cc-connect) can keep one conversation across runs.
++   */
++  sessionId?: string
++  /** Model override for this run; omitted uses the default model selection. */
++  model?: string
++  /**
++   * Permission mode override: one of `read-only`, `workspace-write`,
++   * `danger-full-access`, `confirm`. Pins the session's sandbox/approval
++   * knobs before the task runs; omitted keeps the composed defaults.
++   */
++  mode?: string
++  /**
++   * Stream JSONL events (text/thinking deltas, tool calls, approval
++   * requests) on stdout and read approval responses from stdin. Intended for
++   * external drivers (cc-connect) that display tool progress and relay
++   * permission decisions from the human.
++   */
++  jsonl?: boolean
+ }
+ 
+ /**
+@@ -34,9 +55,15 @@
+     .description('Answer one task, print the final assistant message, and exit.')
+     .helpOption('-h, --help', 'show this help')
+     .argument('[task...]', 'the task text; multiple words are joined by spaces')
++    .option('--session-id <id>', 'explicit session id: resume the persisted session if it exists, otherwise create it')
++    .option('--model <model>', 'override the default model for this run')
++    .option('--mode <mode>', 'permission mode: read-only | workspace-write | danger-full-access | confirm')
++    .option('--jsonl', 'stream JSONL events on stdout and read approval responses from stdin')
+     .addHelpText('after', `
+ Examples:
+   dsh --profile headless "run the tests"     answer one task and exit
++  dsh --profile headless --session-id abc --model deepseek-v4-pro "run the tests"
++  dsh --profile headless --session-id abc --mode confirm --jsonl "run the tests"
+ `)
+ }
+ 
+@@ -51,7 +78,13 @@
+   program.action(() => {
+     const task = program.args.join(' ')
+     if (task.trim() === '') program.error('error: a task is required, for example: dsh --profile headless "run the tests"')
+-    ctx.provide(HEADLESS_STARTUP_SERVICE, { task } satisfies HeadlessStartupValues)
++    const opts = program.opts<{ sessionId?: string; model?: string; mode?: string; jsonl?: boolean }>()
++    const values: HeadlessStartupValues = { task }
++    if (typeof opts.sessionId === 'string' && opts.sessionId !== '') values.sessionId = opts.sessionId
++    if (typeof opts.model === 'string' && opts.model !== '') values.model = opts.model
++    if (typeof opts.mode === 'string' && opts.mode !== '') values.mode = opts.mode
++    if (opts.jsonl === true) values.jsonl = true
++    ctx.provide(HEADLESS_STARTUP_SERVICE, values)
+   })
+   parseCmdline(ctx, program)
+ }
+diff --git a/packages/bundle/headless/src/index.ts b/packages/bundle/headless/src/index.ts
+--- a/packages/bundle/headless/src/index.ts
++++ b/packages/bundle/headless/src/index.ts
+@@ -4,18 +4,31 @@
+  * creates one Agent through the core registry, drives the task to quiescence,
+  * flushes its Session, prints the final assistant text, and exits.
+  *
++ * [cc-connect] The runner also accepts an explicit session id (create-or-
++ * resume), a model override, and a permission mode override so an external
++ * driver (cc-connect) can keep one persisted session across turns and switch
++ * model / permission mode between runs.
++ *
++ * [cc-connect --jsonl] With `--jsonl`, the runner streams machine-readable
++ * events (text/thinking deltas, tool calls, approval requests) as JSONL on
++ * stdout and reads approval responses from stdin, so an external driver can
++ * show tool progress in the chat and relay permission decisions from the
++ * human. In `confirm` mode it also intercepts write/execute tools and asks
++ * before running them (mirroring the web profile's confirm-writes plugin).
++ *
+  * @module @deepseek-ai/dsh-headless
+  */
+ 
+ import { randomUUID } from 'node:crypto'
++import { createInterface } from 'node:readline'
+ import type { Context } from '@deepseek-ai/cordis'
+ import z from '@deepseek-ai/schemastery'
+ import { installModelSelection } from '@deepseek-ai/dsh-agent'
+-import type { ModelSelectionRef } from '@deepseek-ai/dsh-agent'
++import type { AgentSetup, ModelSelectionRef } from '@deepseek-ai/dsh-agent'
+ import type {} from '@deepseek-ai/dsh-agent-default-model'
+ import { createUserMessage } from '@deepseek-ai/dsh-llm'
+ import { SessionId } from '@deepseek-ai/dsh-session'
+-import type { SessionEvent } from '@deepseek-ai/dsh-session'
++import type { Session, SessionEvent } from '@deepseek-ai/dsh-session'
+ // Empty type imports carry the loader Context merge for the settlement await
+ // and the cmdline Context merge for the appExit host value.
+ import type {} from '@deepseek-ai/cordis-plugin-loader'
+@@ -31,10 +44,22 @@
+ export interface Config {
+   /** The prompt text for the single run. */
+   task: string
++  /** Explicit session id: resume the persisted session if it exists, otherwise create it. */
++  sessionId?: string
++  /** Model override for this run; omitted uses the default model selection. */
++  model?: string
++  /** Permission mode override; omitted keeps the composed defaults. */
++  mode?: string
++  /** Stream JSONL events on stdout and read approval responses from stdin. */
++  jsonl?: boolean
+ }
+ 
+ export const Config: z<Config> = z.object({
+   task: z.string().required(),
++  sessionId: z.string(),
++  model: z.string(),
++  mode: z.string(),
++  jsonl: z.boolean(),
+ })
+ 
+ /** Outcome of one owned run interval. */
+@@ -51,10 +76,136 @@
+   exit(code: number): void
+ }
+ 
++/**
++ * [cc-connect --jsonl] Tools that require approval before running in
++ * `confirm` mode (mirrors the web profile's confirm-writes askTools list).
++ */
++const ASK_TOOLS = new Set(['write', 'edit', 'str_replace_editor', 'bash', 'pwsh', 'terminal_send'])
++
+ /** The process streams the runner writes to; tests substitute captures. */
+-export const internals: { stdout: HeadlessIo['stdout']; stderr: HeadlessIo['stderr'] } = {
++export const internals: { stdout: HeadlessIo['stdout']; stderr: HeadlessIo['stderr']; stdin: NodeJS.ReadableStream } = {
+   stdout: process.stdout,
+   stderr: process.stderr,
++  stdin: process.stdin,
++}
++
++/**
++ * [cc-connect] Map a user-facing permission mode to the two session knobs
++ * (`sandbox/mode` + `approval/policy`). The pairs mirror the preset table the
++ * dsh-base bundle ships (and the user's web profile extends with `confirm`).
++ * Unknown modes return undefined so the composed defaults stay untouched.
++ */
++function modeToKnobs(mode: string): { sandbox: 'read-only' | 'workspace-write' | 'danger-full-access'; approval: 'ask' | 'never' } | undefined {
++  switch (mode) {
++    case 'read-only':
++      return { sandbox: 'read-only', approval: 'ask' }
++    case 'workspace-write':
++      return { sandbox: 'workspace-write', approval: 'ask' }
++    case 'danger-full-access':
++      return { sandbox: 'danger-full-access', approval: 'never' }
++    case 'confirm':
++      return { sandbox: 'danger-full-access', approval: 'ask' }
++    default:
++      return undefined
++  }
++}
++
++/**
++ * [cc-connect] Pin the session's permission knobs for this run. The knob
++ * events are declared by `@deepseek-ai/dsh-sandbox-policy` /
++ * `@deepseek-ai/dsh-user-approval` (extensible `SessionEventMap`), which this
++ * bundle does not depend on, so append through a structural cast — at runtime
++ * they are plain session log entries the knobs fold.
++ *
++ * NOTE: `append` MUST be invoked as a method on the cast object — the Session
++ * implementation reads `this.log`, so a detached `const append = session.append`
++ * would run with `this === undefined` and crash.
++ */
++function applyMode(session: Session, mode: string): void {
++  const knobs = modeToKnobs(mode)
++  if (knobs === undefined) return
++  const appendable = session as unknown as { append(type: string, data: Record<string, unknown>): unknown }
++  appendable.append('sandbox/mode', { mode: knobs.sandbox })
++  appendable.append('approval/policy', { policy: knobs.approval })
++}
++
++/**
++ * [cc-connect --jsonl] Map one session event to a JSONL line on stdout.
++ * Only events the driver can display are emitted; everything else (usage,
++ * headers, todo snapshots, boundaries) stays out of the wire protocol.
++ */
++function emitSessionEvent(io: HeadlessIo, event: SessionEvent, toolNames: Map<string, string>): void {
++  switch (event.type) {
++    case 'assistant/chunk': {
++      const chunk = event.data.chunk
++      if (chunk.type === 'text-delta' && chunk.text !== '') {
++        io.stdout.write(`${JSON.stringify({ type: 'text', text: chunk.text })}\n`)
++      } else if (chunk.type === 'reasoning-delta' && chunk.text !== '') {
++        io.stdout.write(`${JSON.stringify({ type: 'thinking', text: chunk.text })}\n`)
++      }
++      break
++    }
++    case 'tool/call': {
++      toolNames.set(event.data.callId, event.data.name)
++      io.stdout.write(`${JSON.stringify({
++        type: 'tool/call',
++        callId: event.data.callId,
++        name: event.data.name,
++        arguments: event.data.arguments,
++      })}\n`)
++      break
++    }
++    case 'tool/result': {
++      const block = event.data.message.content[0]
++      const callId = block?.toolCallId ?? ''
++      const content = block?.content === undefined ? '' : toolResultText(block.content)
++      io.stdout.write(`${JSON.stringify({
++        type: 'tool/result',
++        callId,
++        name: toolNames.get(callId) ?? '',
++        content,
++        ...block?.isError === true ? { isError: true } : {},
++      })}\n`)
++      break
++    }
++    default:
++      break
++  }
++}
++
++/** [cc-connect --jsonl] Extract the text content of a tool result block. */
++function toolResultText(content: readonly { type: string; text?: string }[]): string {
++  return content
++    .filter(block => block.type === 'text' && block.text !== undefined)
++    .map(block => block.text as string)
++    .join('')
++}
++
++/**
++ * [cc-connect --jsonl] Start reading approval responses from stdin. The
++ * runner emits `approval/request` lines on stdout and blocks until the
++ * driver writes `{"type":"approval/response","id":...,"outcome":"allowed-once"|"rejected"}`
++ * back. Responses for unknown ids are ignored.
++ */
++function startStdinApprovalReader(
++  pending: Map<string, (outcome: 'allowed-once' | 'rejected' | 'cancelled') => void>,
++  input: NodeJS.ReadableStream,
++): void {
++  const rl = createInterface({ input })
++  rl.on('line', (line) => {
++    if (line === '') return
++    let msg: { type?: unknown; id?: unknown; outcome?: unknown }
++    try {
++      msg = JSON.parse(line) as { type?: unknown; id?: unknown; outcome?: unknown }
++    } catch {
++      return
++    }
++    if (msg.type !== 'approval/response' || typeof msg.id !== 'string') return
++    const resolve = pending.get(msg.id)
++    if (resolve === undefined) return
++    pending.delete(msg.id)
++    resolve(msg.outcome === 'allowed-once' ? 'allowed-once' : 'rejected')
++  })
+ }
+ 
+ /** Aggregate the last assistant text and turn outcome in one owned interval. */
+@@ -88,12 +239,23 @@
+ }
+ 
+ /**
+- * Run one task through a freshly created Agent and request process exit.
++ * Run one task through a freshly created or resumed Agent and request process exit.
++ *
++ * [cc-connect] When `config.sessionId` is set, the runner resumes the
++ * persisted session if it exists and creates it with that exact id otherwise
++ * (create-once, resume-always), so an external driver can keep one session id
++ * across turns. `config.model` overrides the default model selection and
++ * `config.mode` pins the session's sandbox/approval knobs before the task runs.
++ *
++ * [cc-connect --jsonl] In jsonl mode the runner streams events to stdout,
++ * answers approval requests from stdin, and in `confirm` mode intercepts
++ * write/execute tools to ask the human first.
++ *
+  * @param ctx - plugin context carrying the Agent, default model, Session, and launcher IO services.
+- * @param task - one-shot task text.
++ * @param config - validated run config (task, sessionId?, model?, mode?, jsonl?).
+  * @param io - process-facing effects.
+  */
+-async function run(ctx: Context, task: string, io: HeadlessIo): Promise<void> {
++async function run(ctx: Context, config: Config, io: HeadlessIo): Promise<void> {
+   // Loader siblings mount concurrently. Await the complete application before
+   // creating an Agent so its scoped tools and adapters are not half-composed.
+   await ctx.get('loader')?.await()
+@@ -104,29 +266,120 @@
+   if (agents === undefined || defaultModel === undefined || sessions === undefined) return
+ 
+   const selection = defaultModel.currentSelection()
+-  // This bundle composes no preset roster, so the model-facing rows sit in the
+-  // host plane and the agent reads them from the global layer. A deployment
+-  // that DOES configure one has to join it here first
+-  // (@deepseek-ai/dsh-agent-presets README, "Composing a child agent").
+-  const { agent } = await agents.create({
+-    sessionId: SessionId(`session-${randomUUID()}`),
+-    meta: { cwd: process.cwd() },
+-    agentOptions: { provider: selection.provider, model: selection.model },
+-    setup: (agentCtx) => {
+-      const selected: ModelSelectionRef = { current: selection, assembled: undefined }
+-      installModelSelection(agentCtx, selected)
+-    },
+-  })
++  if (config.model !== undefined && config.model !== '') {
++    selection.model = config.model
++  }
++  const sessionId = SessionId(config.sessionId !== undefined && config.sessionId !== '' ? config.sessionId : `session-${randomUUID()}`)
++  const agentOptions = { provider: selection.provider, model: selection.model }
++  const setup: AgentSetup = (agentCtx) => {
++    const selected: ModelSelectionRef = { current: selection, assembled: undefined }
++    installModelSelection(agentCtx, selected)
++  }
++
++  let agent: Awaited<ReturnType<typeof agents.create>>['agent']
++  if (config.sessionId !== undefined && config.sessionId !== '') {
++    // Resume the persisted session; fall back to creating it with the same id
++    // on the first run (nothing persisted yet). A resume that fails for any
++    // other reason (e.g. a corrupted log) surfaces the error to the driver,
++    // which may fall back to a fresh session id.
++    try {
++      ({ agent } = await agents.resume({ resumeSessionId: sessionId, agentOptions, setup }))
++    } catch {
++      ({ agent } = await agents.create({
++        sessionId,
++        meta: { cwd: process.cwd() },
++        agentOptions,
++        setup,
++      }))
++    }
++  } else {
++    ({ agent } = await agents.create({
++      sessionId,
++      meta: { cwd: process.cwd() },
++      agentOptions,
++      setup,
++    }))
++  }
++
++  if (config.mode !== undefined && config.mode !== '') {
++    applyMode(agent.session, config.mode)
++  }
++
++  // [cc-connect --jsonl] Stream + approval wiring. Registered before the task
++  // is submitted so no event or approval request is missed.
++  const jsonl = config.jsonl === true
++  const pendingApprovals = new Map<string, (outcome: 'allowed-once' | 'rejected' | 'cancelled') => void>()
++  const toolNames = new Map<string, string>()
++  if (jsonl) {
++    ctx.on('session/event', (session: Session, event: SessionEvent) => {
++      if (session.id !== agent.session.id) return
++      emitSessionEvent(io, event, toolNames)
++    })
++
++    // Answer the approval seam by streaming the request to the driver and
++    // waiting for its response on stdin. This is the one terminal answerer;
++    // sandbox escalations (workspace-write) and confirm-mode tool asks both
++    // route through ctx.approval. Answerers subscribe to the scoped
++    // 'approval/request' waterfall on the Context (the event name lives in
++    // @deepseek-ai/dsh-user-approval, which this bundle does not depend on,
++    // so register through a structural cast).
++    const approvalEvents = ctx as unknown as {
++      on(event: 'approval/request', listener: (req: { toolName: string; reason?: string; callId?: string; signal?: AbortSignal }, next: () => Promise<string>) => Promise<string> | string): unknown
++    }
++    approvalEvents.on('approval/request', (req) => {
++        const id = randomUUID()
++        return new Promise<'allowed-once' | 'rejected' | 'cancelled'>((resolve) => {
++          // Register the pending entry BEFORE emitting the request line: the
++          // driver may answer synchronously the moment it streams, so the
++          // stdin response must find the entry already present.
++          pendingApprovals.set(id, resolve)
++          req.signal?.addEventListener('abort', () => {
++            if (pendingApprovals.delete(id)) resolve('cancelled')
++          }, { once: true })
++          io.stdout.write(`${JSON.stringify({
++            type: 'approval/request',
++            id,
++            toolName: req.toolName,
++            ...req.reason === undefined ? {} : { reason: req.reason },
++            ...req.callId === undefined ? {} : { callId: req.callId },
++          })}\n`)
++        })
++    })
++
++    // confirm mode: ask the human before write/execute tools (the headless
++    // counterpart of the web profile's confirm-writes plugin). The event name
++    // lives in @deepseek-ai/dsh-tools, which this bundle does not depend on,
++    // so register through a structural cast.
++    if (config.mode === 'confirm') {
++      const toolsEvents = ctx as unknown as {
++        on(event: 'tools/pre-execute', listener: (exec: { name: string }, next: () => unknown) => unknown): unknown
++      }
++      toolsEvents.on('tools/pre-execute', (exec, next) => {
++        if (ASK_TOOLS.has(exec.name)) {
++          return { kind: 'ask', reason: `tool "${exec.name}" requires your approval (write/execute)` }
++        }
++        return next()
++      })
++    }
++
++    startStdinApprovalReader(pendingApprovals, internals.stdin)
++  }
++
+   await agent.whenIdle()
+   const firstSeq = agent.session.seq
+   agent.followup(createUserMessage({
+-    content: [{ type: 'text', text: task }],
++    content: [{ type: 'text', text: config.task }],
+     source: { kind: 'user' },
+   }))
+   await agent.whenIdle()
+   await sessions.flush(agent.session)
+   const outcome = summarize(agent.session.events, firstSeq)
+-  io.stdout.write(outcome.text + '\n')
++  if (jsonl) {
++    io.stdout.write(`${JSON.stringify({ type: 'result', text: outcome.text })}\n`)
++    io.stdout.write(`${JSON.stringify({ type: 'done', success: outcome.reason?.kind === 'completed', sessionId: String(sessionId) })}\n`)
++  } else {
++    io.stdout.write(outcome.text + '\n')
++  }
+   if (outcome.reason?.kind === 'error') {
+     io.stderr.write(`dsh: ${outcome.reason.error.code}: ${outcome.reason.error.message}\n`)
+   }
+@@ -146,5 +399,5 @@
+     throw new Error('headless-runner: the launcher must provide ctx.appExit before the tree mounts')
+   }
+   const io: HeadlessIo = { stdout: internals.stdout, stderr: internals.stderr, exit }
+-  void run(ctx, config.task, io).catch((error: unknown) => { fail(io, error) })
++  void run(ctx, config, io).catch((error: unknown) => { fail(io, error) })
+ }
+diff --git a/packages/bundle/headless/cordis.patch.yml b/packages/bundle/headless/cordis.patch.yml
+--- a/packages/bundle/headless/cordis.patch.yml
++++ b/packages/bundle/headless/cordis.patch.yml
+@@ -33,3 +33,10 @@
+       inject: [headlessStartup]
+       config:
+         task: !!js ctx.headlessStartup.task
++        # [cc-connect] Optional driver-provided overrides: explicit session id
++        # (create-or-resume), model override, permission mode override, and
++        # JSONL event streaming + stdin approval channel.
++        sessionId: !!js ctx.headlessStartup.sessionId
++        model: !!js ctx.headlessStartup.model
++        mode: !!js ctx.headlessStartup.mode
++        jsonl: !!js ctx.headlessStartup.jsonl === true
+diff --git a/packages/bundle/headless/tests/headless.spec.ts b/packages/bundle/headless/tests/headless.spec.ts
+--- a/packages/bundle/headless/tests/headless.spec.ts
++++ b/packages/bundle/headless/tests/headless.spec.ts
+@@ -5,7 +5,7 @@
+ import AgentRegistry, { Inbox } from '@deepseek-ai/dsh-agent'
+ import type { Agent, AgentHandle, CreateAgentOptions } from '@deepseek-ai/dsh-agent'
+ import AgentDefaultModelConfig from '@deepseek-ai/dsh-agent-default-model'
+-import { createAssistantMessage } from '@deepseek-ai/dsh-llm'
++import { createAssistantMessage, createToolResultMessage, CallId } from '@deepseek-ai/dsh-llm'
+ import SessionStore from '@deepseek-ai/dsh-session'
+ import type { Session, UserMessage } from '@deepseek-ai/dsh-session'
+ import { apply, Config, internals } from '../src/index.ts'
+@@ -16,6 +16,13 @@
+ interface Script {
+   before?(session: Session): void
+   afterPrompt(session: Session, message: UserMessage): Promise<void> | void
++  /** [cc-connect] Called for every stdout chunk the runner writes (for --jsonl tests). */
++  onStdout?(chunk: string): void
++}
++
++/** [cc-connect] Extra test wiring for --jsonl: a substitutable stdin. */
++interface BenchWire {
++  stdin?: NodeJS.ReadableStream
+ }
+ 
+ function appendTurn(
+@@ -48,9 +55,9 @@
+ }
+ 
+ /** Mount the real registries around a small scripted Agent factory. */
+-async function bench(script: Script): Promise<{
++async function bench(script: Script, wire?: BenchWire): Promise<{
+   ctx: Context
+-  run(): Promise<{ code: number; out: string; err: string; order: string[] }>
++  run(config?: Record<string, unknown>): Promise<{ code: number; out: string; err: string; order: string[] }>
+ }> {
+   const ctx = new Context()
+   await ctx.plugin(SessionStore)
+@@ -91,17 +98,18 @@
+   })
+   return {
+     ctx,
+-    run: async () => {
++    run: async (config: Record<string, unknown> = {}) => {
+       let out = ''
+       let err = ''
+       const order: string[] = []
+       ctx.on('session/flush', () => { order.push('flush') })
+-      internals.stdout = { write: (chunk: string) => { out += chunk; return true } }
++      internals.stdout = { write: (chunk: string) => { out += chunk; script.onStdout?.(chunk); return true } }
+       internals.stderr = { write: (chunk: string) => { err += chunk; return true } }
++      if (wire?.stdin !== undefined) internals.stdin = wire.stdin
+       const exited = new Promise<number>((resolve) => {
+         ctx.provide('appExit', (code: number) => { order.push('exit'); resolve(code) })
+       })
+-      apply(ctx, { task: 'do the thing' })
++      apply(ctx, { task: 'do the thing', ...config })
+       return { code: await exited, out, err, order }
+     },
+   }
+@@ -249,4 +257,114 @@
+     expect(() => new Config({} as never)).toThrow()
+     expect(new Config({ task: 'x' })).toEqual({ task: 'x' })
+   })
++
++  // [cc-connect] Regression: applyMode must call Session.append as a METHOD.
++  // The previous implementation detached `const append = session.append`,
++  // which ran append with `this === undefined` and crashed inside the
++  // Session implementation ("Cannot read properties of undefined (reading
++  // 'log')") as soon as `--mode` was passed.
++  it('[cc-connect] --mode appends sandbox/approval knob events without crashing', async () => {
++    let session: Session | undefined
++    const test = await bench({
++      before(s) { session = s },
++      async afterPrompt(s, message) {
++        appendTurn(s, 0, message, 'answer', true)
++      },
++    })
++    const result = await test.run({ mode: 'confirm' })
++    expect(result.code).toBe(0)
++    expect(result.err).toBe('')
++    const knobTypes = session!.events
++      .filter(e => e.type === 'sandbox/mode' || e.type === 'approval/policy')
++      .map(e => e.type)
++      .sort()
++    expect(knobTypes).toEqual(['approval/policy', 'sandbox/mode'])
++    const sandbox = session!.events.find(e => e.type === 'sandbox/mode')
++    expect(sandbox?.data).toMatchObject({ mode: 'danger-full-access' })
++    const approval = session!.events.find(e => e.type === 'approval/policy')
++    expect(approval?.data).toMatchObject({ policy: 'ask' })
++  })
++
++  // [cc-connect --jsonl] The runner must stream text/tool events and close
++  // the run with result + done JSONL envelopes (and never print raw text in
++  // jsonl mode).
++  it('[cc-connect] --jsonl streams text/tool events plus result/done envelopes', async () => {
++    const { PassThrough } = await import('node:stream')
++    const stdin = new PassThrough()
++    const test = await bench({
++      async afterPrompt(session, message) {
++        session.append('turn/start', { turn: 1 })
++        session.append('step/start', { turn: 1, step: 1 })
++        session.append('user/message', message, { surfaceOp: 'append' })
++        session.append('assistant/chunk', { turn: 1, step: 1, chunk: { type: 'text-delta', index: 0, text: 'Hel' } })
++        session.append('assistant/chunk', { turn: 1, step: 1, chunk: { type: 'text-delta', index: 0, text: 'lo' } })
++        const callEvent = session.append('tool/call', { turn: 1, step: 1, callId: 'call-1' as CallId, name: 'bash', arguments: '{"command":"ls"}' })
++        session.append('tool/result', {
++          turn: 1, step: 1,
++          message: createToolResultMessage({ callId: 'call-1' as CallId, content: [{ type: 'text', text: 'ok' }], isError: false }),
++        }, { surfaceOp: 'append', sourceEventSeqs: [callEvent.seq] })
++        session.append('assistant/message', {
++          turn: 1, step: 1,
++          message: createAssistantMessage({
++            content: [{ type: 'text', text: 'Hello' }],
++            source: { provider: 'test-provider', model: 'test-model' },
++          }),
++        }, { surfaceOp: 'append' })
++        session.append('step/end', { turn: 1, step: 1 })
++        session.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
++      },
++    }, { stdin })
++    const result = await test.run({ jsonl: true })
++    expect(result.code).toBe(0)
++    expect(result.err).toBe('')
++    const lines = result.out.split('\n').filter(l => l !== '')
++    const types = lines.map(l => JSON.parse(l).type)
++    expect(types).toEqual(['text', 'text', 'tool/call', 'tool/result', 'result', 'done'])
++    expect(JSON.parse(lines[2]!)).toMatchObject({ type: 'tool/call', name: 'bash', callId: 'call-1', arguments: '{"command":"ls"}' })
++    expect(JSON.parse(lines[3]!)).toMatchObject({ type: 'tool/result', name: 'bash', content: 'ok' })
++    expect(JSON.parse(lines[4]!)).toMatchObject({ type: 'result', text: 'Hello' })
++    expect(JSON.parse(lines[5]!)).toMatchObject({ type: 'done', success: true })
++    stdin.destroy()
++    await test.ctx.fiber.dispose()
++  })
++
++  // [cc-connect --jsonl] Approval requests must stream to stdout and the
++  // runner must resolve the pending request from an approval/response line
++  // on stdin (the driver relays the human's Feishu card decision). The
++  // answerer subscribes to the scoped 'approval/request' waterfall.
++  it('[cc-connect] --jsonl relays approval requests and resolves from stdin', async () => {
++    const { PassThrough } = await import('node:stream')
++    const stdin = new PassThrough()
++    const approvalLines: string[] = []
++    let theCtx: Context | undefined
++    const test = await bench({
++      onStdout(chunk) {
++        // The driver answers the approval request the moment it streams out.
++        if (chunk.includes('"type":"approval/request"')) {
++          approvalLines.push(chunk.trim())
++          const id = (JSON.parse(chunk) as { id: string }).id
++          stdin.write(`${JSON.stringify({ type: 'approval/response', id, outcome: 'allowed-once' })}\n`)
++        }
++      },
++      async afterPrompt(session, message) {
++        // The runner registered its answerer on the ctx event system; trigger
++        // an approval request the way the approval seam does.
++        (theCtx!.emit as unknown as (name: string, ...args: unknown[]) => unknown)(
++          'approval/request',
++          { toolName: 'bash', reason: 'approve me' },
++          () => Promise.resolve('unavailable'),
++        )
++        await Promise.resolve()
++        appendTurn(session, 1, message, 'approved-answer', true)
++      },
++    }, { stdin })
++    theCtx = test.ctx
++    const result = await test.run({ jsonl: true, mode: 'confirm' })
++    expect(result.code).toBe(0)
++    expect(approvalLines.length).toBe(1)
++    expect(JSON.parse(approvalLines[0]!)).toMatchObject({ type: 'approval/request', toolName: 'bash', reason: 'approve me' })
++    expect(result.out).toContain('"type":"result"')
++    stdin.destroy()
++    await test.ctx.fiber.dispose()
++  })
+ })

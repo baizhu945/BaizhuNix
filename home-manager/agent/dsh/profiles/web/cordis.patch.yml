@@ -1,0 +1,42 @@
+# 由 home-manager 管理(agent/dsh/dsh.nix)。追加自定义 patch 行请编辑 dsh.nix。
+- insert:
+    - id: confirm-writes
+      name: './plugins/confirm-writes.mjs'
+      config:
+        # 仅在此预设(第四模式)下拦截写/执行
+        preset: confirm
+        askTools:
+          - write
+          - edit
+          - str_replace_editor
+          - bash
+          - pwsh
+          - terminal_send
+
+# ── 权限预设表 ──────────────────────────────────────────────────────────
+# dsh 三个内置模式保持原样(Read Only / Workspace Write / Full Access);
+# 新增第四模式 confirm = 无沙箱边界 + 每次写/执行询问(配合 confirm-writes 插件)。
+# defaultPreset: confirm → 新会话默认启用询问模式。
+- id: permission
+  config:
+    defaultPreset: confirm
+    presets:
+      read-only:
+        sandbox: read-only
+        approval: ask
+      workspace-write:
+        sandbox: workspace-write
+        approval: ask
+      danger-full-access:
+        sandbox: danger-full-access
+        approval: never
+      confirm:
+        sandbox: danger-full-access
+        approval: ask
+        name: Confirm (ask)
+        description: Full access, but every write and command asks for your approval
+
+# approval 服务默认策略固定为 ask,保证新会话/回退场景下写/执行始终可询问
+- id: approval
+  config:
+    policy: ask

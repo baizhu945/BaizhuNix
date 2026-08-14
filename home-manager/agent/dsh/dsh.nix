@@ -35,6 +35,20 @@ let
 
     pnpmDeps = dshPnpmDeps;
 
+    # 前端展示补丁:进行中的工具调用/命令执行/思考过程默认展开,
+    # 已结束的保持默认折叠(expand-running.patch 修改 ToolRow / ReasoningRow)
+    # 审批弹窗补丁:新增第三个选项"总是允许(always-allow)",选择后写入会话日志,
+    # 本次对话的所有写/执行默认放行(approval-always-allow.patch)
+    # headless 补丁(cc-connect 集成):headless runner 新增 --session-id /
+    # --model / --mode 三个选项,使 cc-connect 的 agent/dsh 可以跨轮次恢复同一
+    # 个持久化会话、切换模型与权限模式(headless-cc-connect.patch 修改
+    # packages/bundle/headless 的 startup.ts / index.ts / cordis.patch.yml)
+    patches = [
+      ./patches/expand-running.patch
+      ./patches/approval-always-allow.patch
+      ./patches/headless-cc-connect.patch
+    ];
+
     nativeBuildInputs = [
       pkgs.nodejs_22 # dsh engines 要求 ^22.19 || >=24
       pkgs.pnpm_11   # 与仓库 packageManager 一致的 pnpm 11
@@ -93,11 +107,17 @@ let
   };
 in
 {
+  imports = [
+    ./skills.nix
+  ];
+
   home.packages = [
     dsh
     # dsh 运行时依赖(必须):
     pkgs.nodejs_22 # dsh 子进程/spawn helper 需要 node 在 PATH
     pkgs.ripgrep   # dsh-tool-fs-search 通过 ctx.subprocess 调用 rg
+    pkgs.bubblewrap # dsh sandbox-local 的 Linux 沙箱后端(workspace-write/read-only 模式需要;
+                    # 探测方式:spawnSync('bwrap', ...);缺它则报 "no sandbox backend usable")
     # 说明:bash 工具走系统 /bin/bash,无需额外安装
 
     # 便捷启动:启动 dsh web 并自动打开默认浏览器(xdg-open),然后立即退出。
@@ -134,49 +154,17 @@ in
   # 配置都是"放文件即生效",启动时自动发现,无需改 dsh 本身。
   # ─────────────────────────────────────────────────────────────────────────────
   home.file = {
-    # 【context】全局指令:等同 pi 的 agent-context.md。
-    # dsh 会在每次会话开始把它作为 system-reminder 注入模型,
-    # 且会话中每次读写编辑文件后自动刷新它。
-    # 取消注释即可启用(也可用自己写的任意 .md):
-    # ".dsh/AGENTS.md".source = ../agent-context.md;
     ".dsh/AGENTS.md".source = ../agent-context.md;
-
-
-    # 【skills】用户级技能:每个子目录 = 一个 skill,目录内放 SKILL.md。
-    # dsh 自动扫描 ~/.dsh/skills/(优先级 rank 400,低于项目级 .dsh/skills)。
-    # 取消注释并创建 ./skills/ 目录即可:
-    # ".dsh/skills/" = { source = ./skills; recursive = true; };
-
-
-
-    # 【额外补丁】如需覆盖 profile 的任何插件行配置(cordis.patch.yml),
-    # 取消注释并创建 ./patches/cordis.patch.yml:
-    # ".dsh/profiles/web/cordis.patch.yml".source = ./patches/cordis.patch.yml;
 
     # ─────────────────────────────────────────────────────────────────────────
     # 权限策略插件 confirm-writes(与 pi 相同:读放行,写/执行询问)
     # ─────────────────────────────────────────────────────────────────────────
     # 插件本体(零依赖 ESM,loader 经相对路径加载)
-    ".dsh/profiles/web/plugins/confirm-writes.mjs".source = ./plugins/confirm-writes.mjs;
+    ".dsh/profiles/web/plugins/confirm-writes.mjs".source = ./profiles/web/plugins/confirm-writes.mjs;
 
     # web profile 的用户 patch 层:挂载 confirm-writes 插件。
     # 注意:此文件由 home-manager 声明式管理;如需追加自己的 patch 行,
     # 请直接编辑 dsh.nix 中此处的内容(改后 home-manager switch 生效)。
-    ".dsh/profiles/web/cordis.patch.yml".text = ''
-      # 由 home-manager 管理(agent/dsh/dsh.nix)。追加自定义 patch 行请编辑 dsh.nix。
-      - insert:
-          - id: confirm-writes
-            name: './plugins/confirm-writes.mjs'
-            config:
-              askTools:
-                - write
-                - edit
-                - str_replace_editor
-                - bash
-                - pwsh
-                - terminal_send
-    '';
-    # force:此文件由 dsh 首次运行自动生成,home-manager 接管声明式管理
-    ".dsh/profiles/web/cordis.patch.yml".force = true;
+    ".dsh/profiles/web/cordis.patch.yml".source = ./profiles/web/cordis.patch.yml;
   };
 }

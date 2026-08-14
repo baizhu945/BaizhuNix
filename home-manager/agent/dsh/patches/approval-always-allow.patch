@@ -1,0 +1,113 @@
+diff --git a/packages/client/ui-conversation/src/client/contract/slots.ts b/packages/client/ui-conversation/src/client/contract/slots.ts
+index 2125914..38407ac 100644
+--- a/packages/client/ui-conversation/src/client/contract/slots.ts
++++ b/packages/client/ui-conversation/src/client/contract/slots.ts
+@@ -636,7 +636,7 @@ export class PendingApproval {
+    * wait and drops it from the pending list.
+    * @param outcome - the only two client-answerable outcomes.
+    */
+-  async answer(outcome: 'allowed-once' | 'rejected'): Promise<void> {
++  async answer(outcome: 'allowed-once' | 'rejected' | 'always-allow'): Promise<void> {
+     const receipt = await this.wait.respond({
+       ok: true,
+       value: { sessionId: this.wait.sessionId, approvalId: this.wait.payload.approvalId, outcome },
+diff --git a/packages/client/ui-conversation/src/client/locales.ts b/packages/client/ui-conversation/src/client/locales.ts
+index c9b6f65..fadbfb0 100644
+--- a/packages/client/ui-conversation/src/client/locales.ts
++++ b/packages/client/ui-conversation/src/client/locales.ts
+@@ -138,6 +138,7 @@ export const zh = {
+   'approval.escalation': '工具 {toolName} 请求越权执行',
+   'approval.reject': '拒绝',
+   'approval.allowOnce': '允许一次',
++  'approval.alwaysAllow': '总是允许',
+   'ask.rowTitle': '提问',
+   'ask.waiting': '等待回答',
+   'ask.cancelled': '已取消',
+@@ -307,6 +308,7 @@ export const en = {
+   'approval.escalation': 'Tool {toolName} requests privileged execution',
+   'approval.reject': 'Reject',
+   'approval.allowOnce': 'Allow once',
++  'approval.alwaysAllow': 'Always allow',
+   'ask.rowTitle': 'Ask question',
+   'ask.waiting': 'waiting',
+   'ask.cancelled': 'cancelled',
+diff --git a/packages/client/ui-conversation/src/client/skeleton/ApprovalPanel.tsx b/packages/client/ui-conversation/src/client/skeleton/ApprovalPanel.tsx
+index e700b11..cf70c65 100644
+--- a/packages/client/ui-conversation/src/client/skeleton/ApprovalPanel.tsx
++++ b/packages/client/ui-conversation/src/client/skeleton/ApprovalPanel.tsx
+@@ -58,7 +58,7 @@ function ApprovalFlow({ pending, command, t }: {
+   // lands; until then the buttons must not re-fire. An answer failure
+   // (rejected receipt / transport) re-arms them for retry.
+   const [answered, setAnswered] = useState(false)
+-  const answer = (outcome: 'allowed-once' | 'rejected'): void => {
++  const answer = (outcome: 'allowed-once' | 'rejected' | 'always-allow'): void => {
+     setAnswered(true)
+     void pending.answer(outcome).catch(() => { setAnswered(false) })
+   }
+@@ -77,6 +77,9 @@ function ApprovalFlow({ pending, command, t }: {
+           <Button variant="outline" className={css.reject} disabled={answered} onClick={() => { answer('rejected') }}>
+             {t('approval.reject')}
+           </Button>
++          <Button variant="outline" className={css.alwaysAllow} disabled={answered} onClick={() => { answer('always-allow') }}>
++            {t('approval.alwaysAllow')}
++          </Button>
+           <Button variant="primary" disabled={answered} onClick={() => { answer('allowed-once') }}>
+             {t('approval.allowOnce')}
+           </Button>
+diff --git a/packages/host/apiproxy/src/api-proxy.ts b/packages/host/apiproxy/src/api-proxy.ts
+index bda9936..08af4b5 100644
+--- a/packages/host/apiproxy/src/api-proxy.ts
++++ b/packages/host/apiproxy/src/api-proxy.ts
+@@ -90,6 +90,14 @@ import type { ApprovalOutcome, ApprovalRequestId } from '@deepseek-ai/dsh-user-a
+ // `ctx.get('approval')` without a value dependency on the seam (optional composition).
+ import type {} from '@deepseek-ai/dsh-user-approval'
+ import { approvalResponsePayloadSchema } from './api/approvals.schema.ts'
++
++// [dsh-harness-always-allow] 进程内"总是允许"广播事件(cordis Events 为 merge-extensible)
++declare module '@deepseek-ai/cordis' {
++  interface Events {
++    /** 审批弹窗选择 Always allow 后由 api-proxy 广播;confirm-writes 插件监听并放行该会话的写/执行 */
++    'confirm-writes/always-allow'(sessionId: string): void
++  }
++}
+ import { imageLimitsProjectionSchema, sessionListMetadataProjectionSchema } from './api/sessions.schema.ts'
+ import { questionResponsePayloadSchema } from './api/questions.schema.ts'
+ import type { ClientResponse, RpcError, RpcReceipt, RpcRequest, RpcResponse } from './api/rpc.ts'
+@@ -3705,7 +3713,14 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
+         if (!parsed.success || parsed.data.approvalId !== approval.approvalId || parsed.data.sessionId !== approval.sessionId) {
+           return Promise.resolve({ accepted: false, reason: 'bad-response' })
+         }
+-        approval.resolve(parsed.data.outcome)
++        // always-allow: 放行本次,并广播进程内事件(confirm-writes 插件据此放行后续调用)。
++        // 状态仅存于进程内存:dsh 重启/插件重载后自动恢复询问,不随会话持久化。
++        if (parsed.data.outcome === 'always-allow') {
++          ctx.emit('confirm-writes/always-allow', approval.sessionId)
++          approval.resolve('allowed-once')
++        } else {
++          approval.resolve(parsed.data.outcome)
++        }
+         return Promise.resolve({ accepted: true })
+       }
+       const pending = pendingQuestions.get(message.rpcId)
+diff --git a/packages/host/apiproxy/src/api/approvals.schema.ts b/packages/host/apiproxy/src/api/approvals.schema.ts
+index 2790d98..81ce3f2 100644
+--- a/packages/host/apiproxy/src/api/approvals.schema.ts
++++ b/packages/host/apiproxy/src/api/approvals.schema.ts
+@@ -17,5 +17,5 @@ export const approvalRequestIdSchema = z.string().min(1) as unknown as z.ZodType
+ export const approvalResponsePayloadSchema = z.object({
+   sessionId: sessionIdSchema,
+   approvalId: approvalRequestIdSchema,
+-  outcome: z.union([z.literal('allowed-once'), z.literal('rejected')]),
++  outcome: z.union([z.literal('allowed-once'), z.literal('rejected'), z.literal('always-allow')]),
+ }) satisfies z.ZodType<Wire<ApprovalResponsePayload>>
+diff --git a/packages/host/apiproxy/src/api/approvals.ts b/packages/host/apiproxy/src/api/approvals.ts
+index 780bc47..b3f9932 100644
+--- a/packages/host/apiproxy/src/api/approvals.ts
++++ b/packages/host/apiproxy/src/api/approvals.ts
+@@ -17,5 +17,5 @@ import type { SessionId } from '@deepseek-ai/dsh-session/types'
+ export interface ApprovalResponsePayload {
+   sessionId: SessionId
+   approvalId: ApprovalRequestId
+-  outcome: 'allowed-once' | 'rejected'
++  outcome: 'allowed-once' | 'rejected' | 'always-allow'
+ }
