@@ -45,7 +45,7 @@ sudo nix-channel --update
 # 三、noctalia 和 DankMaterialShell 配置
 将 7z 文件解压后，将 `noctalia` 和 `DankMaterialShell` 文件夹复制到 `~/.config/` 路径下。
 
-_别忘了将 `wcandxl` 更换为你的密码，`baizhu945` 更换为你的用户名_
+_别忘了将 `<yourusername>` 更换为你的密码，`<yourpassword>` 更换为你的用户名_
 
 # 四、Joplin配置
 安装插件 `Katex Input Helper`, `Record`, `Rich Markdown`, `Search & Replace`, `Kity Minder`, `Note Tabs`
