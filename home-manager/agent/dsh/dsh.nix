@@ -121,16 +121,11 @@ let
     cd "$out"
     ${pkgs.gnupatch}/bin/patch -p2 < "$visionPatch"
   '';
-
-  # ── dsh-deep-whale 鲸鱼娘皮肤系列 ──────────────────────────────────────
-  # maid-atelier 皮肤的源码获取、blur 可读性 patch、以及
-  # ~/.dsh/profiles/web/node_modules 的真实文件部署,全部独立在
-  # ./skin.nix;这里只把它作为模块导入。
 in
 {
   imports = [
     ./skills.nix
-    ./skin.nix
+    ./skin/skin.nix
   ];
 
   home.packages = [
@@ -140,7 +135,6 @@ in
     pkgs.ripgrep   # dsh-tool-fs-search 通过 ctx.subprocess 调用 rg
     pkgs.bubblewrap # dsh sandbox-local 的 Linux 沙箱后端(workspace-write/read-only 模式需要;
                     # 探测方式:spawnSync('bwrap', ...);缺它则报 "no sandbox backend usable")
-    # 说明:bash 工具走系统 /bin/bash,无需额外安装
 
     # 便捷启动(生命周期与浏览器窗口绑定,脚本主体见 ./dsh-web.sh):
     # 1. 端口空闲时启动 dsh web(端口已有实例则直接复用);
@@ -152,88 +146,23 @@ in
     (pkgs.writeShellScriptBin "dsh-web" (builtins.readFile ./dsh-web.sh))
   ];
 
-  # ─────────────────────────────────────────────────────────────────────────────
-  # context / skills 配置入口(默认全部注释 = 零配置)
-  #
-  # dsh 的用户数据根目录为 ~/.dsh(可用环境变量 DSH_HOME 覆盖),所有用户
-  # 配置都是"放文件即生效",启动时自动发现,无需改 dsh 本身。
-  # ─────────────────────────────────────────────────────────────────────────────
   home.file = {
     ".dsh/AGENTS.md".source = ../agent-context.md;
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # 权限策略插件 confirm-writes(与 pi 相同:读放行,写/执行询问)
-    # ─────────────────────────────────────────────────────────────────────────
-    # 插件本体(零依赖 ESM,loader 经相对路径加载)
     ".dsh/profiles/web/plugins/confirm-writes.mjs".source = ./profiles/web/plugins/confirm-writes.mjs;
 
-    # web profile 的用户 patch 层:挂载 confirm-writes + approval-tweaks 插件,
-    # 以及 maid-atelier 皮肤(ui-skin-maid-atelier;皮肤包体由 ./skin.nix
-    # 部署,insert 行见文件内注释)。
-    # 注意:此文件由 home-manager 声明式管理;如需追加自己的 patch 行,
-    # 请直接编辑 dsh.nix 中此处的内容(改后 home-manager switch 生效)。
     ".dsh/profiles/web/cordis.patch.yml".source = ./profiles/web/cordis.patch.yml;
 
-    # ─────────────────────────────────────────────────────────────────────
-    # 审批面板插件 dsh-baizhu-approval(approval-always-allow +
-    # approval-keyboard 两个源码补丁的插件迁移,双半包):
-    # - host 半体 index.mjs:空 apply,让本行出现在 host 组合中;
-    # - client 半体 client.js:浏览器 bundle,composer chain 接管审批 UI。
-    # 安装到 web profile 自己的 node_modules(createRequire(baseUrl) 从此
-    # 解析包名)。真实文件由下方 home.activation.dshPlugins 部署:
-    # home.file 的产物一律是符号链接,Node ESM 会把符号链接 realpath 到
-    # /nix/store,将来插件内一旦出现 bare import 就找不到 profile 的
-    # node_modules(与 headless 插件同因)。
-    # 注意:`dsh plugin` 用 pnpm 管理该目录时可能清掉它,
-    # 重新 home-manager switch 即可恢复。
-    # ─────────────────────────────────────────────────────────────────────
+    ".dsh/profiles/headless/cordis.patch.yml".source = ./profiles/headless/cordis.patch.yml;
 
-    # ─────────────────────────────────────────────────────────────────────
-    # headless profile 插件(cc-connect 集成;headless-cc-connect.patch 的
-    # 插件迁移):headless patch 层禁用内置 startup/runner,挂两个本地插件。
-    # 插件 .mjs 的 bare import(@deepseek-ai/dsh-*)由 dsh 每次启动时维护的
-    # ~/.dsh/profiles/node_modules 扁平链接解析(healProfilesModuleFallback,
-    # 指向 apps/cli 自己的依赖树,保证与内置插件共享同一份 cordis 等实例)。
-    # 插件文件因此必须部署为 ~/.dsh 下的真实文件(不能是符号链接:
-    # realpath 会逃逸到 /nix/store,Node 就找不到模块),由下方
-    # home.activation.dshPlugins 完成。
-    # force = true:dsh 首次创建 profile 时会生成一个 `[]` 模板
-    # cordis.patch.yml,由 home-manager 接管覆盖(该文件本就是用户层,
-    # dsh 之后不再写入)。
-    # ─────────────────────────────────────────────────────────────────────
-    ".dsh/profiles/headless/cordis.patch.yml" = {
-      source = ./profiles/headless/cordis.patch.yml;
-      force = true;
-    };
-
-    # ─────────────────────────────────────────────────────────────────────
-    # home-level patch(~/.dsh/cordis.patch.yml,web/headless 所有 profile
-    # 生效):llm-retry-default-5.patch 的声明式配置迁移。retry policy 是
-    # provider 插件的配置字段,为 deepseek-official(llm-deepseek)与
-    # minimax-cn(llm-pi-ai)显式设置 maxRetries: 5。settings.yaml 用户层
-    # 会逐键深合并到此处 base 上,不会互相覆盖。
-    # ─────────────────────────────────────────────────────────────────────
     ".dsh/cordis.patch.yml".source = ./home-cordis.patch.yml;
 
-    # ─────────────────────────────────────────────────────────────────────
-    # agent preset:dsh-anchored-standard(Anchored Standard,实验性)
-    # 安装到 ~/.dsh/.agent-presets/anchored-standard/(目录 id = preset id),
-    # web 新会话的 preset 选择器中可见(选择 "Anchored Standard (experimental)")。
-    # recursive = true:dsh 发现逻辑用 Dirent.isDirectory() 判断 preset 目录,
-    # 不跟随符号链接,故不能用默认的"整目录符号链接",而需真实目录 + 叶子文件
-    # 符号链接(叶子符号链接 readFile 会正常跟随,loader 相对导入 ./xxx.mjs 也 OK)。
-    # vision subagent 已启用:source 使用上方打过
-    # anchored-standard-vision.patch 的 dshAnchoredPreset。vision 与完整
-    # Standard 工具目录一起在首次持久晋升信号(tool/call 或
-    # assistant/message)后开放,首请求 bootstrap 目录保持 bash/pwsh+read。
-    # ─────────────────────────────────────────────────────────────────────
     ".dsh/.agent-presets/anchored-standard" = {
       source = "${dshAnchoredPreset}";
       recursive = true;
     };
   };
 
-  # ─────────────────────────────────────────────────────────────────────────
   # 插件文件的真实文件部署
   #
   # home.file 的所有产物(含 .text)都是符号链接;Node ESM 加载插件时会
@@ -245,7 +174,6 @@ in
   # 旧的符号链接)。maid-atelier 皮肤包的真实文件部署位于 ./skin.nix
   # (home.activation.dshSkinMaidAtelier),理由相同:防 ESM realpath
   # 逃逸,并保持皮肤配置整体独立。
-  # ─────────────────────────────────────────────────────────────────────────
   home.activation.dshPlugins = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
     run mkdir -p \
       "$HOME/.dsh/profiles/headless/plugins" \

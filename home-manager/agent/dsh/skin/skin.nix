@@ -33,7 +33,7 @@ let
     src = dshDeepWhaleSrc;
 
     patches = [
-      ./patches/maid-atelier-tool-blur.patch
+      ./maid-atelier-tool-blur.patch
     ];
 
     nativeBuildInputs = [ pkgs.python3 ];
@@ -44,7 +44,7 @@ let
       cp -r . "$out/"
       # store 源文件为只读,后处理需要写 lib/client.js
       chmod -R u+w "$out"
-      python3 ${./patches/backport-maid-atelier-blur.py} \
+      python3 ${./backport-maid-atelier-blur.py} \
         "$out/maid-atelier/lib/client.js"
       runHook postInstall
     '';
