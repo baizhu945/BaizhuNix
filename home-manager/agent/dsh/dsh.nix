@@ -1,15 +1,5 @@
 { config, pkgs, lib, ... }:
 
-# ─────────────────────────────────────────────────────────────────────────────
-# dsh — DeepSeek Harness(插件化 AI agent 平台,由 DeepSeek AI 官方开源)
-#
-# 安装方式:直接从 GitHub 源码声明式构建(固定 rev + 两个 hash),全量构建
-# 包含 CLI(web / headless 两种 profile)与 Web 前端(React),无需 npm install。
-#
-# 本模块默认"只安装、零额外配置"。
-# context / skills 的配置入口已在下文预留(见 home.file 与注释),按需取消注释即可。
-# ─────────────────────────────────────────────────────────────────────────────
-
 let
   # 源码固定版本(deepseek-harness master @ 47f9438,对应 npm 0.1.0-rc.x)
   dshSrc = pkgs.fetchFromGitHub {
@@ -35,23 +25,11 @@ let
 
     pnpmDeps = dshPnpmDeps;
 
-    # 前端展示补丁:进行中的工具调用/命令执行/思考过程默认展开,
-    # 已结束的保持默认折叠(expand-running.patch 修改 ToolRow / ReasoningRow)
-    # 审批弹窗补丁:新增第三个选项"总是允许(always-allow)",选择后写入会话日志,
-    # 本次对话的所有写/执行默认放行(approval-always-allow.patch)
-    # headless 补丁(cc-connect 集成):headless runner 新增 --session-id /
-    # --model / --mode 三个选项,使 cc-connect 的 agent/dsh 可以跨轮次恢复同一
-    # 个持久化会话、切换模型与权限模式(headless-cc-connect.patch 修改
-    # packages/bundle/headless 的 startup.ts / index.ts / cordis.patch.yml)
-    # 重试补丁:网络不良时 LLM 请求默认只重试 2 次(provider 未显式配置
-    # retryPolicy 时取 DEFAULT_MAX_RETRIES),这里提升到 5 次
-    # (llm-retry-default-5.patch 修改 packages/llm/llm/src/retry-policy.ts)
     patches = [
       ./patches/expand-running.patch
-      ./patches/approval-always-allow.patch
-      ./patches/approval-keyboard.patch
-      ./patches/headless-cc-connect.patch
-      ./patches/llm-retry-default-5.patch
+      ./patches/tool-bottom-collapse.patch
+      ./patches/bash-command-hscroll.patch
+      ./patches/durable-session-lease.patch
     ];
 
     nativeBuildInputs = [
@@ -110,6 +88,34 @@ let
       mainProgram = "dsh";
     };
   };
+
+  # agent preset:dsh-anchored-standard(xiaobright,社区实验性 preset)
+  # Anchored Standard:首次请求用 Minimal 对齐的双工具目录(不注入工作区/技能
+  # 上下文),会话出现首次持久晋升信号(tool/call 或 assistant/message)后开放
+  # 完整 Standard 工具目录。固定 rev 而非分支;hash 由 nix-prefetch-url --unpack 计算。
+  dshPresetSrc = pkgs.fetchFromGitHub {
+    owner = "xiaobright";
+    repo = "dsh-anchored-standard";
+    rev = "6472c1c9431dcfd9072be23bff781b76fe7146c0";
+    hash = "sha256-R+QCRXtB16fObeVTpz6aXPabGAkWtl/mR+hvW7dNmAw=";
+  };
+
+  # 在 pinned preset 上叠加 vision 兜底 subagent(anchored-standard-vision.patch):
+  # - 新增 `vision` 工具:spawn 一个 MiniMax M3 子代理(前台一次性),
+  #   toolFilter 只保留 read_image/read/glob/grep,maxDepth 1 禁止继续委派;
+  # - persona 中加入路由指引:主模型无图像输入时把图片路径交给 vision;
+  # - bootstrap 首请求工具目录加入 vision,首个问题带图也能走兜底。
+  # fetchFromGitHub 产物只读,这里复制出可写目录后打补丁,再交给 home.file。
+  dshAnchoredPreset = pkgs.runCommand "dsh-anchored-standard-preset" {
+    presetSrc = "${dshPresetSrc}/preset";
+    visionPatch = ./patches/anchored-standard-vision.patch;
+  } ''
+    mkdir -p "$out"
+    cp -r "$presetSrc/." "$out/"
+    chmod -R u+w "$out"
+    cd "$out"
+    ${pkgs.gnupatch}/bin/patch -p2 < "$visionPatch"
+  '';
 in
 {
   imports = [
@@ -125,31 +131,14 @@ in
                     # 探测方式:spawnSync('bwrap', ...);缺它则报 "no sandbox backend usable")
     # 说明:bash 工具走系统 /bin/bash,无需额外安装
 
-    # 便捷启动:启动 dsh web 并自动打开默认浏览器(xdg-open),然后立即退出。
-    # dsh web 作为后台服务继续运行(nohup),日志在 ~/.dsh-web.log。
-    # 用法:dsh-web [port]  (dsh 本身不自动打开浏览器,只打印 URL)
-    (pkgs.writeShellScriptBin "dsh-web" ''
-      PORT="''${1:-3080}"
-      URL="http://127.0.0.1:$PORT/"
-
-      # 端口无实例时:后台启动 dsh web 并脱离终端,等端口就绪
-      if ! curl -sf -o /dev/null "$URL" 2>/dev/null; then
-        nohup dsh web --port "$PORT" > "$HOME/.dsh-web.log" 2>&1 &
-        disown
-        for _ in $(seq 1 30); do
-          curl -sf -o /dev/null "$URL" 2>/dev/null && break
-          sleep 1
-        done
-      fi
-
-      # 确认服务可用后再打开浏览器
-      if ! curl -sf -o /dev/null "$URL" 2>/dev/null; then
-        echo "dsh web 未能启动,请查看日志: ~/.dsh-web.log" >&2
-        exit 1
-      fi
-      echo "$URL"
-      xdg-open "$URL"
-    '')
+    # 便捷启动(生命周期与浏览器窗口绑定,脚本主体见 ./dsh-web.sh):
+    # 1. 端口空闲时启动 dsh web(端口已有实例则直接复用);
+    # 2. 打开一个独立 chromium 应用窗口(临时 profile,可被脚本监控);
+    # 3. 脚本挂起,直到关闭该窗口或按 Ctrl+C;
+    # 4. 退出时杀掉本次运行启动的 webui 进程并清理临时 profile
+    #    (复用的已有实例不会被杀)。
+    # 用法:dsh-web [port]  (默认 3080;浏览器可用 DSH_BROWSER 覆盖)
+    (pkgs.writeShellScriptBin "dsh-web" (builtins.readFile ./dsh-web.sh))
   ];
 
   # ─────────────────────────────────────────────────────────────────────────────
@@ -167,9 +156,93 @@ in
     # 插件本体(零依赖 ESM,loader 经相对路径加载)
     ".dsh/profiles/web/plugins/confirm-writes.mjs".source = ./profiles/web/plugins/confirm-writes.mjs;
 
-    # web profile 的用户 patch 层:挂载 confirm-writes 插件。
+    # web profile 的用户 patch 层:挂载 confirm-writes + approval-tweaks 插件。
     # 注意:此文件由 home-manager 声明式管理;如需追加自己的 patch 行,
     # 请直接编辑 dsh.nix 中此处的内容(改后 home-manager switch 生效)。
     ".dsh/profiles/web/cordis.patch.yml".source = ./profiles/web/cordis.patch.yml;
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 审批面板插件 dsh-baizhu-approval(approval-always-allow +
+    # approval-keyboard 两个源码补丁的插件迁移,双半包):
+    # - host 半体 index.mjs:空 apply,让本行出现在 host 组合中;
+    # - client 半体 client.js:浏览器 bundle,composer chain 接管审批 UI。
+    # 安装到 web profile 自己的 node_modules(createRequire(baseUrl) 从此
+    # 解析包名)。真实文件由下方 home.activation.dshPlugins 部署:
+    # home.file 的产物一律是符号链接,Node ESM 会把符号链接 realpath 到
+    # /nix/store,将来插件内一旦出现 bare import 就找不到 profile 的
+    # node_modules(与 headless 插件同因)。
+    # 注意:`dsh plugin` 用 pnpm 管理该目录时可能清掉它,
+    # 重新 home-manager switch 即可恢复。
+    # ─────────────────────────────────────────────────────────────────────
+
+    # ─────────────────────────────────────────────────────────────────────
+    # headless profile 插件(cc-connect 集成;headless-cc-connect.patch 的
+    # 插件迁移):headless patch 层禁用内置 startup/runner,挂两个本地插件。
+    # 插件 .mjs 的 bare import(@deepseek-ai/dsh-*)由 dsh 每次启动时维护的
+    # ~/.dsh/profiles/node_modules 扁平链接解析(healProfilesModuleFallback,
+    # 指向 apps/cli 自己的依赖树,保证与内置插件共享同一份 cordis 等实例)。
+    # 插件文件因此必须部署为 ~/.dsh 下的真实文件(不能是符号链接:
+    # realpath 会逃逸到 /nix/store,Node 就找不到模块),由下方
+    # home.activation.dshPlugins 完成。
+    # force = true:dsh 首次创建 profile 时会生成一个 `[]` 模板
+    # cordis.patch.yml,由 home-manager 接管覆盖(该文件本就是用户层,
+    # dsh 之后不再写入)。
+    # ─────────────────────────────────────────────────────────────────────
+    ".dsh/profiles/headless/cordis.patch.yml" = {
+      source = ./profiles/headless/cordis.patch.yml;
+      force = true;
+    };
+
+    # ─────────────────────────────────────────────────────────────────────
+    # home-level patch(~/.dsh/cordis.patch.yml,web/headless 所有 profile
+    # 生效):llm-retry-default-5.patch 的声明式配置迁移。retry policy 是
+    # provider 插件的配置字段,为 deepseek-official(llm-deepseek)与
+    # minimax-cn(llm-pi-ai)显式设置 maxRetries: 5。settings.yaml 用户层
+    # 会逐键深合并到此处 base 上,不会互相覆盖。
+    # ─────────────────────────────────────────────────────────────────────
+    ".dsh/cordis.patch.yml".source = ./home-cordis.patch.yml;
+
+    # ─────────────────────────────────────────────────────────────────────
+    # agent preset:dsh-anchored-standard(Anchored Standard,实验性)
+    # 安装到 ~/.dsh/.agent-presets/anchored-standard/(目录 id = preset id),
+    # web 新会话的 preset 选择器中可见(选择 "Anchored Standard (experimental)")。
+    # recursive = true:dsh 发现逻辑用 Dirent.isDirectory() 判断 preset 目录,
+    # 不跟随符号链接,故不能用默认的"整目录符号链接",而需真实目录 + 叶子文件
+    # 符号链接(叶子符号链接 readFile 会正常跟随,loader 相对导入 ./xxx.mjs 也 OK)。
+    # 源为 dshAnchoredPreset(pinned preset + vision subagent 补丁后的副本),
+    # 文件只读、可复现、跟随升级。
+    # ─────────────────────────────────────────────────────────────────────
+    ".dsh/.agent-presets/anchored-standard" = {
+      source = "${dshAnchoredPreset}";
+      recursive = true;
+    };
   };
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 插件文件的真实文件部署
+  #
+  # home.file 的所有产物(含 .text)都是符号链接;Node ESM 加载插件时会
+  # realpath 到 /nix/store,插件内部的 bare import(@deepseek-ai/dsh-* 等)
+  # 就找不到 ~/.dsh/profiles/node_modules(dsh 每次启动 heal 的扁平链接,
+  # 指向 apps/cli 自己的依赖树 —— 必须从这条路径导入,才能与内置插件共享
+  # 同一份 cordis 模块实例)。因此这两个插件目录用激活脚本把 store 里的
+  # 文件真实拷贝到 ~/.dsh(linkGeneration 之后运行,install 会原子替换
+  # 旧的符号链接)。卸载时这些真实文件不会被 linkGeneration 清理,
+  # 属预期行为(删除配置模块后手动清理即可)。
+  # ─────────────────────────────────────────────────────────────────────────
+  home.activation.dshPlugins = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+    run mkdir -p \
+      "$HOME/.dsh/profiles/headless/plugins" \
+      "$HOME/.dsh/profiles/web/node_modules/dsh-baizhu-approval"
+    run install -m 644 ${./profiles/headless/plugins/cc-connect-startup.mjs} \
+      "$HOME/.dsh/profiles/headless/plugins/cc-connect-startup.mjs"
+    run install -m 644 ${./profiles/headless/plugins/cc-connect-runner.mjs} \
+      "$HOME/.dsh/profiles/headless/plugins/cc-connect-runner.mjs"
+    run install -m 644 ${./profiles/web/node_modules/dsh-baizhu-approval/package.json} \
+      "$HOME/.dsh/profiles/web/node_modules/dsh-baizhu-approval/package.json"
+    run install -m 644 ${./profiles/web/node_modules/dsh-baizhu-approval/index.mjs} \
+      "$HOME/.dsh/profiles/web/node_modules/dsh-baizhu-approval/index.mjs"
+    run install -m 644 ${./profiles/web/node_modules/dsh-baizhu-approval/client.js} \
+      "$HOME/.dsh/profiles/web/node_modules/dsh-baizhu-approval/client.js"
+  '';
 }

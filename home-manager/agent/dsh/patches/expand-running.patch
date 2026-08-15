@@ -28,17 +28,19 @@ index bd4add4..15b7335 100644
  import clsx from 'clsx'
  import {
    CodeBlock, DiffBlock, DisclosureRow, IconInspectOutline12, ReadBlock, SearchBlock, StateDot, TerminalBlock, WebBlock,
-@@ -146,7 +146,12 @@ export function ToolRow({
+@@ -146,7 +146,14 @@ export function ToolRow({
    onOpenFile,
    inspect,
  }: ToolRowProps) {
 -  const [expanded, setExpanded] = useState(false)
 +  // [dsh-harness-auto-expand-running] 工具卡片:运行中自动展开(结束后保持);
-+  // bash 命令卡片始终展开、不折叠
-+  const [expanded, setExpanded] = useState(state === 'running' || variant === 'bash')
++  // bash 命令卡片始终展开、不折叠;仅 read 工具例外:默认折叠、不自动展开
++  // (其余 read 变体工具 web_fetch / cordis_*_inspect 维持原有自动展开逻辑)
++  const autoExpand = toolName !== 'read' && (state === 'running' || variant === 'bash')
++  const [expanded, setExpanded] = useState(autoExpand)
 +  useEffect(() => {
-+    if (state === 'running' || variant === 'bash') setExpanded(true)
-+  }, [state, variant])
++    if (autoExpand) setExpanded(true)
++  }, [autoExpand])
    const terminalBody = terminal ?? null
    const diffBody = diff ?? null
    const readBody = read ?? null

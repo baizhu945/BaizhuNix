@@ -19,7 +19,35 @@ Control the user's Google Chrome browser using agent-browser connected via Chrom
 
 ## Quick Start
 
-### Start Chrome (NixOS / Wayland)
+### Start Chrome (NixOS / Wayland) — use systemd-run when launching from an agent (recommended)
+
+> **When starting Chrome from an agent (cc-connect / DSH) session, you MUST use the `systemd-run` approach below — do NOT use `nohup`.**
+> A Chrome started with `nohup` runs under the `cc-connect.service` cgroup and gets cleaned up at the end of every agent task turn (see [Chrome keeps getting killed after an agent task turn](#chrome-keeps-getting-killed-after-an-agent-task-turn)).
+
+```bash
+systemd-run --user --unit=chrome-debug-9222 \
+  --setenv=WAYLAND_DISPLAY=wayland-1 \
+  --setenv=XDG_SESSION_TYPE=wayland \
+  --setenv=XDG_RUNTIME_DIR=/run/user/1000 \
+  --setenv=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus \
+  $(which google-chrome-stable) \
+  --remote-debugging-port=9222 \
+  --user-data-dir=$HOME/.config/chrome-automation \
+  --no-first-run \
+  --disable-vulkan --disable-gpu \
+  --disable-software-rasterizer \
+  --ozone-platform-hint=auto
+```
+
+Chrome is registered as a systemd user service (`chrome-debug-9222.service`), managed directly by the systemd user manager and fully isolated from the agent process tree — it will not be cleaned up when a task turn ends, and no watchdog is needed. Check its status with:
+
+```bash
+systemctl --user status chrome-debug-9222
+```
+
+> Note: If the unit already exists (leftover), run `systemctl --user reset-failed chrome-debug-9222` first, or use a different unit name.
+
+### Start Chrome (non-agent environment / one-off session)
 
 ```bash
 nohup env WAYLAND_DISPLAY=wayland-1 XDG_SESSION_TYPE=wayland google-chrome-stable \
@@ -325,6 +353,34 @@ If you see `DevTools remote debugging requires a non-default data directory`, Ch
 
 **Important trade-off:** Restarting Chrome with a different profile means the user's original session (tabs, active downloads) is lost. If a download was in progress, it will be interrupted and should be resumed via `chrome://downloads` after the restart (see "Checking Download Status & Resuming" above).
 
+### Chrome keeps getting killed after an agent task turn
+
+**Symptoms**: Starting a debugging Chrome from the agent (cc-connect / DSH) bash with `nohup ... & disown` works — Chrome launches and the port listens — but the process is terminated **about 30 seconds later** (right after the agent finishes replying to a message), and the log shows no crash stack.
+
+**Root cause**: The agent's bash runs inside the `cc-connect.service` systemd cgroup. Every child process spawned from that shell (even with `nohup`/`disown`) belongs to this cgroup, and **the agent cleans up processes spawned in this cgroup at the end of each task turn**, taking Chrome down with it. This is not a Chrome crash and not OOM — Chrome started manually from the desktop is unaffected because it lives outside that cgroup.
+
+**How to diagnose**:
+- `journalctl --user` shows each exit as `app-com.google.Chrome-<PID>.scope: Consumed <X>ms CPU time over ~30s wall clock time`, and the ending timestamp matches when the agent replied to the message
+- `cat /proc/<chrome-pid>/cgroup` shows the process under `cc-connect.service` (a healthy instance shows `app.slice/...` instead)
+
+**Solution: register Chrome as a standalone systemd user service with `systemd-run --user`**, detaching it from the agent process tree so the systemd user manager owns it directly (command in Quick Start). The agent's task lifecycle no longer affects Chrome — this isolates the process lifecycle at the source. **Do NOT use a watchdog/daemon script** (that is "restart after close", which users typically explicitly reject).
+
+**Verify it is detached from the agent lifecycle**:
+
+```bash
+systemctl --user status chrome-debug-9222   # should show active (running)
+cat /proc/<chrome-pid>/cgroup               # should show app.slice/... (app.slice/chrome-debug-9222.service or app-com.google.Chrome-*.scope), NOT cc-connect.service
+ss -tlnp | grep 9222                        # port keeps listening
+```
+
+**Management commands**:
+
+```bash
+systemctl --user status chrome-debug-9222   # check status
+systemctl --user restart chrome-debug-9222  # restart
+systemctl --user stop chrome-debug-9222     # stop
+```
+
 ## Best Practices
 
 1. **Start Chrome first** — Chrome must be running with `--remote-debugging-port=9222` before using agent-browser
@@ -336,6 +392,7 @@ If you see `DevTools remote debugging requires a non-default data directory`, Ch
 7. **Re-snapshot** — Get fresh refs after DOM changes
 8. **Descriptive paths** — Save screenshots with clear names to `/tmp/opencode/`
 9. **Report state** — Describe browser content to user
+10. **Use systemd-run for long-running Chrome from an agent** — When launching a debugging Chrome instance that must stay alive from an agent (cc-connect / DSH) session, always use `systemd-run --user` (see Quick Start), never `nohup`, otherwise the agent's cgroup cleanup will terminate it
 
 ## Profile Management
 

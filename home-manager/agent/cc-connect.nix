@@ -14,10 +14,10 @@ let
     src = pkgs.fetchFromGitHub {
       owner = "<yourusername>";
       repo = "cc-connect";
-      rev = "46541ff2fa3d734bc52c5f2f5e48ab05b13db2bc";
-      hash = "sha256-ss124d3JeIcgWCs0f05GXNwh/+ygn6C26shVRImv09w=";
+      rev = "72419afc2bf279e88b588763c7bb18ba802c089e";
+      hash = "sha256-R+hhmqMffjI6zKKy25xj/ccmchbk5jrjfLsWyCP8hss=";
     };
-    vendorHash = "sha256-pkjITb62Waok+aR8WhSAmLOSwms/denexIIVRAPV5GY=";
+    vendorHash = "sha256-+tHlItgdNsKS2XbNXoLALQT1unqQjomr53hkhdmyWXE=";
     tags = [ "no_web" ];
     doCheck = false;
     overrideModAttrs = (_: {

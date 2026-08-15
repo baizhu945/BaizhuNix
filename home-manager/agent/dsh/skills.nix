@@ -24,8 +24,9 @@ let
   # 在会话目录中呈现，模型按"任务匹配技能必须调用"规则自行加载）。
   superpowers-repo = builtins.fetchGit {
     url = "https://github.com/obra/superpowers.git";
-    rev = "b36e0829c6d0140e93cfef2ca599b1b07d4a7797"; # 2026-08-12
-    narHash = "sha256-EsGNO0dULWf5Bx6bGrCv2kI2Z8aKH0kRvGiuN23wChQ=";
+    ref = "main";
+    # rev = "b36e0829c6d0140e93cfef2ca599b1b07d4a7797"; # 2026-08-12
+    # narHash = "sha256-EsGNO0dULWf5Bx6bGrCv2kI2Z8aKH0kRvGiuN23wChQ=";
   };
 in
 {
@@ -48,24 +49,11 @@ in
 
     # ---- addyosmani/agent-skills ----
     ".dsh/skills/idea-refine".source = "${agent-skills-repo}/skills/idea-refine";
-  } // builtins.listToAttrs (map (name: {
-    name = ".dsh/skills/${name}";
-    value = { source = "${superpowers-repo}/skills/${name}"; };
-  }) [
-    # ---- obra/superpowers（全部技能目录，每个目录 = 一个 skill）----
-    "brainstorming"
-    "dispatching-parallel-agents"
-    "executing-plans"
-    "finishing-a-development-branch"
-    "receiving-code-review"
-    "requesting-code-review"
-    "subagent-driven-development"
-    "systematic-debugging"
-    "test-driven-development"
-    "using-git-worktrees"
-    "using-superpowers"
-    "verification-before-completion"
-    "writing-plans"
-    "writing-skills"
-  ]);
+
+    # ---- superpowers ----
+    ".dsh/skills/superpowers" = {
+      source = "${superpowers-repo}/skills";
+      recursive = true;
+    };
+  };
 }

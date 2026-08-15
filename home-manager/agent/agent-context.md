@@ -85,13 +85,6 @@ script/               # niri-config.kdl, fastfetch-config.jsonc, battery-monitor
 - NixOS Packages: https://search.nixos.org/packages?channel=unstable
 - Home-Manager Options: https://nix-community.github.io/home-manager/options.html
 
-## Skill-Driven Workflow
-
-- If a task matches a skill, MUST invoke it; never implement directly when a skill applies; follow it exactly
-- Intent map: feature → `spec-driven-development`+`incremental-implementation`+`test-driven-development` · planning → `planning-and-task-breakdown` · bug → `debugging-and-error-recovery` · review → `code-review-and-quality` · refactor → `code-simplification` · API design → `api-and-interface-design` · UI → `frontend-ui-engineering`
-- No slash commands (OpenCode): follow DEFINE → PLAN → BUILD → VERIFY → REVIEW → SHIP lifecycle internally
-- Anti-rationalization: "too small for a skill" / "I'll gather context first" are incorrect — always check skills first
-
 ## cc-connect Media Sending
 
 When the user asks to send images/files/voice through chat, **invoke the `cc-connect-send` skill** (skills dir `agent/skills/cc-connect-send`); for recurring/scheduled tasks use `cc-connect-cron` skill.
