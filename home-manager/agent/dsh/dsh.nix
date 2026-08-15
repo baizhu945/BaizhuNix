@@ -93,6 +93,10 @@ let
   # Anchored Standard:首次请求用 Minimal 对齐的双工具目录(不注入工作区/技能
   # 上下文),会话出现首次持久晋升信号(tool/call 或 assistant/message)后开放
   # 完整 Standard 工具目录。固定 rev 而非分支;hash 由 nix-prefetch-url --unpack 计算。
+  # dshPresetSrc = builtins.fetchGit {
+    # url = "https://github.com/xiaobright/dsh-anchored-standard.git";
+    # ref = "main";
+  # };
   dshPresetSrc = pkgs.fetchFromGitHub {
     owner = "xiaobright";
     repo = "dsh-anchored-standard";
@@ -100,27 +104,9 @@ let
     hash = "sha256-R+QCRXtB16fObeVTpz6aXPabGAkWtl/mR+hvW7dNmAw=";
   };
 
-  # 在 pinned preset 上叠加 vision 兜底 subagent(anchored-standard-vision.patch):
-  # - 新增 `vision` 工具:spawn 一个 MiniMax M3 子代理(前台一次性),
-  #   toolFilter 只保留 read_image/read/glob/grep,maxDepth 1 禁止继续委派;
-  # - vision 与完整 Standard 工具目录一起,在会话首次持久晋升信号
-  #   (tool/call 或 assistant/message)之后才开放;bootstrap 首请求目录
-  #   保持上游原样(bash/pwsh 选一 + read,不带 vision);
-  # - persona 经 vision-routing.mjs 注册的 prompt 变量在晋升后追加路由
-  #   指引;变量在晋升前展开为空,首请求渲染出的 persona 与上游逐字节一致。
-  # fetchFromGitHub 产物只读,这里复制出可写目录后打补丁,再交给 home.file。
-  #
-  # ── vision subagent:已启用 ────────────────────────────────────────────
-  dshAnchoredPreset = pkgs.runCommand "dsh-anchored-standard-preset" {
-    presetSrc = "${dshPresetSrc}/preset";
-    visionPatch = ./patches/anchored-standard-vision.patch;
-  } ''
-    mkdir -p "$out"
-    cp -r "$presetSrc/." "$out/"
-    chmod -R u+w "$out"
-    cd "$out"
-    ${pkgs.gnupatch}/bin/patch -p2 < "$visionPatch"
-  '';
+  # vision subagent 已移除:不再叠加 anchored-standard-vision.patch,
+  # home.file 直接安装上游纯净 preset(该 patch 文件亦已删除)。
+
 in
 {
   imports = [
@@ -157,8 +143,9 @@ in
 
     ".dsh/cordis.patch.yml".source = ./home-cordis.patch.yml;
 
+    # vision subagent 已移除:直接安装上游纯净 preset。
     ".dsh/.agent-presets/anchored-standard" = {
-      source = "${dshAnchoredPreset}";
+      source = "${dshPresetSrc}/preset";
       recursive = true;
     };
   };
