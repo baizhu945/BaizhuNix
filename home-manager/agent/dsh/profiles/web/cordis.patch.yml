@@ -1,4 +1,5 @@
-# 由 home-manager 管理(agent/dsh/dsh.nix;皮肤 insert 由 skin.nix 部署包体)。
+# 由 home-manager 管理(agent/dsh/dsh.nix;dsh-web-ui 家族包由 web-ui.nix
+# 部署,其 insert 行并入本 patch 层)。
 # 追加自定义 patch 行请编辑 dsh.nix。
 - insert:
     - id: confirm-writes
@@ -22,17 +23,63 @@
     - id: approval-tweaks
       name: 'dsh-baizhu-approval'
 
-    # ── maid-atelier 皮肤(dsh-deep-whale)──────────────────────────────
-    # https://github.com/Small-tailqwq/dsh-deep-whale
-    # 官方装法 `dsh plugin --profile web add ../dsh-deep-whale/maid-atelier`
-    # 经 pnpm 把皮肤包装进本 profile 的 node_modules 并追加到 package.json
-    # 的 dsh.profile.bundles;启动时该 bundle 的 cordis.patch.yml 恰好就是
-    # 下面这行 insert。这里由 home-manager 声明式等效:包体真实文件部署见
-    # skin.nix 的 home.activation.dshSkinMaidAtelier,insert 行直接并入本
-    # patch 层,与 dsh-baizhu-approval(包名从 node_modules 解析)同一机制。
-    # 与皮肤中心/dsh-skin 的互斥切换兼容(wiring.id = ui-skin-maid-atelier)。
-    - id: ui-skin-maid-atelier
-      name: '@dsh-external/dsh-client-ui-skin-maid-atelier'
+# ── dsh-web-ui 全家桶(zhu1090093659/dsh-web-ui)────────────────────────
+# https://github.com/zhu1090093659/dsh-web-ui
+# 官方装法 `dsh plugin --profile web add @linxin666/dsh-web-ui-all` 经 pnpm
+# 把 12 个家族包收进 profile 并追加 package.json;这里由 home-manager
+# 声明式等效:包体真实文件部署见 web-ui.nix 的 home.activation.dshWebUi,
+# 下面 12 行 insert 与聚合包 dsh-web-ui-all 的 cordis.patch.yml 完全一致
+# (任务看板/Git 图谱/右侧面板/鲸鱼娘宠物/移动端远程/SSH/图像理解/
+# 梁神预设/实时令牌统计/设置中心/皮肤中心,含 dsh-skins 全部皮肤资产)。
+# 皮肤中心运行时切换皮肤会自行管理 ~/.dsh/cordis.patch.yml 的
+# dsh-skin managed 区段与本 profile 的皮肤包符号链接。
+- insert:
+    - id: ui-web-ui-compat
+      name: '@linxin666/dsh-web-ui-all'
+
+- insert:
+    - id: ui-web-ui-settings
+      name: '@linxin666/dsh-client-ui-web-ui-settings'
+
+- insert:
+    - id: ui-dsh-aionui-panel
+      name: '@linxin666/dsh-client-ui-aionui-panel'
+
+- insert:
+    - id: ui-task-board
+      name: '@linxin666/dsh-client-ui-task-board'
+
+- insert:
+    - id: ui-git-graph
+      name: '@linxin666/dsh-client-ui-git-graph'
+
+- insert:
+    - id: pet
+      name: '@linxin666/dsh-pet'
+
+- insert:
+    - id: remote-web-ui
+      name: '@linxin666/dsh-remote-web-ui'
+
+- insert:
+    - id: live-stats
+      name: '@linxin666/dsh-live-stats'
+
+- insert:
+    - id: ssh
+      name: '@linxin666/dsh-ssh'
+
+- insert:
+    - id: describe-image
+      name: '@linxin666/dsh-tool-describe-image'
+
+- insert:
+    - id: liangshen
+      name: '@linxin666/dsh-liangshen'
+
+- insert:
+    - id: ui-skin-center
+      name: '@linxin666/dsh-client-ui-skin-center'
 
 # ── 权限预设表 ──────────────────────────────────────────────────────────
 # dsh 三个内置模式保持原样(Read Only / Workspace Write / Full Access);

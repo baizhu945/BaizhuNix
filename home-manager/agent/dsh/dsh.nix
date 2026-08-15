@@ -111,7 +111,7 @@ in
 {
   imports = [
     ./skills.nix
-    ./skin/skin.nix
+    ./web-ui.nix
   ];
 
   home.packages = [
@@ -141,14 +141,29 @@ in
 
     ".dsh/profiles/headless/cordis.patch.yml".source = ./profiles/headless/cordis.patch.yml;
 
-    ".dsh/cordis.patch.yml".source = ./home-cordis.patch.yml;
-
     # vision subagent 已移除:直接安装上游纯净 preset。
     ".dsh/.agent-presets/anchored-standard" = {
       source = "${dshPresetSrc}/preset";
       recursive = true;
     };
   };
+
+  # 机器级 boot patch 的真实文件初始化(不用 home.file 符号链接):
+  # dsh-web-ui 皮肤中心在运行时会把 ~/.dsh/cordis.patch.yml 原子改写为
+  # 真实文件并维护 "dsh-skin managed" 区段(用户换肤选择);若继续用
+  # home.file 管理,下一次 switch 的 linkGeneration 会判定现有文件
+  # clobber 冲突。因此这里只负责播种:目标不存在或还是旧符号链接时,
+  # 把模板真实安装过去;已经是真实文件(皮肤中心写过)则原样保留。
+  home.activation.dshBootPatch = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+    bootPatch="$HOME/.dsh/cordis.patch.yml"
+    if [ -L "$bootPatch" ]; then
+      run /run/current-system/sw/bin/remove-without-permission -f "$bootPatch"
+    fi
+    if [ ! -e "$bootPatch" ]; then
+      run mkdir -p "$HOME/.dsh"
+      run install -m 644 ${./home-cordis.patch.yml} "$bootPatch"
+    fi
+  '';
 
   # 插件文件的真实文件部署
   #
@@ -158,9 +173,8 @@ in
   # 指向 apps/cli 自己的依赖树 —— 必须从这条路径导入,才能与内置插件共享
   # 同一份 cordis 模块实例)。因此这些插件目录用激活脚本把 store 里的
   # 文件真实拷贝到 ~/.dsh(linkGeneration 之后运行,install 会原子替换
-  # 旧的符号链接)。maid-atelier 皮肤包的真实文件部署位于 ./skin.nix
-  # (home.activation.dshSkinMaidAtelier),理由相同:防 ESM realpath
-  # 逃逸,并保持皮肤配置整体独立。
+  # 旧的符号链接)。dsh-web-ui 家族包(含皮肤中心)的真实文件部署位于
+  # ./web-ui.nix(home.activation.dshWebUi),理由相同。
   home.activation.dshPlugins = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
     run mkdir -p \
       "$HOME/.dsh/profiles/headless/plugins" \
