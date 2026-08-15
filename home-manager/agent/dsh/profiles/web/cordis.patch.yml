@@ -1,4 +1,5 @@
-# 由 home-manager 管理(agent/dsh/dsh.nix)。追加自定义 patch 行请编辑 dsh.nix。
+# 由 home-manager 管理(agent/dsh/dsh.nix;皮肤 insert 由 skin.nix 部署包体)。
+# 追加自定义 patch 行请编辑 dsh.nix。
 - insert:
     - id: confirm-writes
       name: './plugins/confirm-writes.mjs'
@@ -20,6 +21,18 @@
     # (包本体由 home-manager 安装到本 profile 的 node_modules)。
     - id: approval-tweaks
       name: 'dsh-baizhu-approval'
+
+    # ── maid-atelier 皮肤(dsh-deep-whale)──────────────────────────────
+    # https://github.com/Small-tailqwq/dsh-deep-whale
+    # 官方装法 `dsh plugin --profile web add ../dsh-deep-whale/maid-atelier`
+    # 经 pnpm 把皮肤包装进本 profile 的 node_modules 并追加到 package.json
+    # 的 dsh.profile.bundles;启动时该 bundle 的 cordis.patch.yml 恰好就是
+    # 下面这行 insert。这里由 home-manager 声明式等效:包体真实文件部署见
+    # skin.nix 的 home.activation.dshSkinMaidAtelier,insert 行直接并入本
+    # patch 层,与 dsh-baizhu-approval(包名从 node_modules 解析)同一机制。
+    # 与皮肤中心/dsh-skin 的互斥切换兼容(wiring.id = ui-skin-maid-atelier)。
+    - id: ui-skin-maid-atelier
+      name: '@dsh-external/dsh-client-ui-skin-maid-atelier'
 
 # ── 权限预设表 ──────────────────────────────────────────────────────────
 # dsh 三个内置模式保持原样(Read Only / Workspace Write / Full Access);

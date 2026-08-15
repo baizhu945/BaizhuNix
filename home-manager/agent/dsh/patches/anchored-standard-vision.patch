@@ -1,37 +1,43 @@
-diff --git a/preset/agent.cordis.yml b/preset/agent.cordis.yml
+diff -u -N --recursive a/preset/agent.cordis.yml b/preset/agent.cordis.yml
 --- a/preset/agent.cordis.yml
 +++ b/preset/agent.cordis.yml
-@@ -28,7 +28,7 @@
- # strip the final transform, so request #1 stays Minimal-exact (see issue #6).
- #
- # V4 Pro conditions strongly on the API tool catalog AND the first request
--# output budget. Bootstrap request #1 with one native shell plus `read` and a
-+# output budget. Bootstrap request #1 with one native shell plus `read`/`vision` and a
- # small maxTokens cap; after the session records its first durable promotion
- # signal (a tool call OR the first assistant message, default
- # `promoteOn: either`), later steps expose every Standard tool below and the
-@@ -46,7 +46,7 @@
-   name: ./tool-bootstrap.mjs
-   config:
-     shellTools: [bash, pwsh]
--    commonTools: [read]
-+    commonTools: [read, vision]
-     promoteOn: either
+@@ -51,16 +51,30 @@
      bootstrapMaxTokens: 1024
      suppressedContextSources: [agent-instructions, skill-catalog]
-@@ -60,7 +60,10 @@
+ 
++# Vision fallback routing guidance is phase-gated exactly like the tool
++# catalog: this local plugin registers the `vision_routing` prompt variable
++# referenced by the persona below. The variable renders empty during
++# bootstrap and expands only after the same durable promotion signal that
++# opens the full Standard catalog, so request #1 stays upstream-identical.
++- id: vision-routing
++  name: ./vision-routing.mjs
++  config:
++    promoteOn: either
++
+ # ── identity ────────────────────────────────────────────────────────────────
+ 
+-# Keep this text byte-identical to the Minimal preset. `complete` prevents the
+-# Harness identity and per-tool guidance from changing the system prompt, while
+-# runtime-context suppression leaves task and repository rules to user messages
+-# and explicit file reads. Tool schemas and their runtime enforcement remain.
++# The RENDERED persona stays byte-identical to the Minimal preset during
++# bootstrap: `{{vision_routing}}` expands to nothing until the session
++# promotes, so request #1 sees exactly the upstream one-liner. Promoted
++# requests get the vision fallback routing text appended by
++# ./vision-routing.mjs. `complete` prevents the Harness identity and per-tool
++# guidance from changing the system prompt, while runtime-context suppression
++# leaves task and repository rules to user messages and explicit file reads.
++# Tool schemas and their runtime enforcement remain.
  - id: persona
    name: '@deepseek-ai/dsh-persona'
    config:
 -    text: You are a helpful software engineer assistant.
-+    text: |-
-+      You are a helpful software engineer assistant.
-+
-+      Vision fallback: you may be running on a model that cannot see images. When the user's task involves an image by file path — a screenshot, chart, document photo, or any image on disk — do not read the image yourself. Call the `vision` tool in the foreground with a short `description` and a self-contained `prompt` that includes the absolute image path and the exact question to answer. If only a filename or directory is given, locate the file with `glob`/`grep` first, then delegate the resolved path. Relay the returned text description to the user. If your model supports image input, prefer `read_image` directly.
++    text: You are a helpful software engineer assistant.{{vision_routing}}
      complete: true
      includeRuntimeContext: false
  
-@@ -239,6 +242,34 @@
+@@ -239,6 +253,37 @@
          toolName: subagent_fork
          backgroundMode: continuable
  
@@ -39,6 +45,9 @@ diff --git a/preset/agent.cordis.yml b/preset/agent.cordis.yml
 +    # image-capable 的 MiniMax M3 子代理,由它 read_image 后回传文字描述。
 +    # 固定 foreground 一次性 spawn;子代理只保留定位与读图所需工具,
 +    # maxDepth: 1 允许创建本子代理、但禁止它再往下委派。
++    # 它与其余 Standard 工具一样只在首次持久晋升信号(tool/call 或
++    # assistant/message)之后进入目录:bootstrap 的 commonTools 仍为
++    # [read],首请求工具面不会加入 vision。
 +    # provider/model 必须与 dsh 中配置的 llm-pi-ai route 一致
 +    # (settings.yaml -> llm-pi-ai.providers.minimax-cn)。
 +    - id: tool-vision
@@ -66,3 +75,80 @@ diff --git a/preset/agent.cordis.yml b/preset/agent.cordis.yml
      # Product providers are host-plane singletons. Copy this preset, then
      # remove `disabled` from either ordinary tool row to expose that product
      # only to agents composed from the copy.
+diff -u -N --recursive a/preset/vision-routing.mjs b/preset/vision-routing.mjs
+--- a/preset/vision-routing.mjs
++++ b/preset/vision-routing.mjs
+@@ -0,0 +1,73 @@
++/**
++ * Vision fallback routing — append the vision fallback guidance to the persona
++ * ONLY after the anchored session has promoted, so request #1 keeps the
++ * upstream Minimal-aligned bootstrap exactly: the rendered persona, the
++ * two-tool catalog, and the suppressed workspace/skill injections are all
++ * unchanged while the session is unpromoted.
++ *
++ * `@deepseek-ai/dsh-persona` registers `deployment:persona` as a complete
++ * system prompt, so an extra prompt section would be discarded; instead this
++ * plugin registers a prompt variable referenced by the persona template. The
++ * variable renders as the empty string during bootstrap and as the guidance
++ * text after the session's first durable promotion signal. The promotion test
++ * mirrors ./tool-bootstrap.mjs — keep both `promoteOn` values in sync.
++ *
++ * @module anchored-vision-routing (local preset plugin)
++ */
++
++export const name = 'anchored-vision-routing'
++
++/** The prompt registry this plugin contributes a variable to. */
++export const inject = ['systemPrompt']
++
++/** Durable session event types that count as a promotion signal per mode. */
++const PROMOTE_EVENTS = {
++  'tool-call': ['tool/call'],
++  'assistant-message': ['assistant/message'],
++  either: ['tool/call', 'assistant/message'],
++}
++
++/**
++ * Guidance appended to the rendered persona after promotion. It starts with a
++ * blank line because the persona template references `{{vision_routing}}`
++ * immediately after the upstream one-liner.
++ */
++const VISION_ROUTING = '\n\n'
++  + 'Vision fallback: you may be running on a model that cannot see images. '
++  + "When the user's task involves an image by file path — a screenshot, chart, document photo, or any image on disk — do not read the image yourself. "
++  + 'Call the `vision` tool in the foreground with a short `description` and a self-contained `prompt` that includes the absolute image path and the exact question to answer. '
++  + 'If only a filename or directory is given, locate the file with `glob`/`grep` first, then delegate the resolved path. '
++  + 'Relay the returned text description to the user. '
++  + 'If your model supports image input, prefer `read_image` directly.'
++
++function parsePromoteOn(value) {
++  if (value === undefined || value === 'either') return PROMOTE_EVENTS.either
++  if (value === 'tool-call' || value === 'assistant-message') return PROMOTE_EVENTS[value]
++  throw new TypeError(`${name}: promoteOn must be one of "tool-call", "assistant-message", "either"; got ${JSON.stringify(value)}`)
++}
++
++export function apply(ctx, config) {
++  const promoteEvents = parsePromoteOn(config.promoteOn)
++
++  /** Sessions already promoted in this process. Promotion is append-only, so a Set is sound. */
++  const promoted = new Set()
++
++  /**
++   * Whether the session has reached the promoted phase — the same durable
++   * event test used by ./tool-bootstrap.mjs, so the vision routing text and
++   * the full Standard tool catalog open together.
++   * @param agent - the assembly context's agent, or undefined outside an agent.
++   */
++  const isPromoted = (agent) => {
++    if (agent === undefined) return true
++    const session = agent.session
++    if (session === undefined) return true
++    if (promoted.has(session.id)) return true
++    const hit = session.events.some((event) => promoteEvents.includes(event.type))
++    if (hit) promoted.add(session.id)
++    return hit
++  }
++
++  ctx.systemPrompt.variable('vision_routing', (context) =>
++    isPromoted(context.agent) ? VISION_ROUTING : '')
++}

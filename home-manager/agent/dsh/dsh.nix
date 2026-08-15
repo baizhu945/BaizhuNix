@@ -103,9 +103,14 @@ let
   # 在 pinned preset 上叠加 vision 兜底 subagent(anchored-standard-vision.patch):
   # - 新增 `vision` 工具:spawn 一个 MiniMax M3 子代理(前台一次性),
   #   toolFilter 只保留 read_image/read/glob/grep,maxDepth 1 禁止继续委派;
-  # - persona 中加入路由指引:主模型无图像输入时把图片路径交给 vision;
-  # - bootstrap 首请求工具目录加入 vision,首个问题带图也能走兜底。
+  # - vision 与完整 Standard 工具目录一起,在会话首次持久晋升信号
+  #   (tool/call 或 assistant/message)之后才开放;bootstrap 首请求目录
+  #   保持上游原样(bash/pwsh 选一 + read,不带 vision);
+  # - persona 经 vision-routing.mjs 注册的 prompt 变量在晋升后追加路由
+  #   指引;变量在晋升前展开为空,首请求渲染出的 persona 与上游逐字节一致。
   # fetchFromGitHub 产物只读,这里复制出可写目录后打补丁,再交给 home.file。
+  #
+  # ── vision subagent:已启用 ────────────────────────────────────────────
   dshAnchoredPreset = pkgs.runCommand "dsh-anchored-standard-preset" {
     presetSrc = "${dshPresetSrc}/preset";
     visionPatch = ./patches/anchored-standard-vision.patch;
@@ -116,10 +121,16 @@ let
     cd "$out"
     ${pkgs.gnupatch}/bin/patch -p2 < "$visionPatch"
   '';
+
+  # ── dsh-deep-whale 鲸鱼娘皮肤系列 ──────────────────────────────────────
+  # maid-atelier 皮肤的源码获取、blur 可读性 patch、以及
+  # ~/.dsh/profiles/web/node_modules 的真实文件部署,全部独立在
+  # ./skin.nix;这里只把它作为模块导入。
 in
 {
   imports = [
     ./skills.nix
+    ./skin.nix
   ];
 
   home.packages = [
@@ -156,7 +167,9 @@ in
     # 插件本体(零依赖 ESM,loader 经相对路径加载)
     ".dsh/profiles/web/plugins/confirm-writes.mjs".source = ./profiles/web/plugins/confirm-writes.mjs;
 
-    # web profile 的用户 patch 层:挂载 confirm-writes + approval-tweaks 插件。
+    # web profile 的用户 patch 层:挂载 confirm-writes + approval-tweaks 插件,
+    # 以及 maid-atelier 皮肤(ui-skin-maid-atelier;皮肤包体由 ./skin.nix
+    # 部署,insert 行见文件内注释)。
     # 注意:此文件由 home-manager 声明式管理;如需追加自己的 patch 行,
     # 请直接编辑 dsh.nix 中此处的内容(改后 home-manager switch 生效)。
     ".dsh/profiles/web/cordis.patch.yml".source = ./profiles/web/cordis.patch.yml;
@@ -209,8 +222,10 @@ in
     # recursive = true:dsh 发现逻辑用 Dirent.isDirectory() 判断 preset 目录,
     # 不跟随符号链接,故不能用默认的"整目录符号链接",而需真实目录 + 叶子文件
     # 符号链接(叶子符号链接 readFile 会正常跟随,loader 相对导入 ./xxx.mjs 也 OK)。
-    # 源为 dshAnchoredPreset(pinned preset + vision subagent 补丁后的副本),
-    # 文件只读、可复现、跟随升级。
+    # vision subagent 已启用:source 使用上方打过
+    # anchored-standard-vision.patch 的 dshAnchoredPreset。vision 与完整
+    # Standard 工具目录一起在首次持久晋升信号(tool/call 或
+    # assistant/message)后开放,首请求 bootstrap 目录保持 bash/pwsh+read。
     # ─────────────────────────────────────────────────────────────────────
     ".dsh/.agent-presets/anchored-standard" = {
       source = "${dshAnchoredPreset}";
@@ -225,10 +240,11 @@ in
   # realpath 到 /nix/store,插件内部的 bare import(@deepseek-ai/dsh-* 等)
   # 就找不到 ~/.dsh/profiles/node_modules(dsh 每次启动 heal 的扁平链接,
   # 指向 apps/cli 自己的依赖树 —— 必须从这条路径导入,才能与内置插件共享
-  # 同一份 cordis 模块实例)。因此这两个插件目录用激活脚本把 store 里的
+  # 同一份 cordis 模块实例)。因此这些插件目录用激活脚本把 store 里的
   # 文件真实拷贝到 ~/.dsh(linkGeneration 之后运行,install 会原子替换
-  # 旧的符号链接)。卸载时这些真实文件不会被 linkGeneration 清理,
-  # 属预期行为(删除配置模块后手动清理即可)。
+  # 旧的符号链接)。maid-atelier 皮肤包的真实文件部署位于 ./skin.nix
+  # (home.activation.dshSkinMaidAtelier),理由相同:防 ESM realpath
+  # 逃逸,并保持皮肤配置整体独立。
   # ─────────────────────────────────────────────────────────────────────────
   home.activation.dshPlugins = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
     run mkdir -p \
