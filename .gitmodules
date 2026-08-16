@@ -4,3 +4,6 @@
 [submodule "home-manager/agent/pi"]
 	path = home-manager/agent/pi
 	url = https://github.com/baizhu945/Baizhu-Pi.git
+[submodule "home-manager/agent/dsh"]
+	path = home-manager/agent/dsh
+	url = https://github.com/baizhu945/Baizhu-DSH.git
