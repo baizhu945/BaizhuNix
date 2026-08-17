@@ -21,7 +21,8 @@ cc-connect 定时任务：把聊天里的自然语言需求转成按 cron 表达
 | `--prompt "<任务>"` | Agent 提示词任务：任务运行 agent 并执行该提示词 |
 | `--exec "<命令>"` | Shell 命令任务：直接执行命令（与 `--prompt` 互斥） |
 | `--desc "<描述>"` | 任务描述，便于列表辨认 |
-| `--session-mode new-per-run` | 每次运行开新会话（推荐周期任务，避免污染当前会话）；默认 `reuse` |
+| 不传 `--session-mode` | 继承全局 `[cron].session_mode`；cc-connect 默认值为 `reuse` |
+| `--session-mode new-per-run` | 每次运行开新会话；仅在用户明确要求每次隔离时使用，不要自动添加 |
 | `--timeout-mins N` | 单次运行最长等待分钟数（0 = 不限，默认 30） |
 | `--silent` | 不发送"任务开始"通知 |
 | `-p <project>` / `-s <session>` | 指定项目/会话；未指定时读 `CC_PROJECT` / `CC_SESSION_KEY` 环境变量 |
@@ -29,8 +30,11 @@ cc-connect 定时任务：把聊天里的自然语言需求转成按 cron 表达
 ## 示例
 
 ```bash
-# Agent 提示词任务：每 30 分钟执行，新会话
-cc-connect cron add --cron "*/30 * * * *" --prompt "检查磁盘空间并汇报" --desc "每30分钟磁盘检查" --session-mode new-per-run
+# Agent 提示词任务：每 30 分钟执行；不传 session-mode，继承全局设置
+cc-connect cron add --cron "*/30 * * * *" --prompt "检查磁盘空间并汇报" --desc "每30分钟磁盘检查"
+
+# 只有用户明确要求每次开新会话时才添加
+cc-connect cron add --cron "*/30 * * * *" --prompt "执行隔离检查" --desc "隔离检查" --session-mode new-per-run
 
 # Shell 命令任务：每天早上 8 点
 cc-connect cron add --cron "0 8 * * *" --exec "df -h" --desc "每日8点磁盘检查"
@@ -44,7 +48,8 @@ cc-connect cron edit <job-id> enabled true
 cc-connect cron edit <job-id> mute true
 cc-connect cron edit <job-id> silent true
 cc-connect cron edit <job-id> timeout_mins 60
-cc-connect cron edit <job-id> session_mode new-per-run
+cc-connect cron edit <job-id> session_mode reuse       # 复用 session
+cc-connect cron edit <job-id> session_mode new-per-run # 每次新建，仅按用户明确要求设置
 cc-connect cron edit <job-id> work_dir /path/to/dir
 cc-connect cron exec <job-id>                  # 立即触发一次
 cc-connect cron del <job-id>
@@ -79,5 +84,6 @@ cc-connect cron del <job-id>
 - **首次使用**：若 agent 依赖记忆文件，先让用户在聊天中执行 `/cron setup` 或 `/bind setup`，刷新记忆文件中的定时任务指令。
 - **时区**：按本机时区（Asia/Shanghai）执行。
 - **socket 缺失/连接失败**：`systemctl --user status cc-connect`；socket 路径 `~/.cc-connect/run/api.sock`。
-- **会话轮换**：项目配置 `reset_on_idle_mins`（默认 30）控制空闲后是否开新会话；设 0 关闭。
+- **会话模式优先级**：任务自身非空的 `session_mode` 高于全局 `[cron].session_mode`；因此修改全局配置不会覆盖已经保存为 `new_per_run` 的任务。用 `cc-connect cron info <id>` 检查，用 `cc-connect cron edit <id> session_mode reuse` 修正。
+- **会话轮换**：项目配置 `reset_on_idle_mins` 控制普通聊天空闲后是否开新会话；设 0 关闭。它与 cron 的 `session_mode` 是不同设置。
 - 任务结果涉及文件/图片时，用 `cc-connect send --image/--file` 发回聊天（见 `cc-connect-send` skill）。

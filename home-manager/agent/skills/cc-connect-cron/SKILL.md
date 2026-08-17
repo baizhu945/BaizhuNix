@@ -37,14 +37,21 @@ cc-connect cron add --cron "*/30 * * * *" --exec "df -h" --desc "磁盘使用率
 
 常用参数：
 
-- `--session-mode new-per-run`：每次运行开新会话，推荐用于周期性 agent 任务，避免污染当前会话；默认 `reuse`
+- 默认**不要传** `--session-mode`：任务继承 `[cron].session_mode`；cc-connect 默认值为 `reuse`
+- `--session-mode new-per-run`：每次运行开新会话；只有用户明确要求每次隔离时才使用，绝不能因为任务是周期性的就自动添加
 - `--timeout-mins N`：单次运行最长等待分钟数（0 = 不限，默认 30）
 - `--silent`：不发送"任务开始"通知
 - `-p <project>` / `-s <session>`：指定项目/会话；未指定时自动读取 `CC_PROJECT` / `CC_SESSION_KEY` 环境变量
 
+**会话模式优先级：**任务自身非空的 `session_mode` 高于 `[cron].session_mode`。修改全局配置不会覆盖已经保存为 `new_per_run` 的任务。需要复用时执行：
+
+```bash
+cc-connect cron edit <job-id> session_mode reuse
+```
+
 ### 3. 验证并汇报
 
-创建成功后运行 `cc-connect cron list`（或 `cc-connect cron info <job-id>`）确认任务已生效，然后向用户回复任务 ID、执行频率和任务内容。
+创建成功后运行 `cc-connect cron list`，并用 `cc-connect cron info <job-id>` 检查完整任务配置。若全局配置为 `reuse`，任务详情中 `session_mode` 为空/缺省表示继承全局复用；若显示 `new_per_run`，必须在用户未明确要求隔离时改为 `reuse`。最后向用户回复任务 ID、执行频率、任务内容和会话模式。
 
 ### 4. 定时任务管理
 

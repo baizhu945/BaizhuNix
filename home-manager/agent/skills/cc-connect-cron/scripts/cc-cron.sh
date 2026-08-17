@@ -3,7 +3,7 @@
 # 依赖: cc-connect 守护进程 (socket: ~/.cc-connect/run/api.sock)
 # 用法:
 #   cc-cron.sh list
-#   cc-cron.sh add <cron表达式> --prompt "任务内容" [--desc "描述"] [--session-mode new-per-run] [--timeout-mins N] [--silent]
+#   cc-cron.sh add <cron表达式> --prompt "任务内容" [--desc "描述"] [--session-mode reuse|new-per-run] [--timeout-mins N] [--silent]
 #   cc-cron.sh add <cron表达式> --exec "shell 命令" [--desc "描述"]
 #   cc-cron.sh info <job-id> [字段名]
 #   cc-cron.sh edit <job-id> <字段> <值>
@@ -35,7 +35,8 @@ usage() {
   edit <job-id> <字段> <值>              修改任务字段
   exec <job-id>                          立即触发一次
   del <job-id>                           删除任务
-add 选项: --desc, --session-mode new-per-run, --timeout-mins N, --silent, -p <project>, -s <session>
+add 选项: --desc, --session-mode reuse|new-per-run, --timeout-mins N, --silent, -p <project>, -s <session>
+默认不传 --session-mode，继承全局 [cron].session_mode；仅在明确要求隔离时使用 new-per-run。
 EOF
   exit 1
 }
