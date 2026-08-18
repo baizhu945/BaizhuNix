@@ -36,7 +36,6 @@ in
     ./showmethekey/showmethekey.nix
     ./agent/pi/pi.nix
     ./agent/dsh/dsh.nix
-    # ./agent/hermes/hermes.nix
     ./mouse-trail/mouse-trail.nix
     # ./noctalia-v5.nix
     ./latex-ocr.nix
