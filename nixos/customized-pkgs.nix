@@ -180,6 +180,6 @@ in
   ];
 
   nixpkgs.config.permittedInsecurePackages = [
-    "ventoy-qt5-1.1.12"
+    "ventoy-qt5-1.1.17"
   ];
 }
