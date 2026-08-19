@@ -22,7 +22,9 @@ find . -path "./.git" -prune -o -type f -name "*" -exec sed -i 's/<yourpassword>
 - `deepseek-ocr` 脚本快速 OCR 识别；
 - `OpenCode` 和 `cc-connect` 支持及其权限请求卡片补丁；
 - 华硕 `linux-g14` 内核支持；
-- 鼠标拖尾特效支持，[见我另一仓库](https://github.com/baizhu945/niri-mouse-trail) 。
+- 鼠标拖尾特效支持，[见我另一仓库](https://github.com/baizhu945/niri-mouse-trail) ；
+- 高度自定义的 `Pi` 支持，[见我另一仓库](https://github.com/baizhu945/Baizhu-Pi) ；
+- 高度自定义的 `DSH` 支持，[见我另一仓库](https://github.com/baizhu945/Baizhu-DSH) 。
 
 # 一、安装home-manager
 ```
