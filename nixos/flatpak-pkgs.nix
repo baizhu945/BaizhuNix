@@ -22,6 +22,7 @@ in
       "io.github.Predidit.Kazumi"
       "com.gopeed.Gopeed"
       "cn.feishu.Feishu"
+      "com.tencent.WeChat"
     ];
   };
 
