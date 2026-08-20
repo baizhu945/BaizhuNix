@@ -133,7 +133,7 @@ in
     stablePkgs.krita
     stablePkgs.kdePackages.kdenlive
     pkgs.gnome-calendar
-    pkgs.mpvpaper
+    stablePkgs.mpvpaper
     pkgs.slurp
     pkgs.grim
     pkgs.translate-shell
@@ -146,14 +146,13 @@ in
     pkgs.baidupcs-go
     pkgs.texstudio
     pkgs.qq
-    # pkgs.wechat
     stablePkgs.qalculate-gtk
     pkgs.brave
     pkgs.google-chrome
     pkgs.kdePackages.discover
     pkgs.proton-vpn
     pkgs.pciutils
-    pkgs.haruna
+    stablePkgs.haruna
     pkgs.smplayer
     pkgs.nvtopPackages.full
     pkgs.noctalia-shell
