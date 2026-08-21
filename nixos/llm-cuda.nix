@@ -4,10 +4,16 @@
   services.ollama = {
     enable = true;
     package = pkgs.ollama-cuda;
+    # Ollama 0.32 defaults to a 4096-token runtime context. Pi's system
+    # prompt and tool definitions already exceed that, so use a 32K context
+    # for OpenAI-compatible clients such as pi-coding-agent.
+    environmentVariables = {
+      OLLAMA_CONTEXT_LENGTH = "32768";
+    };
     syncModels = true;
     loadModels = [
       "deepseek-ocr:3b"
-      "gemma4:12b"
+      "ornith-1.5:9b"
     ];
   };
 
