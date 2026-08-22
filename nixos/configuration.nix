@@ -574,20 +574,11 @@ EOF
     pkgs.coppwr
 
     pkgs.wineWow64Packages.stagingFull pkgs.winetricks pkgs.wineWow64Packages.waylandFull
-
-    (stablePkgs.lutris.override {
-      extraLibraries = pkgs: [ ];
-      extraPkgs = pkgs: [ ];
-    })
   ];
 
   programs.git = {
     enable = true;
     lfs.enable = true;
-  };
-
-  programs.steam = {
-    enable = true;
   };
 
   programs.atop = {
