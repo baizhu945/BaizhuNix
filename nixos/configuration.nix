@@ -299,6 +299,7 @@ EOF
     enablePkexecWrapper = true;
   };
   security.soteria.enable = true;
+  # services.gnome.gnome-keyring.enable = true; # secret service
 
   # 使 dolphin 在其他桌面中也能访问到应用链接列表
   environment.etc."xdg/menus/applications.menu".source = 
@@ -393,8 +394,6 @@ EOF
     Defaults pwfeedback
     Defaults timestamp_type=global
   '';
-
-  services.gnome.gnome-keyring.enable = true;
 
   services.flatpak.enable = true;
   systemd.services.flatpak-repo = {
