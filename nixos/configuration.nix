@@ -578,6 +578,31 @@ EOF
   programs.git = {
     enable = true;
     lfs.enable = true;
+
+    # GitHub 的 Git 传输统一使用 SSH，避免 gh auth setup-git 把带版本号的
+    # /nix/store/...-gh-*/bin/.gh-wrapped 路径写入用户 Git 配置。
+    # 这样即使 HTTPS remote 或旧 credential helper 被迁移过来，GitHub
+    # 的 fetch/push 也不会回退到 ksshaskpass。
+    config = {
+      init.defaultBranch = "main";
+
+      url."git@github.com:".insteadOf = [
+        "https://github.com/"
+        "https://www.github.com/"
+      ];
+      url."git@gist.github.com:".insteadOf = "https://gist.github.com/";
+
+      # 仅作为未被 URL 重写的 GitHub HTTPS 请求的稳定后备；不要使用
+      # ${pkgs.gh}/bin/gh，因为该 Nix store 路径会随更新失效。
+      credential."https://github.com".helper = [
+        ""
+        "!/run/current-system/sw/bin/gh auth git-credential"
+      ];
+      credential."https://gist.github.com".helper = [
+        ""
+        "!/run/current-system/sw/bin/gh auth git-credential"
+      ];
+    };
   };
 
   programs.atop = {
