@@ -19,9 +19,9 @@ in
 {
   programs.codex.skills = {
     # ---- 本地技能（agent/skills/）----
-    cc-connect-cron= ../skills/cc-connect-cron;
-    cc-connect-send = ../skills/cc-connect-send;
-    chrome-automation = ../skills/chrome-automation;
+    # cc-connect-cron= ../skills/cc-connect-cron;
+    # cc-connect-send = ../skills/cc-connect-send;
+    # chrome-automation = ../skills/chrome-automation;
 
     # ---- anthropics/skills ----
     docx = "${anthropics-skills-repo}/skills/docx";
