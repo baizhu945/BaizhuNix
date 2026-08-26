@@ -35,6 +35,7 @@ in
     ./waybar/waybar.nix
     ./showmethekey/showmethekey.nix
     ./agent/pi/pi.nix
+    ./agent/mmx/mmx.nix
     ./agent/dsh/dsh.nix
     ./agent/codex/codex.nix
     ./mouse-trail/mouse-trail.nix
