@@ -5,7 +5,7 @@
 Start Chrome with remote debugging on NixOS / Wayland (Niri).
 
 ```bash
-bash ~/.config/opencode/skills/chrome-automation/scripts/start-chrome-linux.sh
+bash /home/<yourusername>/.config/home-manager/agent/skills/chrome-automation/scripts/start-chrome-linux.sh
 ```
 
 ### What it does
@@ -19,7 +19,7 @@ bash ~/.config/opencode/skills/chrome-automation/scripts/start-chrome-linux.sh
 Connect to or start Chrome for automation.
 
 ```bash
-bash ~/.config/opencode/skills/chrome-automation/scripts/connect_chrome.sh
+bash /home/<yourusername>/.config/home-manager/agent/skills/chrome-automation/scripts/connect_chrome.sh
 ```
 
 ### What it does

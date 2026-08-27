@@ -405,7 +405,7 @@ systemctl --user stop chrome-debug-9222     # stop
 ### Reset automation profile
 
 ```bash
-rm -rf ~/.config/chrome-automation
+remove-without-permission -rf ~/.config/chrome-automation
 ```
 
 This profile is separate from your daily Chrome, so automation activities won't affect your main browser.
