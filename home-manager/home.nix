@@ -35,7 +35,6 @@ in
     ./waybar/waybar.nix
     ./showmethekey/showmethekey.nix
     ./agent/pi/pi.nix
-    ./agent/mmx/mmx.nix
     ./agent/dsh/dsh.nix
     ./agent/codex/codex.nix
     ./mouse-trail/mouse-trail.nix
@@ -54,7 +53,6 @@ in
   nixpkgs.config.cudaSupport = true;
 
   programs.onlyoffice.enable = true;
-
 
   nixpkgs.overlays = with pkgs; [
     # nixpkgs 更新把 frei0r 包升到 3.2.1（CMake 构建），
@@ -103,6 +101,16 @@ in
     in {
       frei0r = frei0r-251;
       frei0r-plugins = frei0r-251;
+      
+      # GeoGebra 从官方目录移除了 nixpkgs 当前固定的 6-0-794-0，
+      # 改用官方仍保留的 Linux 64 位 6-0-804-0。
+      geogebra6 = super.geogebra6.overrideAttrs (_: {
+        version = "6-0-804-0";
+        src = super.fetchurl {
+          url = "https://download.geogebra.org/installers/6.0/GeoGebra-Linux64-Portable-6-0-804-0.zip";
+          hash = "sha256-EU5Tf62TIuGujr34qnNORzs8Zqnx2YxaHsX6Vdbqm9c=";
+        };
+      });
     })
   ];
 
