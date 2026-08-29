@@ -15,6 +15,9 @@
       };
       Service = {
         Type = "simple";
+        # Noctalia 只设置 BlueZ 的 Powered 属性；如果 systemd-rfkill
+        # 恢复了旧的软阻塞，先解除它，否则控件无法重新开启蓝牙。
+        ExecStartPre = "${pkgs.util-linux}/bin/rfkill unblock bluetooth";
         ExecStart = "${pkgs.noctalia-shell}/bin/noctalia-shell";
         Restart = "on-failure";
         RestartSec = "3s";
