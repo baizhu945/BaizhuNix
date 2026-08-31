@@ -44,11 +44,11 @@ in
 
   _module.args.stablePkgs = stablePkgs; # 将 stablePkgs 传递给其他文件
  
-  swapDevices = [{
-    device = "/var/lib/swapfile";
-    size = 32*1024;
-    priority = 1;
-  }];
+  # swapDevices = [{
+    # device = "/var/lib/swapfile";
+    # size = 32*1024;
+    # priority = 1;
+  # }];
 
   hardware.bluetooth.enable = true;
   services.blueman.enable = true;
