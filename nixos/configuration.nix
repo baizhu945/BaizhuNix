@@ -24,8 +24,8 @@ let
 in
 {
   imports =
-    [ # Include the results of the hardware scan.
-      ./hardware-configuration.nix
+    [ 
+      ./hardware-configuration.nix # Include the results of the hardware scan.
 
       ./sddm-theme.nix
       ./grub-theme.nix
