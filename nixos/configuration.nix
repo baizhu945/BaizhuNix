@@ -51,7 +51,8 @@ in
   # }];
 
   hardware.bluetooth.enable = true;
-  services.blueman.enable = true;
+  # 蓝牙由 Noctalia 管理，避免 Blueman 与 KDE BlueDevil 争用 BlueZ/OBEX agent。
+  services.blueman.enable = false;
 
   # Bootloader.
   boot.loader = {
@@ -270,6 +271,7 @@ EOF
     enable = true;
   };
 
+  # 当前会话使用 Niri；避免 Plasma 的 kded6 在 KDE 应用首次启动时被 D-Bus 激活。
   services.desktopManager.plasma6.enable = true;
   environment.plasma6.excludePackages = with pkgs; [
     kdePackages.elisa
@@ -563,7 +565,7 @@ EOF
     pkgs.nodejs
     pkgs.os-prober
     
-    pkgs.kdePackages.sddm-kcm pkgs.kdePackages.kate pkgs.kdePackages.yakuake pkgs.kdePackages.layer-shell-qt pkgs.kdePackages.qttools  pkgs.kdePackages.kscreen pkgs.kdePackages.kdialog pkgs.kdePackages.plasma-sdk pkgs.kdePackages.drkonqi pkgs.kurve
+    pkgs.kdePackages.sddm-kcm pkgs.kdePackages.kate pkgs.kdePackages.yakuake pkgs.kdePackages.layer-shell-qt pkgs.kdePackages.qttools  pkgs.kdePackages.kscreen pkgs.kdePackages.kdialog pkgs.kdePackages.drkonqi pkgs.kurve
     
     pkgs.thunderbird-bin
     pkgs.texlivePackages.dvipng

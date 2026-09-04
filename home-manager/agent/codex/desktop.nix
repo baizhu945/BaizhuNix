@@ -7,7 +7,7 @@ let
   version = "26.818.61809";
   src = pkgs.fetchurl {
     url = "https://persistent.oaistatic.com/codex-app-prod/linux/deb/latest/chatgpt_amd64.deb";
-    hash = "sha256-wXMEi6gPevnNiQT5ofJyr/SUejFPb+l9obuDaEds3Pk=";
+    hash = "sha256-QqZHfyL0E21iMh7ae0aXp52h62bWHcuFqwQghgoaUiM=";
   };
 
   chatgpt-desktop = pkgs.stdenv.mkDerivation {

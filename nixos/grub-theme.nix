@@ -11,7 +11,7 @@ let
   } ''
     mkdir -p $out
     # ImageMagick 的 convert 命令：先模糊，再输出为 PNG
-    magick "${originalWallpaper}" -blur 20x16 $out/blurred.png
+    magick "${originalWallpaper}" -blur 20x16 $out/blurred.jpg
   '';
 in
 {
@@ -21,7 +21,7 @@ in
       gfxmodeEfi = "2560x1600";
       font = "${pkgs.nerd-fonts.noto}/share/fonts/truetype/NerdFonts/Noto/NotoSansMNerdFont-Bold.ttf";
       fontSize = 28;
-      splashImage = "${blurredWallpaper}/blurred.png";
+      splashImage = "${blurredWallpaper}/blurred.jpg";
     };
   };
 }
