@@ -37,7 +37,6 @@ in
     ./agent/pi/pi.nix
     ./agent/dsh/dsh.nix
     ./agent/codex/codex.nix
-    ./agent/qwen/qwen.nix
     ./mouse-trail/mouse-trail.nix
     ./noctalia-v5.nix
     ./latex-ocr.nix
