@@ -51,8 +51,7 @@ in
   # }];
 
   hardware.bluetooth.enable = true;
-  # 蓝牙由 Noctalia 管理，避免 Blueman 与 KDE BlueDevil 争用 BlueZ/OBEX agent。
-  services.blueman.enable = false;
+  services.blueman.enable = true;
 
   # Bootloader.
   boot.loader = {
