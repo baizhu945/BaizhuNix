@@ -52,12 +52,12 @@ yazi.nix · unar/ · tts/ · latex-ocr.nix · showmethekey/
 mouse-trail/          # Wayland cursor trail (toggle with mouse-trail-toggle)
 theme/                # wallpaper-theme-sync: Noctalia colors → DMS theme + trail color
 script/               # niri-config.kdl, fastfetch-config.jsonc, battery-monitor.sh
-# Disabled: noctalia-v5.nix, caelestia.nix (quickshell shells, commented out in home.nix)
+# Disabled: noctalia-v5.nix (quickshell shells, commented out in home.nix)
 ```
 
 ## NVIDIA GPU
 
-- **Driver**: nvidia-open latest, CUDA 13, driver 610.43.03; `hardware.nvidia.open = true`, dynamicBoost, modesetting
+- **Driver**: nvidia-open latest, CUDA 13; `hardware.nvidia.open = true`, dynamicBoost, modesetting
 - **Services**: supergfxd (GPU switching), asusd, power-profiles-daemon, nvidia-powerd; nvidia-container-toolkit (Docker CUDA)
 - **Kernel Params**: `nvidia-drm.modeset=1`, `nvidia_drm.fbdev=1`, `nvidia.NVreg_PreserveVideoMemoryAllocations=1`, `nvidia-modeset.hdmi_deepcolor=0`
 - **VA-API**: intel-media-driver + nvidia-vaapi-driver (HW decode for Kazumi etc.)
