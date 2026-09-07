@@ -1,9 +1,8 @@
 { config, pkgs, lib,  ... }:
 
 let
-  stableTarball =
-    fetchTarball
-      "https://nixos.org/channels/nixos-26.05/nixexprs.tar.xz";
+  stableTarball = fetchTarball "https://nixos.org/channels/nixos-26.05/nixexprs.tar.xz";
+  
   # 注：新版 nixos-unstable 的 nixpkgs.config 会通过 deferredModuleWith 泄漏
   # pkgs/top-level/config.nix 的全部默认值（含 rewriteURL = null），而 nixos-26.05
   # 已把 rewriteURL 改为 function 类型，不再接受 null，导致 nixos-rebuild 报错。
@@ -13,7 +12,10 @@ let
   };
 
   nix-alien-pkgs = import (
-    builtins.fetchTarball "https://github.com/thiagokokada/nix-alien/tarball/master"
+    builtins.fetchTarball {
+      url = "https://github.com/thiagokokada/nix-alien/archive/df422df4324674417f91dee49bae401eef87c6ed.tar.gz";
+      sha256 = "sha256-iW7BzSkv27lII5FvrB6kPRO0CzOZj8utOIpvcFWjHgw=";
+    }
   ) { };
 
   fenix = import (
@@ -537,13 +539,17 @@ EOF
     pkgs.showmethekey
     pkgs.libnotify
     pkgs.tree
-    pkgs.friture
+    # nixos-unstable's current Friture pulls PyQt5 through Python 3.14,
+    # whose wheel build is not compatible with the available SIP ABI yet.
+    # Keep the same Friture release from the already-used stable channel.
+    stablePkgs.friture
     pkgs.btop-cuda
     pkgs.wget
     pkgs.gh
     pkgs.audacious
     pkgs.audacious-plugins
     pkgs.binutils
+    pkgs.usbutils
     pkgs.nirius
     pkgs.chameleos
     pkgs.networkmanagerapplet
@@ -570,7 +576,9 @@ EOF
     
     pkgs.thunderbird-bin
     pkgs.texlivePackages.dvipng
-    pkgs.texliveFull
+    # The unstable TeX Live Asymptote environment currently pulls PyQt5
+    # through Python 3.14; use the matching stable-channel TeX Live closure.
+    stablePkgs.texliveFull
     pkgs.miktex
     pkgs.pwvucontrol
     pkgs.coppwr

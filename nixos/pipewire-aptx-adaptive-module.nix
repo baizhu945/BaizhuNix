@@ -2,17 +2,15 @@
 
 let
   cfg = config.services.pipewire.aptxAdaptive;
-  
   runtimeDir = "/home/<yourusername>/Documents/aptx-adaptive-runtime";
-  
   openaptx-adaptive = pkgs.stdenv.mkDerivation {
     pname = "openaptx-adaptive-protocol";
     version = "2.0.0";
     src = pkgs.fetchFromGitHub {
       owner = "<yourusername>";
       repo = "openaptx";
-      rev = "ecab9fbb1f0e5441ee25f74c29f83dc3996503cd";
-      hash = "sha256-1KG6pwC8BVRKttSO9irACtnkrODCmJFCrV5Tqaq4Ylg=";
+      rev = "da487f5c78c8d4c01f360d60cf1462a851bfeb6a";
+      hash = "sha256-CtAemn5lq9CRg+Rsrym2/+uo6AS2m5AXAFTw1lfB+lA=";
     };
 
     nativeBuildInputs = [ pkgs.cmake pkgs.pkg-config ];
@@ -29,8 +27,8 @@ let
     src = pkgs.fetchFromGitHub {
       owner = "<yourusername>";
       repo = "pipewire";
-      rev = "11eb043bd66b7bcdf33b804e72d43d57f1b622ee";
-      hash = "sha256-/DkYb73UWJkCtW/jgzGJuO+c8oHPEep0aMkuZBfukD8=";
+      rev = "2245971dc5789842ca82d6be3fd1b7bab69f5e97";
+      hash = "sha256-xWPpVoKdtCvCrNxeRwxQWNgdyyPPQjNw8tXsqsaKpQk=";
     };
     outputs = [ "out" "dev" "doc" "man" "jack" ];
     patches = [];
@@ -44,18 +42,22 @@ let
     doCheck = false;
   });
   adaptiveEnv = {
-    # The R3 encoder profile is the openaptx-info/Qualcomm aptX Lossless
-    # profile (profile 6), exposed through the aptX Adaptive A2DP endpoint.
-    PIPEWIRE_APTX_ADAPTIVE_HELPER =
-      "${runtimeDir}/helper/aptx-lossless-helper";
+    # The R2 CAPI wrapper is the local Qualcomm entry point for normal
+    # Adaptive R2/R2.2 streams. The PipeWire plugin derives the extension
+    # stream from the peer's negotiated CIE instead of forcing one value.
+    PIPEWIRE_APTX_ADAPTIVE_HELPER = "${runtimeDir}/helper/aptx-lossless-helper";
     PIPEWIRE_APTX_ADAPTIVE_QEMU = "${pkgs.qemu}/bin/qemu-hexagon";
     PIPEWIRE_APTX_ADAPTIVE_SYSROOT = "${runtimeDir}/sysroot";
+    PIPEWIRE_APTX_ADAPTIVE_MODE = "r2";
     APTX_ADAPTIVE_PROFILE = "6";
+    APTX_ADAPTIVE_LOSSLESS = "off";
+    APTX_ADAPTIVE_QHS_SUPPORT = "0";
+    APTX_ADAPTIVE_ABR = "1";
   };
 in
 {
   options.services.pipewire.aptxAdaptive.enable = lib.mkEnableOption
-    "the experimental aptX Adaptive 2.2 / aptX Lossless bridge";
+    "the experimental aptX Adaptive R2/R2.2 bridge";
 
   config = lib.mkIf cfg.enable {
     # The helper and Qualcomm libraries are user-supplied files and are not
@@ -65,6 +67,15 @@ in
     environment.variables = adaptiveEnv;
     systemd.user.services.pipewire.environment = adaptiveEnv;
     systemd.user.services.wireplumber.environment = adaptiveEnv;
+    # Never inherit a fixed diagnostic CIE from the user manager.  The
+    # Adaptive plugin must use the peer's negotiated stream on the AX210
+    # path; fixed overrides are only for explicit, out-of-band experiments.
+    systemd.user.services.pipewire.serviceConfig.UnsetEnvironment = [
+      "APTX_ADAPTIVE_CONFIG_STREAM_HEX"
+    ];
+    systemd.user.services.wireplumber.serviceConfig.UnsetEnvironment = [
+      "APTX_ADAPTIVE_CONFIG_STREAM_HEX"
+    ];
 
     services.pipewire.wireplumber.extraConfig."aptx-adaptive" = {
       "monitor.bluez.properties" = {

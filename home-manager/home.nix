@@ -14,8 +14,10 @@ let
   };
 
   bilibiliTarball =
-    fetchTarball
-      "https://github.com/NixOS/nixpkgs/archive/cdb16195ed783fcd8681120639d305b789169b97.tar.gz";
+    fetchTarball {
+      url = "https://github.com/NixOS/nixpkgs/archive/cdb16195ed783fcd8681120639d305b789169b97.tar.gz";
+      sha256 = "sha256-3x0Br/DUxw39548Axmt0BbmBG0KXuZAUl+EgdVdct8w=";
+    };
   bilibiliPkgs = import bilibiliTarball {
     config = {
       allowUnfree = true;

@@ -2,7 +2,8 @@
 
 let
   nix-flatpak = builtins.fetchTarball {
-    url = "https://github.com/gmodena/nix-flatpak/archive/main.tar.gz";
+    url = "https://github.com/gmodena/nix-flatpak/archive/20d42f0ee98c9fe9f85e8d1de474f1409ed10d05.tar.gz";
+    sha256 = "sha256-0H8jDwR4Kegb3heaTrH1ftbgKfZVDT8JE+46uXxDy/Q=";
   };
 in
 {
