@@ -7,3 +7,6 @@
 [submodule "home-manager/agent/dsh"]
 	path = home-manager/agent/dsh
 	url = https://github.com/baizhu945/Baizhu-DSH.git
+[submodule "home-manager/bt11-control"]
+	path = home-manager/bt11-control
+	url = https://github.com/baizhu945/BT11-Control-Panel-Linux
