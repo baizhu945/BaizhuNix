@@ -57,6 +57,12 @@ in
   services.blueman.enable = true;
   services.pipewire.aptxAdaptive.enable = true;
 
+  # BT11's interface 1 is a vendor HID channel. The application itself is
+  # installed by Home Manager; NixOS only grants access to this exact device.
+  services.udev.extraRules = ''
+    SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0a12", ATTRS{idProduct}=="4007", MODE="0660", GROUP="input", TAG+="uaccess"
+  '';
+
   # Bootloader.
   boot.loader = {
     grub = {

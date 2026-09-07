@@ -44,6 +44,7 @@ in
     ./noctalia-v5.nix
     ./latex-ocr.nix
     ./shell-services.nix
+    ./bt11-control/bt11-control.nix
   ];
 
   # Home Manager needs a bit of information about you and the paths it should
