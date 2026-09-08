@@ -9,8 +9,10 @@ let
     src = pkgs.fetchFromGitHub {
       owner = "<yourusername>";
       repo = "openaptx";
-      rev = "da487f5c78c8d4c01f360d60cf1462a851bfeb6a";
-      hash = "sha256-CtAemn5lq9CRg+Rsrym2/+uo6AS2m5AXAFTw1lfB+lA=";
+      # 2026-09-08: 修复 helper（44.1 kHz 卡死、R3 崩溃、Lossless 谎报）
+      # 后续: 补齐 64 位 builtins、遵循 CAPI 初始化契约、修正 R3 环形游标语义
+      rev = "c5fdab9ff7118fce16486b368fe57709adc90b3f";
+      hash = "sha256-Xrv9r+Xb/I1NKYOd1TVpspP0rN6pZiG4jHW4wsDxe2o=";
     };
 
     nativeBuildInputs = [ pkgs.cmake pkgs.pkg-config ];
@@ -27,8 +29,10 @@ let
     src = pkgs.fetchFromGitHub {
       owner = "<yourusername>";
       repo = "pipewire";
-      rev = "2245971dc5789842ca82d6be3fd1b7bab69f5e97";
-      hash = "sha256-xWPpVoKdtCvCrNxeRwxQWNgdyyPPQjNw8tXsqsaKpQk=";
+      # 2026-09-08: R3 直编管线支持全速率；移除过时的 QHS 警告。
+      # helper 读取增加 poll 超时；记录 ABR 的已知限制。
+      rev = "90cb7d74e4978b8598e8d9f40ee77523a8ecd5ec";
+      hash = "sha256-5ZzI/BU2oCh3ofec7ggNovwtSIoMcQFR9f1aWGKV5t8=";
     };
     outputs = [ "out" "dev" "doc" "man" "jack" ];
     patches = [];
@@ -42,16 +46,24 @@ let
     doCheck = false;
   });
   adaptiveEnv = {
-    # The R2 CAPI wrapper is the local Qualcomm entry point for normal
-    # Adaptive R2/R2.2 streams. The PipeWire plugin derives the extension
-    # stream from the peer's negotiated CIE instead of forcing one value.
+    # The helper drives the R3 encoder through a direct encoding pipeline
+    # (aptX3Encode(ctx, input_descriptor, output_descriptor)) which produces
+    # real Lossless bitstreams; the R2 CAPI wrapper remains available for
+    # plain Adaptive by setting this back to "r2".
     PIPEWIRE_APTX_ADAPTIVE_HELPER = "${runtimeDir}/helper/aptx-lossless-helper";
     PIPEWIRE_APTX_ADAPTIVE_QEMU = "${pkgs.qemu}/bin/qemu-hexagon";
     PIPEWIRE_APTX_ADAPTIVE_SYSROOT = "${runtimeDir}/sysroot";
-    PIPEWIRE_APTX_ADAPTIVE_MODE = "r2";
+    PIPEWIRE_APTX_ADAPTIVE_MODE = "r3";
+    # 仅 R3 模式使用；R2 路径的 profile 由协商出的 CIE 决定，此变量被忽略。
     APTX_ADAPTIVE_PROFILE = "6";
-    APTX_ADAPTIVE_LOSSLESS = "off";
+    # Lossless 能力位必须与 R3 编码器一致：off 会在协商时清掉 R2.2 的
+    # 0x80 位，对端就不会进入 Lossless。force 保留该位并由 R3 直编管线
+    # 产出 0xad 码流。
+    APTX_ADAPTIVE_LOSSLESS = "force";
+    # AX210 没有 Qualcomm High Speed Link，不能宣称支持 QHS。
     APTX_ADAPTIVE_QHS_SUPPORT = "0";
+    # 保留控制面，但实测该编码器构建不响应 quality-level 反馈，
+    # 码率固定（48 kHz 约 212 kbps），详见插件初始化日志。
     APTX_ADAPTIVE_ABR = "1";
   };
 in
