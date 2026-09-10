@@ -15,6 +15,14 @@
       };
       Service = {
         Type = "simple";
+        # Noctalia 由 systemd --user 启动，不会继承 niri-config.kdl 的
+        # environment{}。其 app2unit 启动的应用需要显式获得 Fcitx 变量，
+        # 否则从 Noctalia 启动的 Qt/GTK 应用无法切换中文输入法。
+        Environment = [
+          "GTK_IM_MODULE=fcitx"
+          "QT_IM_MODULE=fcitx"
+          "XMODIFIERS=@im=fcitx"
+        ];
         # Noctalia 只设置 BlueZ 的 Powered 属性；如果 systemd-rfkill
         # 恢复了旧的软阻塞，先解除它，否则控件无法重新开启蓝牙。
         ExecStartPre = "${pkgs.util-linux}/bin/rfkill unblock bluetooth";

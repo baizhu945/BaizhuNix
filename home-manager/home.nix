@@ -161,6 +161,7 @@ in
     pkgs.baidupcs-go
     pkgs.texstudio
     pkgs.qq
+    pkgs.wechat
     stablePkgs.qalculate-gtk
     pkgs.brave
     pkgs.google-chrome

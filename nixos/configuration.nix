@@ -510,7 +510,8 @@ EOF
     pkgs.yad
     pkgs.python3
     pkgs.vulkan-tools
-  
+    pkgs.android-tools
+
     pkgs.unar pkgs.rar pkgs.unzip pkgs.unrar pkgs.p7zip
 
     pkgs.file
