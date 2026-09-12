@@ -40,7 +40,6 @@ in
     ./agent/antigravity/antigravity.nix
     ./agent/dsh/dsh.nix
     ./agent/codex/codex.nix
-    ./agent/grok/grok.nix
     ./mouse-trail/mouse-trail.nix
     ./noctalia-v5.nix
     ./latex-ocr.nix

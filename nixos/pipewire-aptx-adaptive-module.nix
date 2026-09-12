@@ -29,12 +29,13 @@ let
     src = pkgs.fetchFromGitHub {
       owner = "<yourusername>";
       repo = "pipewire";
-      # 2026-09-10: 代码审查修复（write_full 无超时、STRIP_OTA=0 失效、
-      # FEATURES 覆盖重新引入 R2.2 位、ABR 等级反向、R3 静态属性入口错误、
-      # helper 子进程信号掩码/fd 泄漏、get_delay 单位）。
-      # 详见 research/aptx-adaptive-qemu/CODE-REVIEW.md。
-      rev = "b97eae8c84b3b253429461abbb7c6c099cbe36cc";
-      hash = "sha256-jVrl8n1DmTEBJxtkAB6TVMjyko7kScF7wTgoCN0ykiI=";
+      # 2026-09-11: adds APTX_ADAPTIVE_ADVERTISE_R2_2 (report the R2.2
+      # capability to the peer while the encoder keeps its ordinary R2 path).
+      # The option is off by default, so the deployed stream is unchanged;
+      # it exists because the byte-identical Qualcomm configuration had to be
+      # testable.  See research/aptx-adaptive-qemu/HANDOFF.md section 21.
+      rev = "8976dcf7fa81ed53d01ddeb5714fb2b3477950cf";
+      hash = "sha256-admPs/eJN2qsb+0GZEvTD8n+veL3WTtllFlrpdy6C18=";
     };
     outputs = [ "out" "dev" "doc" "man" "jack" ];
     patches = [];
