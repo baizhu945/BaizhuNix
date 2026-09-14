@@ -1,557 +1,1266 @@
-import sys
-import time
-import threading
-import subprocess
-import requests
+"""Waybar Spotify lyrics module.
+
+The module deliberately keeps all network work off the polling loop.  Spotify
+can expose a different track while an old request is still in flight, so every
+request is associated with a stable track key before its result is accepted.
+"""
+
+import bisect
+import contextlib
+import difflib
+import fcntl
+import hashlib
 import json
+import math
 import os
+from pathlib import Path
+import queue
 import re
+import subprocess
+import sys
+import tempfile
+import threading
+import time
+import unicodedata
 
-STATE_FILE = "/tmp/waybar_lyrics_show"
-CACHE_DIR = os.path.expanduser("~/.cache/waybar-lyrics")
-P = "playerctl"
-DEBUG = True
+import requests
 
-# 缓存哨兵值：标记"已确认无歌词"。写入后下次
-# 播放同一首歌只需读缓存，不再发起网络请求。
+
+# Runtime configuration can be overridden without changing the Nix expression.
+PLAYER = os.environ.get("WAYBAR_LYRICS_PLAYER", "spotify")
+PLAYERCTL = os.environ.get("WAYBAR_LYRICS_PLAYERCTL", "playerctl")
+# Keep the original path for compatibility with an already-running Waybar
+# process.  It is also overridable for testing or a private user session.
+STATE_FILE = Path(
+    os.environ.get("WAYBAR_LYRICS_STATE", "/tmp/waybar_lyrics_show")
+)
+CACHE_DIR = Path(
+    os.environ.get(
+        "WAYBAR_LYRICS_CACHE_DIR",
+        os.path.join(
+            os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")),
+            "waybar-lyrics",
+        ),
+    )
+)
+DEBUG = os.environ.get("WAYBAR_LYRICS_DEBUG", "").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+
+POLL_INTERVAL = 0.25
+INACTIVE_INTERVAL = 1.0
+RETRY_INTERVAL = 30.0
+HTTP_TIMEOUT = (2.0, 5.0)
+FETCH_DEADLINE = 15.0
+# Bump this whenever candidate validation changes so previously selected
+# potentially incomplete timelines are evaluated again.
+CACHE_VERSION = 3
+POSITIVE_CACHE_TTL = 30 * 24 * 60 * 60
+PLAIN_CACHE_TTL = 7 * 24 * 60 * 60
+NEGATIVE_CACHE_TTL = 60 * 60
+MAX_LYRICS_BYTES = 512 * 1024
+
+LRCLIB_GET_URL = "https://lrclib.net/api/get"
+LRCLIB_SEARCH_URL = "https://lrclib.net/api/search"
+METING_URL = "https://metingapi.nanorocky.top/"
+
+FIELD_SEPARATOR = "\x1f"
 NO_LYRICS_MARKER = "#NO_LYRICS#"
 
-os.makedirs(CACHE_DIR, exist_ok=True)
+# Standard LRC timestamps.  Both [mm:ss] and [mm:ss.xx] are common; a few
+# providers use h:mm:ss or a colon instead of a dot before milliseconds.
+TIMESTAMP_RE = re.compile(
+    r"\[(?:(\d{1,3}):)?(\d{1,4}):(\d{1,2})"
+    r"(?:[\.,:](\d{1,3}))?\]"
+)
+OFFSET_RE = re.compile(
+    r"^\s*\[offset\s*:\s*([-+]?\d+(?:\.\d+)?)\]\s*$",
+    re.IGNORECASE,
+)
+LENGTH_RE = re.compile(
+    r"^\s*\[length\s*:\s*(?:(\d{1,3}):)?(\d{1,4}):(\d{1,2})"
+    r"(?:[\.,:](\d{1,3}))?\]\s*$",
+    re.IGNORECASE,
+)
+META_TAG_RE = re.compile(r"^\s*\[[A-Za-z][^:]*:.*\]\s*$")
+INLINE_META_TAG_RE = re.compile(r"\[[A-Za-z][^:]*:[^\]]*\]")
+KARAOKE_TAG_RE = re.compile(
+    r"<(?:(\d{1,3}):)?\d{1,4}:\d{1,2}"
+    r"(?:[\.,:]\d{1,3})?>"
+)
+ARTIST_SEPARATOR_RE = re.compile(r"\s*(?:,|、|;)\s*")
 
-# lyrics_data 的三种状态：
-#   None  -> 正在后台加载中，不显示任何内容
-#   []    -> 已加载，无可用的时间轴歌词
-#   [...] -> 已加载，有时间轴歌词，正常滚动
-last_id = ""
-lyrics_data = None
 
-
-def dbg(msg):
+def dbg(message):
     if DEBUG:
-        print(f"[DBG] {msg}", file=sys.stderr, flush=True)
+        print(f"[waybar-lyrics] {message}", file=sys.stderr, flush=True)
 
 
-def clean_text(text):
-    if not text:
-        return ""
-    text = re.sub(
-        r'\(feat\..*?\)', "", text, flags=re.IGNORECASE
-    )
-    text = re.sub(
-        r'\(with.*?\)', "", text, flags=re.IGNORECASE
-    )
-    text = re.sub(r'\(.*?\)|\[.*?\]', "", text)
-    text = re.sub(
-        r'- .*Remaster.*', "", text, flags=re.IGNORECASE
-    )
-    text = re.sub(r' - Single| - Deluxe Edition', "", text)
-    return text.strip()
+def run_playerctl(arguments, timeout=1.0):
+    """Run playerctl and return stripped stdout, or raise its normal errors."""
+    return subprocess.run(
+        [PLAYERCTL, "-p", PLAYER, *arguments],
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=timeout,
+    ).stdout.strip()
 
 
-def make_cache_path(meta):
-    name = f"{meta['artist']} - {meta['title']}"
-    name = re.sub(r'[\\\\/:\"*?<>|]+', "_", name)
-    return os.path.join(CACHE_DIR, name + ".lrc")
+def split_artists(value):
+    if not value:
+        return []
+    return [
+        part.strip()
+        for part in ARTIST_SEPARATOR_RE.split(value)
+        if part.strip()
+    ]
+
+
+def parse_mpris_duration(value):
+    """MPRIS length is microseconds; tolerate seconds for unusual players."""
+    try:
+        number = float(str(value).strip())
+    except (TypeError, ValueError):
+        return 0.0
+    if not math.isfinite(number) or number <= 0:
+        return 0.0
+    # MPRIS uses microseconds and normal tracks are well above 10,000 units.
+    return number / 1_000_000.0 if number > 10_000 else number
+
+
+def parse_source_duration(value):
+    """Accept seconds, milliseconds, or microseconds returned by providers."""
+    try:
+        number = float(str(value).strip())
+    except (TypeError, ValueError):
+        return 0.0
+    if not math.isfinite(number) or number <= 0:
+        return 0.0
+    if number > 10_000_000:
+        return number / 1_000_000.0
+    if number > 10_000:
+        return number / 1_000.0
+    return number
 
 
 def get_metadata():
+    """Read status, identity, title and duration in one playerctl call."""
+    metadata_format = FIELD_SEPARATOR.join(
+        (
+            "{{status}}",
+            "{{mpris:trackid}}",
+            "{{title}}",
+            "{{artist}}",
+            "{{album}}",
+            "{{mpris:length}}",
+        )
+    )
     try:
-        cmd = [
-            P, "-p", "spotify", "metadata",
-            "--format",
-            "{{title}}||{{artist}}||{{mpris:length}}"
-        ]
-        out = subprocess.check_output(cmd, text=True).strip()
-        parts = out.split("||")
-        if len(parts) < 3:
-            dbg("get_metadata: 字段不足 raw=" + repr(out))
+        output = run_playerctl(
+            ["metadata", "--format", metadata_format], timeout=1.0
+        )
+        fields = output.split(FIELD_SEPARATOR, 5)
+        if len(fields) != 6:
+            dbg(f"metadata fields are incomplete: {output!r}")
             return None
-        meta = {
-            "title": parts[0].strip(),
-            "artist": parts[1].split(",")[0].strip(),
-            "duration": int(parts[2]) // 1000000
+
+        status, track_id, title, artist_value, album, length = fields
+        title = title.strip()
+        artist_value = artist_value.strip()
+        if not title or not artist_value:
+            return None
+
+        artists = split_artists(artist_value)
+        artist = artists[0] if artists else artist_value
+        return {
+            "status": status.strip(),
+            "track_id": track_id.strip(),
+            "title": title,
+            "artist": artist,
+            "artist_value": artist_value,
+            "artists": artists or [artist],
+            "album": album.strip(),
+            "duration": parse_mpris_duration(length),
         }
-        t = repr(meta["title"])
-        a = repr(meta["artist"])
-        d = meta["duration"]
-        dbg(f"get_metadata: title={t} artist={a} {d}s")
-        return meta
-    except subprocess.CalledProcessError as e:
-        dbg(f"get_metadata: playerctl 失败 -> {e}")
-        return None
-    except ValueError as e:
-        dbg(f"get_metadata: 解析数值失败 -> {e}")
+    except (
+        OSError,
+        subprocess.CalledProcessError,
+        subprocess.TimeoutExpired,
+        ValueError,
+    ) as error:
+        dbg(f"get_metadata failed: {error}")
         return None
 
 
-def score_match(item, title, artist):
-    # lrclib 用 trackName/artistName；
-    # meting API 用 name/title/artist/author
-    name = (
+def normalize_match_text(value):
+    value = unicodedata.normalize("NFKC", str(value or "")).casefold()
+    value = value.replace("&", " and ")
+    # Keep Unicode letters/numbers (important for Japanese and Chinese), but
+    # discard punctuation and spacing so different providers compare equally.
+    return re.sub(r"[^\w]+", "", value, flags=re.UNICODE).replace("_", "")
+
+
+def clean_text(text):
+    """Remove only common feature/remaster suffixes for fallback searches."""
+    text = unicodedata.normalize("NFKC", str(text or ""))
+    text = re.sub(
+        r"\s*[\(\[]\s*(?:feat\.?|ft\.?|featuring|with)\b.*?[\)\]]",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(
+        r"\s+(?:feat\.?|ft\.?|featuring)\s+.*$",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(
+        r"\s*[-–—]\s*(?:(?:19|20)\d{2}\s*)?"
+        r"(?:remaster(?:ed)?|radio\s+edit|single\s+version|"
+        r"album\s+version)\b.*$",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def text_similarity(left, right):
+    left = normalize_match_text(left)
+    right = normalize_match_text(right)
+    if not left or not right:
+        return 0.0
+    if left == right:
+        return 1.0
+    return difflib.SequenceMatcher(
+        None, left, right, autojunk=False
+    ).ratio()
+
+
+def title_similarity(expected, candidate):
+    return max(
+        text_similarity(expected, candidate),
+        text_similarity(clean_text(expected), clean_text(candidate)),
+    )
+
+
+def artist_similarity(expected, candidate):
+    expected_values = split_artists(expected) or [str(expected or "")]
+    candidate_values = split_artists(candidate) or [str(candidate or "")]
+    return max(
+        (
+            text_similarity(left, right)
+            for left in expected_values
+            for right in candidate_values
+        ),
+        default=0.0,
+    )
+
+
+def result_fields(item):
+    """Extract the provider-specific title and artist fields."""
+    if not isinstance(item, dict):
+        return "", ""
+
+    title = (
         item.get("trackName")
         or item.get("name")
         or item.get("title")
         or ""
-    ).lower()
-    art = (
+    )
+    artist = (
         item.get("artistName")
         or item.get("artist")
         or item.get("author")
         or ""
-    ).lower()
-    title_l = title.lower()
-    artist_l = artist.lower()
-    score = 0
-    if title_l in name:
-        score += 2
-    if artist_l in art:
-        score += 2
-    if name in title_l or title_l in name:
-        score += 1
-    if art in artist_l or artist_l in art:
-        score += 1
-    return score
+    )
+    if isinstance(title, (list, tuple)):
+        title = " ".join(str(part) for part in title)
+    if isinstance(artist, (list, tuple)):
+        artist = ", ".join(str(part) for part in artist)
+    return str(title), str(artist)
+
+
+def result_match(item, meta):
+    title, artist = result_fields(item)
+    title_score = title_similarity(meta["title"], title)
+    artist_score = artist_similarity(meta["artist_value"], artist)
+    combined = title_score * 0.65 + artist_score * 0.35
+    return title_score, artist_score, combined
+
+
+def candidate_is_acceptable(item, meta):
+    title_score, artist_score, combined = result_match(item, meta)
+    # Search APIs often add a harmless version suffix, but a result with only
+    # one matching field is too risky to use for a time axis.
+    return (
+        title_score >= 0.72
+        and artist_score >= 0.50
+        and combined >= 0.66
+    )
+
+
+def duration_matches(candidate, expected):
+    candidate = parse_source_duration(candidate)
+    if candidate <= 0 or expected <= 0:
+        return True
+    tolerance = max(4.0, expected * 0.02)
+    return abs(candidate - expected) <= tolerance
 
 
 def generate_queries(meta):
-    """供 meting 系列 API 使用的多策略查询列表"""
     title = meta["title"]
     artist = meta["artist"]
-    queries = []
-    queries.append(f"{title} {artist}")
-    queries.append(f"{artist} {title}")
-    clean_title = clean_text(title)
-    queries.append(f"{clean_title} {artist}")
-    queries.append(title)
-    queries.append(artist)
-    unique = list(dict.fromkeys(queries))
-    dbg("generate_queries: " + str(unique))
-    return unique
+    base_title = clean_text(title)
+    queries = [f"{title} {artist}"]
+    if base_title and base_title != title:
+        queries.append(f"{base_title} {artist}")
+    # Keep the artist in every query.  A title-only search is a frequent cause
+    # of same-name songs being paired with the wrong LRC file.
+    return list(
+        dict.fromkeys(query.strip() for query in queries if query.strip())
+    )
 
 
-def fetch_lrclib(meta):
-    dbg("fetch_lrclib: 开始")
-    title = meta["title"]
-    artist = meta["artist"]
-    dur = meta["duration"]
-    # contacted=True 表示成功拿到过有效的 JSON
-    # 响应，此时"无歌词"的结论才可以信任并缓存
-    contacted = False
-
-    # Step 1: 精确查找。lrclib /api/get 会在 ± 5s
-    # 内自动模糊匹配时长，是最可靠的入口。
-    # 若找到 syncedLyrics 直接返回；若只有
-    # plainLyrics，继续尝试搜索找有时间轴的版本。
-    try:
-        r = requests.get(
-            "https://lrclib.net/api/get",
-            params={
-                "track_name": title,
-                "artist_name": artist,
-                "duration": dur
-            },
-            timeout=5
-        )
-        dbg(
-            f"fetch_lrclib: /api/get"
-            f" HTTP {r.status_code}"
-        )
-        if r.status_code == 200:
-            contacted = True
-            data = r.json()
-            lrc = data.get("syncedLyrics")
-            if lrc:
-                dbg("fetch_lrclib: /api/get synced 命中")
-                return lrc, True
-            dbg("fetch_lrclib: /api/get 无 synced，转搜索")
-    except requests.RequestException as e:
-        dbg(f"fetch_lrclib: /api/get 异常 -> {e}")
-
-    # Step 2: 搜索兜底，但施加严格的双重过滤。
-    # 查询只用含 title+artist 的组合，绝不做
-    # 单字段搜索，避免误命中同名不同曲的结果。
-    queries = [
-        f"{title} {artist}",
-        f"{artist} {title}",
-        f"{clean_text(title)} {artist}",
-    ]
-    queries = list(dict.fromkeys(queries))
-
-    for q in queries:
-        dbg("fetch_lrclib: search q=" + repr(q))
-        try:
-            r = requests.get(
-                "https://lrclib.net/api/search",
-                params={"q": q},
-                timeout=5
-            )
-            dbg(f"fetch_lrclib: HTTP {r.status_code}")
-            if r.status_code != 200:
-                continue
-            contacted = True
-
-            results = r.json()
-            dbg(f"fetch_lrclib: {len(results)} 个结果")
-            if not results:
-                continue
-
-            # 时长过滤：偏差超过 3s 的大概率是不同
-            # edit/版本，时间轴会对不上，直接丢弃。
-            # dur==0 表示 Spotify 未提供时长，跳过。
-            if dur > 0:
-                dur_ok = [
-                    x for x in results
-                    if abs(
-                        x.get("duration", 0) - dur
-                    ) <= 3
-                ]
-            else:
-                dur_ok = results
-            n_dur = len(dur_ok)
-            dbg(f"fetch_lrclib: 时长过滤后 {n_dur} 个")
-            if not dur_ok:
-                continue
-
-            for i, item in enumerate(dur_ok[:3]):
-                has_s = bool(item.get("syncedLyrics"))
-                has_p = bool(item.get("plainLyrics"))
-                sc = score_match(item, title, artist)
-                tn = repr(item.get("trackName"))
-                an = repr(item.get("artistName"))
-                dbg(
-                    f"  [{i}] track={tn} artist={an}"
-                    f" sc={sc} s={has_s} p={has_p}"
-                )
-
-            # 双键排序：先保证 synced 优先，
-            # 再在同类中选匹配分最高的版本
-            best = sorted(
-                dur_ok,
-                key=lambda x: (
-                    bool(x.get("syncedLyrics")),
-                    score_match(x, title, artist)
-                ),
-                reverse=True
-            )[0]
-
-            sc = score_match(best, title, artist)
-            # 最低匹配分 3 分：title 或 artist 至少
-            # 有一个必须出现在结果字段里，得分过低
-            # 的结果极可能是完全无关的歌曲
-            if sc < 3:
-                dbg(f"fetch_lrclib: 分数{sc}<3，跳过")
-                continue
-
-            has_s = bool(best.get("syncedLyrics"))
-            has_p = bool(best.get("plainLyrics"))
-            tn = repr(best.get("trackName"))
-            dbg(
-                f"fetch_lrclib: 选中 track={tn}"
-                f" sc={sc} s={has_s} p={has_p}"
-            )
-
-            lrc = (
-                best.get("syncedLyrics")
-                or best.get("plainLyrics")
-            )
-            if lrc:
-                dbg(
-                    "fetch_lrclib: 成功 前50="
-                    + repr(lrc[:50])
-                )
-                return lrc, True
-
-        except requests.RequestException as e:
-            dbg(f"fetch_lrclib: 网络异常 -> {e}")
+def declared_lrc_duration(lrc):
+    if not isinstance(lrc, str):
+        return 0.0
+    for raw_line in lrc.lstrip("\ufeff").splitlines():
+        match = LENGTH_RE.match(raw_line)
+        if not match:
             continue
-
-    dbg("fetch_lrclib: 所有 query 未命中")
-    return "", contacted
-
-
-def _meting_search(server, meta):
-    queries = generate_queries(meta)
-    base = "https://metingapi.nanorocky.top/"
-    contacted = False
-
-    for q in queries:
-        dbg(f"fetch_{server}: query=" + repr(q))
-        try:
-            r = requests.get(
-                base,
-                params={
-                    "server": server,
-                    "type": "search",
-                    "id": "0",
-                    "keyword": q
-                },
-                timeout=5
-            )
-            dbg(
-                f"fetch_{server}:"
-                f" 搜索 HTTP {r.status_code}"
-            )
-            if r.status_code != 200:
-                continue
-            contacted = True
-
-            results = r.json()
-            n = (
-                len(results)
-                if isinstance(results, list)
-                else 0
-            )
-            dbg(f"fetch_{server}: {n} 个结果")
-            if not results:
-                continue
-
-            best = sorted(
-                results,
-                key=lambda x: score_match(
-                    x, meta["title"], meta["artist"]
-                ),
-                reverse=True
-            )[0]
-
-            # meting 结果不含时长，只能靠匹配分把关
-            sc = score_match(
-                best, meta["title"], meta["artist"]
-            )
-            if sc < 2:
-                nm2 = repr(best.get("name"))
-                dbg(
-                    f"fetch_{server}: 分数{sc}<2"
-                    f" name={nm2}，跳过"
-                )
-                continue
-
-            song_id = best.get("id")
-            nm = repr(best.get("name"))
-            dbg(
-                f"fetch_{server}:"
-                f" id={song_id} name={nm}"
-            )
-            if not song_id:
-                continue
-
-            r2 = requests.get(
-                base,
-                params={
-                    "server": server,
-                    "type": "lrc",
-                    "id": song_id
-                },
-                timeout=5
-            )
-            n2 = len(r2.text)
-            dbg(
-                f"fetch_{server}: 歌词"
-                f" HTTP {r2.status_code} 长度={n2}"
-            )
-            if r2.status_code == 200 and r2.text.strip():
-                return r2.text, True
-
-        except requests.RequestException as e:
-            dbg(f"fetch_{server}: 网络异常 -> {e}")
-            continue
-
-    dbg(f"fetch_{server}: 未命中")
-    return "", contacted
-
-
-def fetch_netease(meta):
-    dbg("fetch_netease: 开始")
-    return _meting_search("netease", meta)
-
-
-def fetch_qq(meta):
-    dbg("fetch_qq: 开始")
-    return _meting_search("tencent", meta)
-
-
-def fetch_online(meta):
-    dbg("fetch_online: lrclib -> netease -> qq")
-    any_contacted = False
-
-    lrc, contacted = fetch_lrclib(meta)
-    any_contacted = any_contacted or contacted
-    if lrc:
-        dbg("fetch_online: lrclib 命中")
-        return lrc, True
-
-    lrc, contacted = fetch_netease(meta)
-    any_contacted = any_contacted or contacted
-    if lrc:
-        dbg("fetch_online: netease 命中")
-        return lrc, True
-
-    lrc, contacted = fetch_qq(meta)
-    any_contacted = any_contacted or contacted
-    if lrc:
-        dbg("fetch_online: qq 命中")
-        return lrc, True
-
-    dbg("fetch_online: 三个源均未命中")
-    return "", any_contacted
-
-
-def fetch_lyrics(meta):
-    path = make_cache_path(meta)
-    dbg("fetch_lyrics: 缓存路径=" + path)
-
-    if os.path.exists(path):
-        dbg("fetch_lyrics: 命中缓存")
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                content = f.read()
-            if content.strip() == NO_LYRICS_MARKER:
-                dbg("fetch_lyrics: 缓存标记为无歌词")
-                return ""
-            dbg(f"fetch_lyrics: 缓存 {len(content)} 字符")
-            return content
-        except OSError as e:
-            dbg(f"fetch_lyrics: 读缓存失败 -> {e}")
-    else:
-        dbg("fetch_lyrics: 无缓存，发起网络请求")
-
-    lrc, contacted = fetch_online(meta)
-
-    if lrc:
-        try:
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(lrc)
-            dbg("fetch_lyrics: 已写入歌词缓存")
-        except OSError as e:
-            dbg(f"fetch_lyrics: 写缓存失败 -> {e}")
-    elif contacted:
-        # 至少成功联系到一个 API 并确认无歌词，
-        # 写入哨兵值，下次播放同曲直接命中缓存
-        try:
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(NO_LYRICS_MARKER)
-            dbg("fetch_lyrics: 已写入'无歌词'标记")
-        except OSError as e:
-            dbg(f"fetch_lyrics: 写缓存失败 -> {e}")
-    else:
-        # 三个源全部网络异常，结果不可信，
-        # 不写缓存，下次播放时重新尝试
-        dbg("fetch_lyrics: 网络不可达，跳过缓存写入")
-
-    return lrc
+        hours = int(match.group(1) or 0)
+        minutes = int(match.group(2))
+        seconds = int(match.group(3))
+        fraction_text = match.group(4) or ""
+        if seconds >= 60:
+            return 0.0
+        fraction = (
+            int(fraction_text) / (10 ** len(fraction_text))
+            if fraction_text
+            else 0.0
+        )
+        return hours * 3600.0 + minutes * 60.0 + seconds + fraction
+    return 0.0
 
 
 def parse_lrc(lrc):
+    """Parse LRC into sorted (seconds, text) pairs.
+
+    Handles integer timestamps, comma/dot milliseconds, multiple timestamps
+    on one line, and the standard [offset:milliseconds] metadata tag.
+    """
+    if not isinstance(lrc, str):
+        return []
+
+    lrc = lrc.lstrip("\ufeff")
+    offset_seconds = 0.0
+    for raw_line in lrc.splitlines():
+        offset_match = OFFSET_RE.match(raw_line)
+        if offset_match:
+            try:
+                offset_seconds = float(offset_match.group(1)) / 1000.0
+            except ValueError:
+                pass
+            break
+
+    parsed = []
+    for raw_line in lrc.splitlines():
+        timestamp_matches = list(TIMESTAMP_RE.finditer(raw_line))
+        if not timestamp_matches:
+            continue
+
+        text = TIMESTAMP_RE.sub("", raw_line)
+        text = INLINE_META_TAG_RE.sub("", text)
+        text = KARAOKE_TAG_RE.sub("", text)
+        text = re.sub(r"\s+", " ", text).strip()
+        if not text:
+            continue
+
+        for match in timestamp_matches:
+            hours = int(match.group(1) or 0)
+            minutes = int(match.group(2))
+            seconds = int(match.group(3))
+            fraction_text = match.group(4) or ""
+            if seconds >= 60:
+                continue
+            fraction = (
+                int(fraction_text) / (10 ** len(fraction_text))
+                if fraction_text
+                else 0.0
+            )
+            timestamp = (
+                hours * 3600.0
+                + minutes * 60.0
+                + seconds
+                + fraction
+                + offset_seconds
+            )
+            if not math.isfinite(timestamp) or timestamp < 0:
+                continue
+            parsed.append((round(timestamp, 3), text))
+
+    parsed.sort(key=lambda pair: pair[0])
+    # A few sources repeat the same timestamp/text; removing exact duplicates
+    # makes selection deterministic without deleting simultaneous translations.
+    unique = []
+    seen = set()
+    for timestamp, text in parsed:
+        key = (timestamp, text)
+        if key not in seen:
+            unique.append((timestamp, text))
+            seen.add(key)
+
+    dbg(f"parse_lrc: {len(unique)} timed lines")
+    return unique
+
+
+def plain_text_from_lrc(lrc):
+    if not isinstance(lrc, str):
+        return ""
+    if len(lrc.encode("utf-8", errors="ignore")) > MAX_LYRICS_BYTES:
+        return ""
+
     lines = []
-    for line in lrc.splitlines():
-        m = re.match(r"\[(\d+):(\d+\.\d+)\](.*)", line)
-        if m:
-            sec = int(m.group(1)) * 60 + float(m.group(2))
-            lines.append((sec, m.group(3).strip()))
-    dbg(f"parse_lrc: {len(lines)} 行带时间轴")
+    for raw_line in lrc.lstrip("\ufeff").splitlines():
+        if OFFSET_RE.match(raw_line) or META_TAG_RE.match(raw_line):
+            continue
+        line = TIMESTAMP_RE.sub("", raw_line)
+        line = INLINE_META_TAG_RE.sub("", line)
+        line = KARAOKE_TAG_RE.sub("", line)
+        line = re.sub(r"\s+", " ", line).strip()
+        if line:
+            lines.append(line)
+
+    text = "\n".join(lines).strip()
+    if not text or "<html" in text[:500].lower():
+        return ""
+    # Never cache an API error page as if it were a plain lyric.
+    if text.lower().startswith(("error ", "<!doctype", "{\"error")):
+        return ""
+    return text
+
+
+def timeline_score(lines, duration, source_duration=0.0):
+    """Estimate how completely a timed lyric covers its track."""
+    if not lines:
+        return 0.0
+    expected = source_duration if source_duration > 0 else duration
+    if expected <= 0:
+        return 1.0
+    coverage = min(1.0, max(0.0, lines[-1][0] / expected))
+    # Do not require a fixed lyric line count: long lines and instrumental
+    # sections are legitimate.  This is only a tie-breaker for duplicate
+    # provider entries, while coverage remains the dominant signal.
+    expected_lines = max(8.0, expected / 8.0)
+    density = min(1.0, len(lines) / expected_lines)
+    return coverage * 0.75 + density * 0.25
+
+
+def timeline_is_plausible(lines, duration, source_duration=0.0):
+    """Reject an LRC from a different edit or a severely truncated track."""
+    if not lines:
+        return False
+    timestamps = [timestamp for timestamp, _ in lines]
+    if any(
+        not math.isfinite(timestamp)
+        or timestamp < 0
+        or timestamp > 24 * 60 * 60
+        for timestamp in timestamps
+    ):
+        return False
+
+    expected = source_duration if source_duration > 0 else duration
+    if expected <= 0:
+        return True
+    if expected >= 60.0 and len(lines) < 2:
+        dbg("reject sparse timeline: fewer than two lyric lines")
+        return False
+
+    tolerance = max(12.0, expected * 0.08)
+    last_timestamp = timestamps[-1]
+    if last_timestamp > expected + tolerance:
+        dbg(
+            f"reject timeline: last={last_timestamp:.1f}s "
+            f"expected={expected:.1f}s"
+        )
+        return False
+
+    # Lyrics can end before an instrumental outro, but a file ending in the
+    # first third of a normal song is almost always the wrong version or a
+    # truncated response.  Allow up to 90 seconds of legitimate outro.
+    if expected >= 120.0:
+        minimum_last = max(20.0, expected - max(90.0, expected * 0.30))
+        if last_timestamp < minimum_last:
+            dbg(
+                f"reject truncated timeline: last={last_timestamp:.1f}s "
+                f"minimum={minimum_last:.1f}s"
+            )
+            return False
+    return True
+
+
+def prepare_result(raw_lrc, meta, source, source_duration=0.0):
+    """Validate and turn provider output into a result consumed by Waybar."""
+    if not isinstance(raw_lrc, str):
+        return None
+    raw_lrc = raw_lrc.strip()
+    if not raw_lrc or raw_lrc == NO_LYRICS_MARKER:
+        return None
+    if len(raw_lrc.encode("utf-8", errors="ignore")) > MAX_LYRICS_BYTES:
+        dbg(f"reject oversized lyrics from {source}")
+        return None
+    provider_duration = parse_source_duration(source_duration)
+    declared_duration = declared_lrc_duration(raw_lrc)
+    if provider_duration <= 0:
+        provider_duration = declared_duration
+    elif (
+        declared_duration > 0
+        and not duration_matches(declared_duration, meta["duration"])
+    ):
+        dbg(f"reject declared-duration mismatch from {source}")
+        return None
+    if not duration_matches(provider_duration, meta["duration"]):
+        dbg(f"reject duration-mismatched lyrics from {source}")
+        return None
+
+    lines = parse_lrc(raw_lrc)
     if lines:
-        dbg(
-            f"parse_lrc: 第一行"
-            f" ts={lines[0][0]:.2f}s"
-            f" text={repr(lines[0][1])}"
-        )
-    return lines
+        if not timeline_is_plausible(
+            lines, meta["duration"], provider_duration
+        ):
+            return None
+        return {
+            "kind": "timed",
+            "lines": lines,
+            "timestamps": [timestamp for timestamp, _ in lines],
+            "timeline_score": timeline_score(
+                lines, meta["duration"], provider_duration
+            ),
+            "source": source,
+            "raw": raw_lrc,
+        }
+
+    # A response containing timestamps but failing validation must not be
+    # downgraded to plain text: that would hide a wrong time axis as a success.
+    if TIMESTAMP_RE.search(raw_lrc):
+        return None
+    plain = plain_text_from_lrc(raw_lrc)
+    if plain:
+        return {
+            "kind": "plain",
+            "text": plain,
+            "source": source,
+            "raw": raw_lrc,
+        }
+    return None
 
 
-def fetch_lyrics_async(meta, target_id):
-    # 在后台线程中完成网络请求和解析，结果写回
-    # lyrics_data。写入前检查 last_id 是否仍然
-    # 匹配，防止慢速请求覆盖更新歌曲的数据。
-    global lyrics_data
-    dbg("async: 开始 id=" + repr(target_id))
-    lrc = fetch_lyrics(meta)
-    parsed = parse_lrc(lrc)
-    if last_id == target_id:
-        # parsed 可能是 [] （无时间轴歌词），
-        # 这正是我们想写入的——主循环会据此
-        # 显示"无歌词"，而不是继续等待
-        lyrics_data = parsed
-        dbg("async: 歌词已更新 " + repr(target_id))
-    else:
-        dbg("async: 歌曲已切换，丢弃 " + repr(target_id))
+def timed_result_rank(result, item, meta, priority=0.0):
+    """Rank already-validated timed candidates without trusting API order."""
+    _title_score, _artist_score, match_score = result_match(item, meta)
+    source_duration = (
+        parse_source_duration(item.get("duration"))
+        if isinstance(item, dict)
+        else 0.0
+    )
+    duration_score = 1.0
+    if source_duration > 0 and meta["duration"] > 0:
+        difference = abs(source_duration - meta["duration"])
+        tolerance = max(4.0, meta["duration"] * 0.02)
+        duration_score = max(0.0, 1.0 - difference / tolerance)
+    return (
+        result.get("timeline_score", 0.0) * 100.0
+        + match_score * 10.0
+        + duration_score * 5.0
+        + priority,
+        result.get("timeline_score", 0.0),
+        match_score,
+        priority,
+    )
 
 
-if not os.path.exists(STATE_FILE):
-    with open(STATE_FILE, "w") as f:
-        f.write("true")
+session = requests.Session()
+session.headers.update(
+    {
+        "User-Agent": "waybar-lyrics/2.0 (+https://lrclib.net/)",
+        "Accept": "application/json, text/plain;q=0.9, */*;q=0.8",
+    }
+)
+request_deadline = None
 
-while True:
+
+def request_timeout():
+    if request_deadline is None:
+        return HTTP_TIMEOUT
+    remaining = request_deadline - time.monotonic()
+    if remaining <= 0.05:
+        return None
+    return min(HTTP_TIMEOUT[0], remaining), min(HTTP_TIMEOUT[1], remaining)
+
+
+def request_json(url, params):
+    timeout = request_timeout()
+    if timeout is None:
+        return None, False
     try:
-        with open(STATE_FILE, "r") as f:
-            visible = f.read().strip() == "true"
-        status = subprocess.check_output(
-            [P, "-p", "spotify", "status"], text=True
-        ).strip()
-    except (OSError, subprocess.CalledProcessError):
-        status, visible = "Stopped", True
-
-    meta = get_metadata()
-
-    if status != "Playing" or not meta:
-        has_meta = "有" if meta else "无"
-        dbg(
-            f"主循环: status={status!r}"
-            f" meta={has_meta} -> 空"
-        )
-        print(json.dumps({"text": "", "class": "none"}))
-        sys.stdout.flush()
-        time.sleep(1)
-        continue
-
-    curr_id = f"{meta['title']}{meta['artist']}"
-
-    if curr_id != last_id:
-        dbg("主循环: 歌曲切换 id=" + repr(curr_id))
-        last_id = curr_id
-        lyrics_data = None  # 标记为加载中
-        t = threading.Thread(
-            target=fetch_lyrics_async,
-            args=(meta, curr_id),
-            daemon=True
-        )
-        t.start()
-
-    # 三态分支：隐藏 / 加载中 / 无歌词 / 显示歌词
-    if not visible:
-        dbg("主循环: 隐藏状态 -> 空")
-        print(json.dumps({"text": ""}))
-    elif lyrics_data is None:
-        dbg("主循环: 加载中 -> 空")
-        print(json.dumps({"text": ""}))
-    elif not lyrics_data:
-        dbg("主循环: 无歌词")
-        out = json.dumps(
-            {"text": " 󰝚  "}, ensure_ascii=False
-        )
-        print(out)
-    else:
+        response = session.get(url, params=params, timeout=timeout)
+        dbg(f"GET {url} -> HTTP {response.status_code}")
+        if response.status_code == 404:
+            # A valid provider response with no match is cacheable for a short
+            # negative TTL; transport/server errors are not.
+            return None, True
+        if response.status_code != 200:
+            return None, False
         try:
-            pos = float(subprocess.check_output(
-                [P, "-p", "spotify", "position"],
-                text=True
-            ))
-            curr_txt = ""
-            for ts, txt in lyrics_data:
-                if pos >= ts:
-                    curr_txt = txt
-                else:
-                    break
-            print(
-                json.dumps(
-                    {"text": curr_txt},
-                    ensure_ascii=False
+            return response.json(), True
+        except (TypeError, ValueError) as error:
+            dbg(f"invalid JSON from {url}: {error}")
+            return None, False
+    except requests.RequestException as error:
+        dbg(f"request failed {url}: {error}")
+        return None, False
+
+
+def request_text(url, params):
+    timeout = request_timeout()
+    if timeout is None:
+        return "", False
+    try:
+        response = session.get(url, params=params, timeout=timeout)
+        dbg(f"GET {url} -> HTTP {response.status_code}")
+        if response.status_code == 404:
+            return "", True
+        if response.status_code != 200:
+            return "", False
+        return response.text, True
+    except requests.RequestException as error:
+        dbg(f"request failed {url}: {error}")
+        return "", False
+
+
+def lrclib_candidate(item, meta, source):
+    if not isinstance(item, dict):
+        return None
+    title, artist = result_fields(item)
+    if title and artist and not candidate_is_acceptable(item, meta):
+        dbg(
+            f"skip LRCLIB candidate {title!r} / {artist!r}: "
+            f"match={result_match(item, meta)}"
+        )
+        return None
+    source_duration = parse_source_duration(item.get("duration"))
+    synced = item.get("syncedLyrics")
+    plain = item.get("plainLyrics")
+    if synced:
+        result = prepare_result(synced, meta, source, source_duration)
+        if result:
+            return result
+        # Do not treat an invalid synced file as plain text.
+        return None
+    if plain:
+        return prepare_result(plain, meta, source, source_duration)
+    return None
+
+
+def fetch_lrclib(meta):
+    """Prefer synced LRCLIB data, retaining plain text as a last resort."""
+    contacted = False
+    plain_fallback = None
+    best_timed = None
+    best_rank = None
+
+    data, responded = request_json(
+        LRCLIB_GET_URL,
+        {
+            "track_name": meta["title"],
+            "artist_name": meta["artist"],
+            "duration": round(meta["duration"], 3),
+        },
+    )
+    contacted = contacted or responded
+    if isinstance(data, dict):
+        source = f"lrclib:get:{data.get('id', 'unknown')}"
+        title, artist = result_fields(data)
+        exact_match = (
+            not title
+            or not artist
+            or candidate_is_acceptable(data, meta)
+        )
+        synced = data.get("syncedLyrics") if exact_match else None
+        if synced:
+            result = prepare_result(
+                synced,
+                meta,
+                source,
+                parse_source_duration(data.get("duration")),
+            )
+            if result and result["kind"] == "timed":
+                best_timed = result
+                best_rank = timed_result_rank(result, data, meta, 1.0)
+        plain = data.get("plainLyrics") if exact_match else None
+        if plain:
+            plain_fallback = prepare_result(
+                plain,
+                meta,
+                source,
+                parse_source_duration(data.get("duration")),
+            )
+
+    for query in generate_queries(meta)[:2]:
+        data, responded = request_json(LRCLIB_SEARCH_URL, {"q": query})
+        contacted = contacted or responded
+        if not isinstance(data, list) or not data:
+            continue
+
+        ranked = []
+        for item in data:
+            if not isinstance(item, dict):
+                continue
+            title, artist = result_fields(item)
+            if (
+                not title
+                or not artist
+                or not candidate_is_acceptable(item, meta)
+            ):
+                continue
+            candidate_duration = parse_source_duration(item.get("duration"))
+            if not duration_matches(candidate_duration, meta["duration"]):
+                continue
+            title_score, artist_score, combined = result_match(item, meta)
+            ranked.append(
+                (
+                    bool(item.get("syncedLyrics")),
+                    combined,
+                    title_score,
+                    artist_score,
+                    item,
                 )
             )
-        except (
-            subprocess.CalledProcessError,
-            ValueError
-        ) as e:
-            dbg(f"主循环: 获取播放位置失败 -> {e}")
-            print(json.dumps({"text": ""}))
 
-    sys.stdout.flush()
-    time.sleep(0.1)
+        ranked.sort(key=lambda row: row[:4], reverse=True)
+        dbg(f"LRCLIB search {query!r}: {len(ranked)} usable candidates")
+        for (
+            has_synced,
+            _combined,
+            _title_score,
+            _artist_score,
+            item,
+        ) in ranked[:10]:
+            source = f"lrclib:search:{item.get('id', 'unknown')}"
+            if has_synced:
+                result = lrclib_candidate(item, meta, source)
+                if result and result["kind"] == "timed":
+                    rank = timed_result_rank(result, item, meta)
+                    if best_rank is None or rank > best_rank:
+                        best_timed = result
+                        best_rank = rank
+            elif plain_fallback is None:
+                result = lrclib_candidate(item, meta, source)
+                if result and result["kind"] == "plain":
+                    plain_fallback = result
+
+    if best_timed:
+        dbg(
+            "LRCLIB selected synced candidate: "
+            f"{best_timed.get('source', 'unknown')}"
+        )
+        return best_timed, contacted
+    if plain_fallback:
+        dbg("LRCLIB returned plain lyrics; waiting for synced fallbacks")
+        return plain_fallback, contacted
+    return None, contacted
+
+
+def meting_candidate_score(item, meta):
+    title_score, artist_score, combined = result_match(item, meta)
+    duration = (
+        parse_source_duration(item.get("duration"))
+        if isinstance(item, dict)
+        else 0.0
+    )
+    if not candidate_is_acceptable(item, meta):
+        return None
+    if not duration_matches(duration, meta["duration"]):
+        return None
+    return title_score, artist_score, combined, duration
+
+
+def fetch_meting(server, meta):
+    """Use Meting only as a fallback, trying several ranked song IDs."""
+    contacted = False
+    plain_fallback = None
+    best_timed = None
+    best_rank = None
+    seen_ids = set()
+
+    for query in generate_queries(meta)[:2]:
+        data, responded = request_json(
+            METING_URL,
+            {
+                "server": server,
+                "type": "search",
+                "id": "0",
+                "keyword": query,
+            },
+        )
+        contacted = contacted or responded
+        if not isinstance(data, list):
+            continue
+
+        ranked = []
+        for item in data:
+            if not isinstance(item, dict):
+                continue
+            score = meting_candidate_score(item, meta)
+            song_id = item.get("id")
+            if score is None or song_id in (None, ""):
+                continue
+            ranked.append((score[2], score[0], score[1], item))
+        ranked.sort(key=lambda row: row[:3], reverse=True)
+        dbg(
+            f"Meting/{server} search {query!r}: "
+            f"{len(ranked)} usable candidates"
+        )
+
+        for _combined, _title_score, _artist_score, item in ranked[:5]:
+            song_id = str(item.get("id"))
+            if song_id in seen_ids:
+                continue
+            seen_ids.add(song_id)
+            raw_lrc, responded = request_text(
+                METING_URL,
+                {"server": server, "type": "lrc", "id": song_id},
+            )
+            contacted = contacted or responded
+            if not raw_lrc.strip():
+                continue
+            result = prepare_result(
+                raw_lrc,
+                meta,
+                f"{server}:{song_id}",
+                parse_source_duration(item.get("duration")),
+            )
+            if result and result["kind"] == "timed":
+                rank = timed_result_rank(result, item, meta)
+                if best_rank is None or rank > best_rank:
+                    best_timed = result
+                    best_rank = rank
+            if result and result["kind"] == "plain" and plain_fallback is None:
+                plain_fallback = result
+
+    if best_timed:
+        dbg(
+            f"Meting/{server} selected synced candidate: "
+            f"{best_timed.get('source', 'unknown')}"
+        )
+        return best_timed, contacted
+    return plain_fallback, contacted
+
+
+def fetch_online(meta):
+    """Try all sources within one bounded network budget."""
+    global request_deadline
+    previous_deadline = request_deadline
+    request_deadline = time.monotonic() + FETCH_DEADLINE
+    try:
+        contacted = False
+        plain_fallback = None
+
+        for fetcher in (
+            fetch_lrclib,
+            lambda current_meta: fetch_meting("netease", current_meta),
+            lambda current_meta: fetch_meting("tencent", current_meta),
+        ):
+            result, responded = fetcher(meta)
+            contacted = contacted or responded
+            if result and result["kind"] == "timed":
+                return result, contacted
+            if result and plain_fallback is None:
+                plain_fallback = result
+
+        if plain_fallback:
+            return plain_fallback, contacted
+        return None, contacted
+    finally:
+        request_deadline = previous_deadline
+
+
+@contextlib.contextmanager
+def cache_lock(path):
+    """Serialize duplicate Waybar instances fetching the same track."""
+    lock_path = Path(f"{path}.lock")
+    try:
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        lock_file = lock_path.open("a+", encoding="utf-8")
+    except OSError as error:
+        # A read-only/broken cache must not prevent lyrics from working.
+        dbg(f"cache lock unavailable: {error}")
+        yield
+        return
+
+    try:
+        try:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        except OSError as error:
+            dbg(f"cache lock unavailable: {error}")
+        yield
+    finally:
+        try:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+        except OSError:
+            pass
+        lock_file.close()
+
+
+def cache_identity(meta):
+    return json.dumps(
+        {
+            "track_id": meta.get("track_id", ""),
+            "title": meta.get("title", ""),
+            "artist": meta.get("artist_value", meta.get("artist", "")),
+            "album": meta.get("album", ""),
+            "duration_ms": round(float(meta.get("duration", 0.0)) * 1000),
+        },
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def cache_path(meta):
+    identity = cache_identity(meta)
+    digest = hashlib.sha256(identity.encode("utf-8")).hexdigest()[:20]
+    readable = re.sub(
+        r"[^\w .-]+",
+        "_",
+        f"{meta.get('artist', 'unknown')} - {meta.get('title', 'unknown')}",
+        flags=re.UNICODE,
+    ).strip(" .")[:80]
+    # Filename limits are byte-based; Japanese/emoji titles can use multiple
+    # bytes per character, so leave ample room for the digest and extension.
+    while len(readable.encode("utf-8")) > 120:
+        readable = readable[:-1]
+    readable = readable or "track"
+    return CACHE_DIR / f"{readable}.{digest}.json"
+
+
+def load_cache(path, meta):
+    try:
+        with path.open("r", encoding="utf-8") as cache_file:
+            payload = json.load(cache_file)
+    except (OSError, TypeError, ValueError):
+        return None
+
+    if not isinstance(payload, dict):
+        return None
+    if payload.get("version") != CACHE_VERSION:
+        return None
+    if payload.get("identity") != cache_identity(meta):
+        return None
+
+    try:
+        age = max(0.0, time.time() - float(payload.get("fetched_at", 0)))
+    except (TypeError, ValueError):
+        return None
+
+    kind = payload.get("kind")
+    if kind == "none":
+        if age > NEGATIVE_CACHE_TTL:
+            return None
+        return {"kind": "none", "source": payload.get("source", "cache")}
+    if kind not in {"timed", "plain"}:
+        return None
+    max_age = PLAIN_CACHE_TTL if kind == "plain" else POSITIVE_CACHE_TTL
+    if age > max_age:
+        return None
+
+    result = prepare_result(
+        payload.get("lrc", ""),
+        meta,
+        payload.get("source", "cache"),
+        payload.get("source_duration", 0.0),
+    )
+    if result and result["kind"] == kind:
+        dbg(f"cache hit: {path.name}")
+        return result
+    return None
+
+
+def write_atomic(path, payload):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, temporary_name = tempfile.mkstemp(
+        prefix=f".{path.name}.", dir=str(path.parent)
+    )
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as temporary_file:
+            json.dump(payload, temporary_file, ensure_ascii=False)
+            temporary_file.write("\n")
+            temporary_file.flush()
+            os.fsync(temporary_file.fileno())
+        os.replace(temporary_name, path)
+    except Exception:
+        try:
+            os.unlink(temporary_name)
+        except OSError:
+            pass
+        raise
+
+
+def save_cache(path, meta, result, source_duration=0.0):
+    payload = {
+        "version": CACHE_VERSION,
+        "fetched_at": time.time(),
+        "identity": cache_identity(meta),
+        "kind": result["kind"],
+        "source": result.get("source", "unknown"),
+        "source_duration": parse_source_duration(source_duration),
+        "lrc": result.get("raw", ""),
+    }
+    try:
+        write_atomic(path, payload)
+        dbg(f"cache write: {path.name}")
+    except OSError as error:
+        dbg(f"cache write failed: {error}")
+
+
+def fetch_lyrics(meta):
+    """Load a validated cache entry or fetch one while holding its lock."""
+    path = cache_path(meta)
+    try:
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    except OSError as error:
+        dbg(f"cache directory unavailable: {error}")
+
+    with cache_lock(path):
+        cached = load_cache(path, meta)
+        if cached:
+            return cached
+
+        result, contacted = fetch_online(meta)
+        if result:
+            save_cache(path, meta, result)
+            return result
+        if contacted:
+            none_result = {"kind": "none", "source": "providers"}
+            save_cache(path, meta, none_result)
+            return none_result
+
+        # Do not turn a timeout/HTTP failure into a permanent "no lyrics"
+        # result.  The foreground loop will retry this track later.
+        return {"kind": "retry", "source": "network"}
+
+
+# Shared state is protected because every Waybar output can have its own
+# long-running module process and the network worker runs in another thread.
+state_lock = threading.Lock()
+current_track_key = None
+lyrics_data = None
+
+
+class FetchWorker:
+    """Keep one latest-job worker; skipped tracks cannot spawn threads."""
+
+    def __init__(self):
+        self.jobs = queue.Queue(maxsize=1)
+        self.jobs_lock = threading.Lock()
+        self.thread = threading.Thread(target=self._run, daemon=True)
+        self.thread.start()
+
+    def request(self, meta, track_key):
+        with self.jobs_lock:
+            try:
+                self.jobs.get_nowait()
+                self.jobs.task_done()
+            except queue.Empty:
+                pass
+            try:
+                self.jobs.put_nowait((meta, track_key))
+            except queue.Full:
+                # The worker may have taken the item between get_nowait and
+                # put_nowait; retain the newest request in that rare race.
+                try:
+                    self.jobs.get_nowait()
+                    self.jobs.task_done()
+                except queue.Empty:
+                    pass
+                try:
+                    self.jobs.put_nowait((meta, track_key))
+                except queue.Full:
+                    pass
+
+    def _run(self):
+        global lyrics_data
+        while True:
+            meta, track_key = self.jobs.get()
+            try:
+                try:
+                    result = fetch_lyrics(meta)
+                except Exception as error:  # noqa: BLE001
+                    # Keep the worker alive after an unexpected provider error.
+                    dbg(f"background fetch failed: {error!r}")
+                    result = {"kind": "retry", "source": "exception"}
+                if not isinstance(result, dict):
+                    result = {"kind": "retry", "source": "invalid-result"}
+                if result.get("kind") == "retry":
+                    result = dict(result)
+                    result["retry_after"] = time.monotonic() + RETRY_INTERVAL
+
+                with state_lock:
+                    if track_key == current_track_key:
+                        lyrics_data = result
+                        dbg(
+                            f"background result accepted: {track_key[:12]} "
+                            f"kind={result.get('kind')}"
+                        )
+            finally:
+                self.jobs.task_done()
+
+
+def make_track_key(meta):
+    return hashlib.sha256(cache_identity(meta).encode("utf-8")).hexdigest()
+
+
+def read_visible():
+    try:
+        return STATE_FILE.read_text(encoding="utf-8").strip().lower() not in {
+            "false",
+            "0",
+            "no",
+            "off",
+        }
+    except OSError:
+        return True
+
+
+def get_position():
+    value = run_playerctl(["position"], timeout=0.8)
+    position = float(value)
+    if not math.isfinite(position):
+        raise ValueError(f"invalid player position: {value!r}")
+    return max(0.0, position)
+
+
+def line_at_position(result, position):
+    index = bisect.bisect_right(result["timestamps"], position) - 1
+    if index < 0:
+        return ""
+    return result["lines"][index][1]
+
+
+def main():
+    global current_track_key, lyrics_data
+
+    worker = FetchWorker()
+    last_output = None
+
+    def emit(payload):
+        nonlocal last_output
+        serialized = json.dumps(payload, ensure_ascii=False)
+        if serialized != last_output:
+            print(serialized, flush=True)
+            last_output = serialized
+
+    while True:
+        try:
+            meta = get_metadata()
+            if not meta or meta["status"] != "Playing":
+                emit({"text": "", "class": "inactive"})
+                time.sleep(INACTIVE_INTERVAL)
+                continue
+
+            track_key = make_track_key(meta)
+            with state_lock:
+                changed = track_key != current_track_key
+                if changed:
+                    current_track_key = track_key
+                    lyrics_data = None
+
+            if changed:
+                dbg(
+                    f"track changed: {meta['artist']} - {meta['title']} "
+                    f"({meta['duration']:.3f}s)"
+                )
+                worker.request(meta, track_key)
+
+            visible = read_visible()
+            with state_lock:
+                result = lyrics_data
+
+            if result and result.get("kind") == "retry":
+                if time.monotonic() >= result.get("retry_after", 0.0):
+                    with state_lock:
+                        if (
+                            track_key == current_track_key
+                            and lyrics_data is result
+                        ):
+                            lyrics_data = None
+                    worker.request(meta, track_key)
+                    result = None
+
+            if not visible:
+                emit({"text": "", "class": "hidden"})
+            elif result is None:
+                emit({"text": "", "class": "loading"})
+            elif result.get("kind") == "timed":
+                try:
+                    position = get_position()
+                    emit(
+                        {
+                            "text": line_at_position(result, position),
+                            "class": "lyrics",
+                            "tooltip": (
+                                f"{meta['artist']} - {meta['title']}\n"
+                                f"来源: {result.get('source', 'unknown')}"
+                            ),
+                        }
+                    )
+                except (
+                    OSError,
+                    subprocess.CalledProcessError,
+                    subprocess.TimeoutExpired,
+                    ValueError,
+                ) as error:
+                    dbg(f"position unavailable: {error}")
+            elif result.get("kind") == "plain":
+                emit(
+                    {
+                        "text": " 󰝚  ",
+                        "class": "plain",
+                        "tooltip": (
+                            f"{meta['artist']} - {meta['title']}\n"
+                            "仅找到未同步歌词"
+                        ),
+                    }
+                )
+            else:
+                emit(
+                    {
+                        "text": " 󰝚  ",
+                        "class": "none",
+                        "tooltip": (
+                            f"{meta['artist']} - {meta['title']}\n未找到歌词"
+                        ),
+                    }
+                )
+
+            time.sleep(POLL_INTERVAL)
+        except KeyboardInterrupt:
+            return
+        except BrokenPipeError:
+            return
+        except Exception as error:  # noqa: BLE001 - keep Waybar alive
+            dbg(f"main loop failed: {error!r}")
+            emit({"text": "", "class": "error"})
+            time.sleep(POLL_INTERVAL)
+
+
+if __name__ == "__main__":
+    main()

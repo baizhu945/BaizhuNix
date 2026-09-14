@@ -5,7 +5,9 @@
     enable = true;
     systemd = {
       enable = true;
-      targets = [ "niri-session.target" ];
+      # niri-session.target is not provided by this session; use the active
+      # standard graphical-session target so Waybar is service-managed.
+      targets = [ "graphical-session.target" ];
       enableDebug = true;
     };
 
@@ -34,6 +36,7 @@
           "exec" = "waybar-lyrics";
           "return-type" = "json";
           "escape" = true;
+          "restart-interval" = 5;
         };
       };
     };
