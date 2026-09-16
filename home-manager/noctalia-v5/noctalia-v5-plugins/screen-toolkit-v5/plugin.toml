@@ -1,0 +1,22 @@
+id = "baizhu/screen_toolkit"
+name = "Screen Toolkit"
+version = "1.0.0"
+plugin_api = 9
+author = "<yourusername>"
+license = "MIT"
+dependencies = []
+tags = ["screen", "annotation", "utility"]
+icon = "screenshot"
+description = "V5 command bridge for the screen tools used by the V4 setup."
+
+[[service]]
+id = "service"
+entry = "service.luau"
+
+[[panel]]
+id = "panel"
+entry = "panel.luau"
+width = 440
+height = 360
+placement = "floating"
+position = "center"

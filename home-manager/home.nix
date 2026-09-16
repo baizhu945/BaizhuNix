@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, pkgs, lib, ... }:
 
 
 let
@@ -38,7 +38,7 @@ in
     ./showmethekey/showmethekey.nix
     ./agent/agent.nix
     ./mouse-trail/mouse-trail.nix
-    ./noctalia-v5.nix
+    ./noctalia-v5/noctalia-v5.nix
     ./latex-ocr.nix
     ./shell-services.nix
     ./bt11-control/bt11-control.nix
@@ -50,6 +50,8 @@ in
   home.homeDirectory = "/home/<yourusername>";
 
   home.stateVersion = "26.11"; # Please read the comment before changing.
+
+  news.entries = lib.mkForce [];
 
   nixpkgs.config.cudaSupport = true;
 
@@ -113,6 +115,25 @@ in
         };
       });
     })
+
+    # Keep the Noctalia 4.7.7 PipeWire spectrum fix in the package set so the
+    # systemd service and every `noctalia-shell ipc ...` caller use the same
+    # patched shell instance.
+    (self: super:
+      let
+        patchedNoctaliaQs = super.noctalia-qs.overrideAttrs (old: {
+          postPatch = (old.postPatch or "") + ''
+            substituteInPlace src/services/pipewire/spectrum.cpp \
+              --replace-fail 'PW_KEY_NODE_PASSIVE, "true",' \
+                'PW_KEY_NODE_PASSIVE, "in-follow",'
+          '';
+        });
+      in {
+        noctalia-qs = patchedNoctaliaQs;
+        noctalia-shell = super.noctalia-shell.override {
+          noctalia-qs = patchedNoctaliaQs;
+        };
+      })
   ];
 
   home.packages = [

@@ -1,0 +1,14 @@
+id = "baizhu/showmethekey"
+name = "Show Me The Key"
+version = "1.0.0"
+plugin_api = 3
+author = "<yourusername>"
+license = "MIT"
+dependencies = []
+tags = ["bar", "keyboard"]
+icon = "keyboard"
+description = "Shows the latest keyboard or mouse key combination in the Noctalia bar."
+
+[[widget]]
+id = "bar"
+entry = "bar.luau"

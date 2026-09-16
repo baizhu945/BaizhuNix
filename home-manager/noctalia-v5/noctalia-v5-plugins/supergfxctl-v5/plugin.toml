@@ -1,0 +1,22 @@
+id = "baizhu/supergfxctl"
+name = "SuperGFX Control"
+version = "1.0.0"
+plugin_api = 22
+author = "<yourusername>"
+license = "MIT"
+dependencies = []
+tags = ["control-center", "gpu", "asus"]
+icon = "device-desktop"
+description = "GPU mode control through supergfxctl."
+
+[[shortcut]]
+id = "shortcut"
+entry = "shortcut.luau"
+
+[[panel]]
+id = "panel"
+entry = "panel.luau"
+width = 440
+height = 250
+placement = "floating"
+position = "center"

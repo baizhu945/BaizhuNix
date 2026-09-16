@@ -1,0 +1,31 @@
+id = "baizhu/catwalk"
+name = "Catwalk"
+version = "1.0.0"
+plugin_api = 3
+author = "<yourusername>"
+license = "MIT"
+dependencies = []
+tags = ["bar", "fun"]
+icon = "cat"
+description = "A CPU-reactive animated cat for the Noctalia v5 bar."
+
+[[setting]]
+key = "minimum_threshold"
+type = "double"
+label_key = "settings.minimum_threshold.label"
+default = 10.0
+min = 0.0
+max = 100.0
+step = 1.0
+
+[[widget]]
+id = "bar"
+entry = "bar.luau"
+
+[[panel]]
+id = "panel"
+entry = "panel.luau"
+width = 320
+height = 280
+placement = "floating"
+position = "center"

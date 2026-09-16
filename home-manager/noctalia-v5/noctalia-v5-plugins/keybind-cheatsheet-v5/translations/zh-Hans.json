@@ -1,0 +1,13 @@
+{
+  "settings": {
+    "niri_config_path": {
+      "label": "Niri 配置文件"
+    },
+    "column_count": {
+      "label": "显示列数"
+    },
+    "show_undescribed": {
+      "label": "显示未描述的快捷键"
+    }
+  }
+}

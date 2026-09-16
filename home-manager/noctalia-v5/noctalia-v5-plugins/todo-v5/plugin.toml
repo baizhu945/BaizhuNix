@@ -1,0 +1,26 @@
+id = "baizhu/todo"
+name = "Todo List"
+version = "1.0.0"
+plugin_api = 22
+author = "<yourusername>"
+license = "MIT"
+dependencies = []
+tags = ["bar", "panel", "productivity"]
+icon = "clipboard-check"
+description = "A small todo list panel compatible with the v4 workflow."
+
+[[service]]
+id = "service"
+entry = "service.luau"
+
+[[widget]]
+id = "bar"
+entry = "bar.luau"
+
+[[panel]]
+id = "panel"
+entry = "panel.luau"
+width = 720
+height = 560
+placement = "floating"
+position = "center"

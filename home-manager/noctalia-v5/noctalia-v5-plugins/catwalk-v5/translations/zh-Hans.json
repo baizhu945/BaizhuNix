@@ -1,0 +1,7 @@
+{
+  "settings": {
+    "minimum_threshold": {
+      "label": "最低 CPU 阈值"
+    }
+  }
+}

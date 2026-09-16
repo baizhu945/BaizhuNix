@@ -1,0 +1,29 @@
+id = "baizhu/media_visualizer"
+name = "Media Visualizer"
+version = "1.0.0"
+plugin_api = 9
+author = "<yourusername>"
+license = "MIT"
+dependencies = []
+tags = ["bar", "media", "visualizer"]
+icon = "wave-sine"
+description = "A compact wave visualizer for the media bar widget."
+
+[[widget]]
+id = "wave"
+entry = "bar.luau"
+
+  [[widget.setting]]
+  key = "audio_spectrum"
+  type = "bool"
+  label_key = "settings.audio_spectrum.label"
+  default = true
+
+  [[widget.setting]]
+  key = "audio_spectrum_bands"
+  type = "int"
+  label_key = "settings.audio_spectrum_bands.label"
+  default = 32
+  min = 4
+  max = 64
+  step = 4

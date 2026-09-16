@@ -1,0 +1,10 @@
+{
+  "settings": {
+    "audio_spectrum": {
+      "label": "启用音频频谱"
+    },
+    "audio_spectrum_bands": {
+      "label": "频谱采样数"
+    }
+  }
+}

@@ -1,0 +1,39 @@
+id = "baizhu/keybind_cheatsheet"
+name = "Keybind Cheatsheet"
+version = "1.0.0"
+plugin_api = 21
+author = "<yourusername>"
+license = "MIT"
+dependencies = []
+tags = ["panel", "keybinds", "niri"]
+icon = "keyboard"
+description = "A native v5 keybind browser for the current Niri configuration."
+
+[[setting]]
+key = "niri_config_path"
+type = "file"
+label_key = "settings.niri_config_path.label"
+default = "~/.config/niri/config.kdl"
+
+[[setting]]
+key = "column_count"
+type = "int"
+label_key = "settings.column_count.label"
+default = 3
+min = 1
+max = 4
+step = 1
+
+[[setting]]
+key = "show_undescribed"
+type = "bool"
+label_key = "settings.show_undescribed.label"
+default = true
+
+[[panel]]
+id = "panel"
+entry = "panel.luau"
+width = 1000
+height = 680
+placement = "floating"
+position = "center"
