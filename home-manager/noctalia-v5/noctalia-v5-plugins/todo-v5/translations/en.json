@@ -1,0 +1,20 @@
+{
+  "bar": {
+    "todo_count_singular": "{count} todo",
+    "todo_count_plural": "{count} todos"
+  },
+  "settings": {
+    "show_completed": { "label": "Show completed todos" },
+    "export_path": { "label": "Export directory" },
+    "export_format": {
+      "label": "Export format",
+      "markdown": "Markdown",
+      "json": "JSON"
+    },
+    "export_empty_sections": { "label": "Export empty sections" },
+    "use_custom_colors": { "label": "Use custom priority colors" },
+    "priority_low_color": { "label": "Low priority color" },
+    "priority_medium_color": { "label": "Medium priority color" },
+    "priority_high_color": { "label": "High priority color" }
+  }
+}

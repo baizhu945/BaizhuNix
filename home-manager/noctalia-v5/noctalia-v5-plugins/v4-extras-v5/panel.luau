@@ -12,7 +12,7 @@ function render()
         ui.row({ gap = 8, align = "center" }, {
             ui.glyph({ name = "dots", size = 22, color = "primary" }),
             ui.label({ text = "V4 Extras", fontSize = 17, fontWeight = "bold", flexGrow = 1 }),
-            ui.button({ glyph = "close", onClick = "onClose" }),
+            ui.button({ glyph = "x", onClick = "onClose" }),
         }),
         ui.button({ glyph = "archive", text = "Deep Clean", variant = "outline", onClick = function()
             run({ "nix-clean" }, "Deep Clean")

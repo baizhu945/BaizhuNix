@@ -234,12 +234,12 @@ in
     '')
 
     (pkgs.writeShellScriptBin "nix-clean" ''
-      noctalia-shell ipc call toast send '{"title":"Cleaning"}'
+      noctalia-compat notify Cleaning
       echo '<yourpassword>' | sudo -S nix-store --gc
       nix-store --gc
       echo '<yourpassword>' | sudo -S nix-collect-garbage --delete-old
       nix-collect-garbage --delete-old
-      noctalia-shell ipc call toast send '{"title":"Clean Completed"}'
+      noctalia-compat notify "Clean Completed"
     '')
 
     (pkgs.writeShellScriptBin "git-update" (builtins.readFile ./script/git-update.sh))

@@ -1,0 +1,8 @@
+{
+  "settings": {
+    "debug": { "label": "调试日志" },
+    "patch_pending": { "label": "猜测切换所需操作" },
+    "polling": { "label": "定期轮询状态" },
+    "polling_interval": { "label": "轮询间隔（毫秒）" }
+  }
+}

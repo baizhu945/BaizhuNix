@@ -1,13 +1,13 @@
 id = "baizhu/screen_toolkit"
 name = "Screen Toolkit"
 version = "1.0.0"
-plugin_api = 9
+plugin_api = 24
 author = "<yourusername>"
 license = "MIT"
-dependencies = []
+dependencies = ["grim", "slurp", "satty", "hyprpicker", "zbarimg", "tesseract", "mpv", "wl-copy", "magick", "curl", "jq", "xdg-open", "wl-screenrec", "wf-recorder", "chameleos", "chamel"]
 tags = ["screen", "annotation", "utility"]
 icon = "screenshot"
-description = "V5 command bridge for the screen tools used by the V4 setup."
+description = "V4-compatible screen capture, annotation, OCR, color and media tools for Noctalia v5."
 
 [[service]]
 id = "service"
@@ -16,7 +16,7 @@ entry = "service.luau"
 [[panel]]
 id = "panel"
 entry = "panel.luau"
-width = 440
-height = 360
-placement = "floating"
-position = "center"
+width = 340
+height = 640
+placement = "attached"
+position = "top_left"

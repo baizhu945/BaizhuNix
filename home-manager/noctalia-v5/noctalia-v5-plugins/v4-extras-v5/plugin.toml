@@ -1,17 +1,25 @@
 id = "baizhu/v4_extras"
 name = "V4 Extras"
 version = "1.0.0"
-plugin_api = 9
+plugin_api = 24
 author = "<yourusername>"
 license = "MIT"
 dependencies = []
 tags = ["control-center", "v4", "utility"]
 icon = "dots"
-description = "The extra V4 actions grouped into one V5 control-center tile."
+description = "V4 control-center actions exposed as native V5 shortcut tiles."
 
 [[shortcut]]
 id = "shortcut"
 entry = "shortcut.luau"
+
+[[shortcut]]
+id = "deep-clean"
+entry = "deep_clean.luau"
+
+[[shortcut]]
+id = "dark-mode"
+entry = "dark_mode.luau"
 
 [[panel]]
 id = "panel"

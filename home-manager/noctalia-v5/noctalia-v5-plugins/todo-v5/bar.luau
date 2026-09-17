@@ -19,10 +19,15 @@ end
 
 local function render()
     local count = activeCount()
-    barWidget.setGlyph("clipboard-check")
-    barWidget.setColor("on_surface")
-    barWidget.setText(tostring(count))
-    barWidget.setTooltip(`Todo: {count} active`)
+    local key = count == 1 and "bar.todo_count_singular" or "bar.todo_count_plural"
+    local label = noctalia.tr(key):gsub("{count}", tostring(count))
+    -- Compensate for V5's narrower CJK text metrics so the capsule width
+    -- matches the V4 reference while retaining V4's six-pixel icon gap.
+    barWidget.render(ui.row({ gap = 6, align = "center", paddingH = 8 }, {
+        ui.glyph({ name = "clipboard-check", size = 14, color = "on_surface" }),
+        ui.label({ text = label, color = "on_surface", maxLines = 1 }),
+    }))
+    barWidget.setTooltip(label)
 end
 
 noctalia.state.watch("data", function(value)

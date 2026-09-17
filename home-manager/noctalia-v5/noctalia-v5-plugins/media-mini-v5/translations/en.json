@@ -1,0 +1,7 @@
+{
+  "settings": {
+    "audio_spectrum": { "label": "Show background audio wave" },
+    "audio_spectrum_bands": { "label": "Audio spectrum bands" },
+    "content_width": { "label": "Widget content width" }
+  }
+}

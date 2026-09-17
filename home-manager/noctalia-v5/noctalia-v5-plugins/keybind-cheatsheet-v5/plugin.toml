@@ -30,10 +30,32 @@ type = "bool"
 label_key = "settings.show_undescribed.label"
 default = true
 
+[[setting]]
+key = "merge_sequential_binds"
+type = "bool"
+label_key = "settings.merge_sequential_binds.label"
+default = true
+
+[[setting]]
+key = "split_large_workspace_category"
+type = "bool"
+label_key = "settings.split_large_workspace_category.label"
+default = true
+
+[[setting]]
+key = "workspace_split_threshold"
+type = "int"
+label_key = "settings.workspace_split_threshold.label"
+default = 12
+min = 4
+max = 40
+step = 1
+visible_when = { key = "split_large_workspace_category", values = ["true"] }
+
 [[panel]]
 id = "panel"
 entry = "panel.luau"
-width = 1000
-height = 680
+width = 1400
+height = 850
 placement = "floating"
 position = "center"

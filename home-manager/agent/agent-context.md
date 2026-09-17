@@ -52,7 +52,8 @@ yazi.nix · unar/ · tts/ · latex-ocr.nix · showmethekey/
 mouse-trail/          # Wayland cursor trail (toggle with mouse-trail-toggle)
 theme/                # wallpaper-theme-sync: Noctalia colors → DMS theme + trail color
 script/               # niri-config.kdl, fastfetch-config.jsonc, battery-monitor.sh
-# Disabled: noctalia-v5.nix (quickshell shells, commented out in home.nix)
+# noctalia-v5/        # Home Manager programs.noctalia v5 config + local ports
+# Default startup intentionally remains the v4 shell in shell-services.nix
 ```
 
 ## NVIDIA GPU

@@ -547,30 +547,30 @@ blur {
 
 binds {
     //Mod+Shift+Slash { show-hotkey-overlay; }
-    Mod+Shift+Slash hotkey-overlay-title="Browse Hotkey" { spawn-sh "noctalia-shell ipc call plugin:keybind-cheatsheet toggle"; }
+    Mod+Shift+Slash hotkey-overlay-title="Browse Hotkey" { spawn "noctalia-compat" "hotkeys"; }
 
     Mod+T hotkey-overlay-title="Open a Terminal" { spawn "ghostty"; }
 	  Mod+Shift+T hotkey-overlay-title="Open a Terminal" { spawn "alacritty"; }
-    Mod+D hotkey-overlay-title="Run an Application Finder" { spawn-sh "noctalia-shell ipc call launcher toggle"; }
+    Mod+D hotkey-overlay-title="Run an Application Finder" { spawn "noctalia-compat" "launcher"; }
     Mod+B hotkey-overlay-title="Run a Browser" { spawn "chromium"; }
-    Mod+E hotkey-overlay-title="Open an emoji selector" { spawn-sh "noctalia-shell ipc call launcher emoji"; }
+    Mod+E hotkey-overlay-title="Open an emoji selector" { spawn "noctalia-compat" "emoji"; }
     Mod+Shift+B hotkey-overlay-title="Run another Browser: Google Chrome" { spawn "google-chrome-stable"; }
     Mod+F hotkey-overlay-title="Run a File Manager: dolphin" { spawn "dolphin"; }
     Mod+C hotkey-overlay-title="Run a Calculator: Qalculate" { spawn "qalculate-gtk"; }
-    Mod+Z hotkey-overlay-title="Show clipboard history" { spawn-sh "noctalia-shell ipc call launcher clipboard"; }
+    Mod+Z hotkey-overlay-title="Show clipboard history" { spawn "noctalia-compat" "clipboard"; }
     Mod+Alt+B hotkey-overlay-title="Run another Browser: Brave" { spawn "brave"; }
     Mod+N hotkey-overlay-title="Open the note: Joplin" { spawn "joplin-desktop"; }
-    Mod+H hotkey-overlay-title="Hide top bar" { spawn-sh "noctalia-shell ipc call bar toggle"; }
-    Mod+Shift+H hotkey-overlay-title="Hide DesktopWidgets" { spawn-sh "noctalia-shell ipc call desktopWidgets toggle"; }
+    Mod+H hotkey-overlay-title="Hide top bar" { spawn "noctalia-compat" "bar-toggle"; }
+    Mod+Shift+H hotkey-overlay-title="Hide DesktopWidgets" { spawn "noctalia-compat" "desktop-toggle"; }
     Mod+Alt+H hotkey-overlay-title="Hide Showmethekey" { spawn-sh "showmethekey-toggle"; }
     Mod+M hotkey-overlay-title="Toggle mouse trail" { spawn-sh "mouse-trail-toggle"; }
     Mod+L hotkey-overlay-title="Toggle the lyrics" { spawn-sh "lyrics-toggle"; }
     Mod+A hotkey-overlay-title="Open coding agent: Pi" { spawn-sh "ghostty -e pi"; }
     Mod+Shift+A hotkey-overlay-title="Open coding agent: DSH" { spawn-sh "dsh-web"; }
     Mod+Alt+A hotkey-overlay-title="Open coding agent: Codex" { spawn "chatgpt"; }
-    Mod+Ctrl+W hotkey-overlay-title="全屏涂鸦" { spawn-sh "chameleos --stroke-width 4 & noctalia-shell ipc call toast send '{\"title\":\"进入涂鸦模式\"}' & sleep 0.1 && chamel toggle"; }
-    Mod+Shift+W hotkey-overlay-title="区域涂鸦" { spawn-sh "noctalia-shell ipc call plugin:screen-toolkit annotate"; }
-    Mod+Ctrl+E { spawn-sh "chamel exit && noctalia-shell ipc call toast send '{\"title\":\"退出涂鸦模式\"}'"; }
+    Mod+Ctrl+W hotkey-overlay-title="全屏涂鸦" { spawn-sh "chameleos --stroke-width 4 & noctalia-compat notify 进入涂鸦模式 & sleep 0.1 && chamel toggle"; }
+    Mod+Shift+W hotkey-overlay-title="区域涂鸦" { spawn "noctalia-compat" "toolkit" "annotate"; }
+    Mod+Ctrl+E { spawn-sh "chamel exit && noctalia-compat notify 退出涂鸦模式"; }
     Mod+Ctrl+Z { spawn-sh "chamel undo"; }
     Mod+Ctrl+C { spawn-sh "chamel clear"; }
 
@@ -579,13 +579,13 @@ binds {
     XF86AudioMute        allow-when-locked=true { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"; }
     XF86AudioMicMute     allow-when-locked=true { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"; }
 
-    XF86AudioPlay        allow-when-locked=true { spawn-sh "noctalia-shell ipc call media play"; }
-    XF86AudioStop        allow-when-locked=true { spawn-sh "noctalia-shell ipc call media stop"; }
-    XF86AudioPrev        allow-when-locked=true { spawn-sh "noctalia-shell ipc call media previous"; }
-    XF86AudioNext        allow-when-locked=true { spawn-sh "noctalia-shell ipc call media next"; }
+    XF86AudioPlay        allow-when-locked=true { spawn "noctalia-compat" "media" "play"; }
+    XF86AudioStop        allow-when-locked=true { spawn "noctalia-compat" "media" "stop"; }
+    XF86AudioPrev        allow-when-locked=true { spawn "noctalia-compat" "media" "previous"; }
+    XF86AudioNext        allow-when-locked=true { spawn "noctalia-compat" "media" "next"; }
 
-    XF86MonBrightnessUp allow-when-locked=true { spawn-sh "noctalia-shell ipc call brightness increase"; }
-    XF86MonBrightnessDown allow-when-locked=true { spawn-sh "noctalia-shell ipc call brightness decrease"; }
+    XF86MonBrightnessUp allow-when-locked=true { spawn "noctalia-compat" "brightness-up"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn "noctalia-compat" "brightness-down"; }
 
     Mod+O repeat=false { toggle-overview; }
 
@@ -666,9 +666,9 @@ binds {
     Mod+Shift+V { switch-focus-between-floating-and-tiling; }
 
 
-    Mod+Shift+P hotkey-overlay-title="Region Screenshot" { spawn-sh "grim -g \"$(slurp)\" -c /home/<yourusername>/Pictures/Screenshots/$(date +'%s_grim.png') && wl-copy < ~/Pictures/Screenshots/$(date +'%s_grim.png') && noctalia-shell ipc call toast send '{\"title\":\"区域截图\"}'"; }
-    Mod+Ctrl+P hotkey-overlay-title="Screen Screenshot" { spawn-sh "grim -c $(xdg-user-dir PICTURES)/Screenshots/$(date +'%s_grim.png') && wl-copy < ~/Pictures/Screenshots/$(date +'%s_grim.png') && noctalia-shell ipc call toast send '{\"title\":\"屏幕截图\"}'"; }
-    Mod+Alt+P hotkey-overlay-title="Screen Pin" { spawn-sh "noctalia-shell ipc call plugin:screen-toolkit pin"; }
+    Mod+Shift+P hotkey-overlay-title="Region Screenshot" { spawn-sh "file=/home/<yourusername>/Pictures/Screenshots/$(date +'%s_grim.png'); grim -g \"$(slurp)\" -c \"$file\" && wl-copy < \"$file\" && noctalia-compat notify 区域截图"; }
+    Mod+Ctrl+P hotkey-overlay-title="Screen Screenshot" { spawn-sh "file=$(xdg-user-dir PICTURES)/Screenshots/$(date +'%s_grim.png'); grim -c \"$file\" && wl-copy < \"$file\" && noctalia-compat notify 屏幕截图"; }
+    Mod+Alt+P hotkey-overlay-title="Screen Pin" { spawn "noctalia-compat" "toolkit" "pin"; }
 
     Mod+Escape allow-inhibiting=false { toggle-keyboard-shortcuts-inhibit; }
 

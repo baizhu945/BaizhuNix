@@ -8,6 +8,15 @@
     },
     "show_undescribed": {
       "label": "显示未描述的快捷键"
+    },
+    "merge_sequential_binds": {
+      "label": "合并连续快捷键"
+    },
+    "split_large_workspace_category": {
+      "label": "拆分大型工作区分类"
+    },
+    "workspace_split_threshold": {
+      "label": "工作区分类拆分阈值"
     }
   }
 }

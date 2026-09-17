@@ -12,6 +12,9 @@ local function defaultData()
         pages = {{ id = 0, name = "General" }},
         current_page_id = 0,
         show_completed = true,
+        export_path = "~/Documents",
+        export_format = "markdown",
+        export_empty_sections = false,
     }
 end
 
@@ -19,13 +22,34 @@ local function validData(value)
     return type(value) == "table" and type(value.todos) == "table"
 end
 
-local function legacyData()
-    local text = noctalia.readFile("~/.config/noctalia/settings.json")
+local function decodeFile(path)
+    local text = noctalia.readFile(path)
     if text == nil or text == "" then
         return nil
     end
-    local root = noctalia.json.decode(text)
-    if root == nil or type(root) ~= "table" or root.bar == nil or root.bar.widgets == nil then
+    local value = noctalia.json.decode(text)
+    return type(value) == "table" and value or nil
+end
+
+local function legacyData()
+    -- V4 stores the mutable Todo data in the plugin's own settings file. Read
+    -- that first; the global settings fallback supports older installations
+    -- that embedded the widget's defaultSettings in settings.json.
+    local pluginRoot = decodeFile("~/.config/noctalia/plugins/todo/settings.json")
+    if pluginRoot ~= nil and type(pluginRoot.todos) == "table" then
+        return {
+            todos = pluginRoot.todos,
+            pages = pluginRoot.pages or {{ id = 0, name = "General" }},
+            current_page_id = pluginRoot.current_page_id or 0,
+            show_completed = pluginRoot.showCompleted ~= false,
+            export_path = pluginRoot.exportPath or "~/Documents",
+            export_format = pluginRoot.exportFormat or "markdown",
+            export_empty_sections = pluginRoot.exportEmptySections == true,
+        }
+    end
+
+    local root = decodeFile("~/.config/noctalia/settings.json")
+    if root == nil or root.bar == nil or root.bar.widgets == nil then
         return nil
     end
     local sections = { root.bar.widgets.left, root.bar.widgets.center, root.bar.widgets.right }
@@ -39,6 +63,9 @@ local function legacyData()
                         pages = old.pages or {{ id = 0, name = "General" }},
                         current_page_id = old.current_page_id or 0,
                         show_completed = old.showCompleted ~= false,
+                        export_path = old.exportPath or "~/Documents",
+                        export_format = old.exportFormat or "markdown",
+                        export_empty_sections = old.exportEmptySections == true,
                     }
                 end
             end
@@ -56,6 +83,19 @@ function M.load()
     local saved = noctalia.readFile(dataPath)
     local parsed = saved ~= nil and saved ~= "" and noctalia.json.decode(saved) or nil
     local data = validData(parsed) and parsed or legacyData() or defaultData()
+    -- Preserve V4 records verbatim where possible, only filling fields that
+    -- the V5 panel relies on. In particular, keep createdAt/priority/details
+    -- so upgrading does not silently discard the user's metadata.
+    for _, todo in ipairs(data.todos) do
+        if type(todo) == "table" then
+            if todo.pageId == nil then todo.pageId = 0 end
+            if todo.completed == nil then todo.completed = false end
+            if todo.priority ~= "high" and todo.priority ~= "medium" and todo.priority ~= "low" then
+                todo.priority = "medium"
+            end
+            if todo.details == nil then todo.details = "" end
+        end
+    end
     if type(data.pages) ~= "table" or #data.pages == 0 then
         data.pages = {{ id = 0, name = "General" }}
     end
@@ -65,6 +105,9 @@ function M.load()
     if data.show_completed == nil then
         data.show_completed = true
     end
+    if data.export_path == nil then data.export_path = "~/Documents" end
+    if data.export_format == nil then data.export_format = "markdown" end
+    if data.export_empty_sections == nil then data.export_empty_sections = false end
     noctalia.state.set("data", data)
     local encoded = noctalia.json.encode(data)
     if encoded ~= nil then

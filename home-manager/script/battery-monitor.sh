@@ -2,7 +2,8 @@
 
 UPOWER="@upower@/bin/upower"
 GREP="@grep@/bin/grep"
-NOCTALIA="@noctalia@/bin/noctalia-shell"
+NOCTALIA_V4="@noctalia@/bin/noctalia-shell"
+NOCTALIA_V5="noctalia"
 BATTERY_PATH="/org/freedesktop/UPower/devices/battery_BAT0"
 JQ="@jq@/bin/jq"
 WLRRANDR="@wlrrandr@/bin/wlr-randr"
@@ -31,8 +32,13 @@ prev_state=$(get_state)
       sleep 3
       confirm_state=$(get_state)
       if [ "$confirm_state" = "discharging" ]; then
-        "$NOCTALIA" ipc call darkMode setDark
-        "$NOCTALIA" ipc call powerProfile set "powersaver"
+        if "$NOCTALIA_V5" msg status >/dev/null 2>&1; then
+          "$NOCTALIA_V5" msg theme-mode-set dark
+          "$NOCTALIA_V5" msg power-set power-saver
+        else
+          "$NOCTALIA_V4" ipc call darkMode setDark
+          "$NOCTALIA_V4" ipc call powerProfile set "powersaver"
+        fi
         set_low_refresh
       fi
     fi

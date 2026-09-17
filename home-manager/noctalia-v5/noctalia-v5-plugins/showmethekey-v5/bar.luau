@@ -1,7 +1,9 @@
 --!nonstrict
 -- Port of the v4 showmethekey text-stream bar widget.
 
-local command = "showmethekey-cli | python3 ~/.local/bin/showmethekey-cli.py"
+local pluginDir = noctalia.pluginDir() or ""
+local helper = pluginDir .. "/showmethekey-cli.py"
+local command = `showmethekey-cli | python3 '{helper}'`
 barWidget.setColor("primary")
 barWidget.setVisible(false)
 
@@ -24,6 +26,6 @@ if not noctalia.runStream(command, applyLine) then
     noctalia.notifyError("Show Me The Key", "Unable to start showmethekey-cli stream")
 end
 
-function onClick()
-    noctalia.runAsync("showmethekey-toggle")
-end
+-- This instance's left/right/middle gestures are bound to
+-- settings-open-widget in config.toml, exactly like V4's empty CustomButton
+-- commands. No script click callback is needed.

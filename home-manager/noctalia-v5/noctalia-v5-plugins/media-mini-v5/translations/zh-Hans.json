@@ -1,0 +1,7 @@
+{
+  "settings": {
+    "audio_spectrum": { "label": "显示背景音频波形" },
+    "audio_spectrum_bands": { "label": "音频频段数" },
+    "content_width": { "label": "组件内容宽度" }
+  }
+}

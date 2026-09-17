@@ -1,10 +1,10 @@
 id = "baizhu/showmethekey"
 name = "Show Me The Key"
 version = "1.0.0"
-plugin_api = 3
+plugin_api = 14
 author = "<yourusername>"
 license = "MIT"
-dependencies = []
+dependencies = ["showmethekey-cli", "python3"]
 tags = ["bar", "keyboard"]
 icon = "keyboard"
 description = "Shows the latest keyboard or mouse key combination in the Noctalia bar."
@@ -12,3 +12,9 @@ description = "Shows the latest keyboard or mouse key combination in the Noctali
 [[widget]]
 id = "bar"
 entry = "bar.luau"
+
+  # V4's empty CustomButton commands open widget settings on all buttons.
+  [widget.actions]
+  left = "settings-open-widget"
+  right = "settings-open-widget"
+  middle = "settings-open-widget"
