@@ -41,9 +41,21 @@ in
       ./customized-pkgs.nix
       ./automount.nix
       ./rm-protection/rm-protection.nix
+      ./acm/module.nix
       # ./ros2.nix
       # ./g14-kernel.nix
     ];
+
+  # ACM-equivalent automatic display colour management (reverse-engineered
+  # from Windows 11 ACM; see ~/Code/acm-re and /etc/nixos/acm/README.md)
+  services.acm = {
+    enable = true;
+    user = "<yourusername>";
+    displays = {
+      "eDP-1" = { mode = "auto"; };
+      "HDMI-A-1" = { mode = "auto"; };
+    };
+  };
 
   _module.args.stablePkgs = stablePkgs; # 将 stablePkgs 传递给其他文件
  

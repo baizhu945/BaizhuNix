@@ -38,6 +38,8 @@ MOUSE_BUTTONS = {
     "BACK": "BackButton",
     "WHEELUP": "WheelUp",
     "WHEELDOWN": "WheelDown",
+    "WHEELLEFT": "WheelLeft",
+    "WHEELRIGHT": "WheelRight",
 }
 
 # 特殊键映射
@@ -93,10 +95,16 @@ def emit(text: str, cls: str):
     if not output_enabled():
         return
 
+    prefix = {
+        "mouse": "🖱️ ",
+        "both": "🖱️+⌨ ",
+        "keyboard": "⌨ ",
+    }.get(cls, "⌨ ")
+
     print(
         json.dumps(
             {
-                "text": f"⌨ {text}",
+                "text": f"{prefix}{text}",
                 "class": cls,
             },
             ensure_ascii=False,
@@ -215,6 +223,21 @@ def is_released(event):
 def main():
 
     held_modifiers = OrderedDict()
+    held_keys = OrderedDict()
+    held_mouse_buttons = OrderedDict()
+
+    def labels(keys):
+        return [pretty_key(key)[0] for key in keys]
+
+    def keyboard_labels():
+        return labels(held_modifiers.keys()) + labels(held_keys.keys())
+
+    def mouse_labels():
+        return labels(held_mouse_buttons.keys())
+
+    def mark_modifiers_used():
+        for key in held_modifiers:
+            held_modifiers[key] = True
 
     for line in sys.stdin:
 
@@ -236,48 +259,55 @@ def main():
         if is_pressed(event):
 
             if is_modifier_key(key_name):
+                held_modifiers.setdefault(key_name, False)
 
-                if key_name not in held_modifiers:
-                    held_modifiers[key_name] = False
-
-            else:
-
-                mods = [
-                    pretty_key(k)[0]
-                    for k in held_modifiers.keys()
-                ]
-
-                key, cls = pretty_key(key_name)
-
-                if mods:
-
-                    for k in held_modifiers:
-                        held_modifiers[k] = True
-
+                if held_mouse_buttons:
+                    mark_modifiers_used()
                     emit(
-                        " + ".join(mods + [key]),
-                        cls,
+                        " + ".join(keyboard_labels() + mouse_labels()),
+                        "both",
                     )
 
+            elif key_name.startswith("BTN_"):
+                button_name = key_name[4:]
+                key, _cls = pretty_key(key_name)
+                is_wheel = button_name.startswith("WHEEL")
+                if not is_wheel:
+                    held_mouse_buttons.setdefault(key_name, True)
+
+                keyboard = keyboard_labels()
+                if keyboard:
+                    mark_modifiers_used()
+                    emit(" + ".join(keyboard + [key]), "both")
                 else:
-                    emit(key, cls)
+                    emit(key, "mouse")
+
+            else:
+                held_keys.setdefault(key_name, True)
+                keyboard = keyboard_labels()
+                mouse = mouse_labels()
+                if held_modifiers:
+                    mark_modifiers_used()
+                emit(
+                    " + ".join(keyboard + mouse),
+                    "both" if mouse else "keyboard",
+                )
 
             continue
 
         if is_released(event):
 
-            if (
-                is_modifier_key(key_name)
-                and key_name in held_modifiers
-            ):
-
+            if is_modifier_key(key_name) and key_name in held_modifiers:
                 if not held_modifiers[key_name]:
-
-                    key, cls = pretty_key(key_name)
-
-                    emit(key, cls)
-
+                    key, _cls = pretty_key(key_name)
+                    emit(key, "keyboard")
                 del held_modifiers[key_name]
+
+            elif key_name.startswith("BTN_"):
+                held_mouse_buttons.pop(key_name, None)
+
+            else:
+                held_keys.pop(key_name, None)
 
 
 if __name__ == "__main__":

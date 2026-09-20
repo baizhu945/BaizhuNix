@@ -418,10 +418,8 @@ concave_edge_corners = false
 padding            = 5
 widget_spacing     = 6
 scale              = 1.0
-# V4 source is authoritative: density=default gives
-# (31 / 25) * Style.fontSizeXXS(8) = 9.92pt. Qt points at the standard 96dpi
-# rasterize to 9.92*96/72 = 13.2266667px; v5's body baseline is 14px.
-font_scale         = 0.9447619048
+# Use one shared scale for every bar label, including native and plugin widgets.
+font_scale         = 0.94
 # NText.qml sets Style.fontWeightMedium = 500 for the V4 bar labels.
 font_weight        = 500
 # V4's simple bar had no surface shadow; capsule shadows remain widget-local.
@@ -463,8 +461,6 @@ type            = "clock"
 # V4 Clock.qml uses Style.radiusL=20 and Style.marginM=9 on both sides.
 capsule_radius  = 20
 capsule_padding = 9
-# Pango's CJK glyph advances are wider than V4 Qt's at the same nominal size.
-font_scale      = 0.92
 # zh_CN's C strftime %a is only “三”, while Qt's ddd used by V4 is “周三”.
 format          = "{:%H:%M 周%a, %b %d}"
 vertical_format = "{:%H\n%M - %d/%m}"

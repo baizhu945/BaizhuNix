@@ -28,6 +28,7 @@ let
 in
 {
   imports = [
+    ./acm.nix   # ACM-equivalent display colour management (see /etc/nixos/acm/)
     ./tts/tts-qwen.nix
     ./ghostty/ghostty.nix
     ./lyrics/lyrics.nix
@@ -43,6 +44,18 @@ in
     ./shell-services.nix
     ./bt11-control/bt11-control.nix
   ];
+
+  # ACM-equivalent automatic colour management: the session daemon computes a
+  # display transform from each panel's profile and keeps it programmed in the
+  # hardware (compositor gamma-control / DRM KMS).
+  home.acm = {
+    enable = true;
+    reconcileSeconds = 5;
+    displays = {
+      "eDP-1" = { };                                   # internal panel (EDID-derived profile)
+      "HDMI-A-1" = { };                                # external display
+    };
+  };
 
   # Home Manager needs a bit of information about you and the paths it should
   # manage.
