@@ -30,6 +30,41 @@ The session daemon (which applies the transform under a Wayland compositor via
 `~/.config/home-manager/acm.nix`; it writes `~/.config/acm/displays.conf` and the
 `acm.service` systemd **user** unit.
 
+## 稳定的显示器标识（不要用 eDP-1 / HDMI-A-1 作为键）
+
+连接器名（`eDP-1`、`HDMI-A-1`）是每次开机分配的，换口/换 GPU/接扩展坞后都会变，
+所以配置里改用 EDID 派生的选择器：
+
+```
+$ acm-ctl list
+  eDP-1      active   id=CSW1656-00000000 serial=- hash=380c4f83604eae61 name=MNG007DA5-3
+             config key: hash:380c4f83604eae61
+  HDMI-A-1   active   id=SKY0001-00000000 serial=0000000000 hash=4ce7d007462e9a2d name=F24B40Q
+             config key: hash:4ce7d007462e9a2d
+```
+
+可用选择器（配置键与 `--output` 通用）：
+
+| 选择器 | 含义 | 稳定性 |
+|---|---|---|
+| `hash:<16位十六进制>` | EDID 内容（blob）的 SHA-256 前 16 位 | **最稳**：换口/扩展坞/重启都不变 |
+| `id:<PNP><产品码>-<序列号>` | 厂商 + 产品码 + EDID 序列号 | 稳定（除非同型号同序列号） |
+| `serial:<值>` | EDID 序列号（十六进制）或序列号字符串 | 每台唯一 |
+| `name:<显示器名>` | EDID 0xFC 显示器名（子串匹配） | 同型号会歧义 |
+| `con:<连接器>` | DRM 连接器名 | **易变**，仅用于消歧 |
+| 裸键 | 先按连接器、再按显示器名、再按 id 匹配 | 向后兼容 |
+
+两个同型号显示器冲突时会明确报错并要求用 `con:` 消歧。
+
+在 Nix 里，属性名只是标签，真正的选择器写在 `match`：
+
+```nix
+services.acm.displays = {
+  internal = { match = "hash:380c4f83604eae61"; mode = "auto"; };   # 内置屏
+  external = { match = "hash:4ce7d007462e9a2d"; mode = "auto"; };   # 外接屏
+};
+```
+
 ## Turning ACM on and off
 
 ```bash

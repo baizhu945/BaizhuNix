@@ -52,6 +52,8 @@ yazi.nix · unar/ · tts/ · latex-ocr.nix · showmethekey/
 mouse-trail/          # Wayland cursor trail (toggle with mouse-trail-toggle)
 theme/                # wallpaper-theme-sync: Noctalia colors → DMS theme + trail color
 script/               # niri-config.kdl, fastfetch-config.jsonc, battery-monitor.sh
+catia.nix             # CATIA V5R20 (Wine)：cabextract 推导安装树 + 前缀安装（catia / catia-setup）
+                      #   固定数据（许可清单/控制清单/图标）在 Documents/Reproduce/CATIA/
 # noctalia-v5/        # Home Manager programs.noctalia v5 config + local ports
 # Default startup intentionally remains the v4 shell in shell-services.nix
 ```

@@ -21,6 +21,22 @@ let
 
   displayType = types.submodule {
     options = {
+      match = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = ''
+          Selector for the physical display.  Connector names such as "HDMI-A-1"
+          are not stable across boots, so prefer a stable selector:
+            hash:<16 hex>     SHA-256 of the EDID blob (most stable)
+            id:<PNP><PROD>-<SERIAL>
+            serial:<value>
+            name:<monitor name>
+            con:<connector>   volatile, but useful to disambiguate
+          When null, the attribute name is used as the selector.  Run
+          `acm-ctl list` to see the identifiers of the connected displays.
+        '';
+        example = "hash:4ce7d007462e9a2d";
+      };
       enable = mkOption { type = types.bool; default = true; };
       mode = mkOption {
         type = types.enum [ "auto" "gamma" "kms" ];
@@ -51,8 +67,11 @@ let
 
   configText = lib.concatStrings (
     lib.mapAttrsToList (name: d:
+      let
+        key = if d.match != null then d.match else name;
+      in
       ''
-        [display "${name}"]
+        [display "${key}"]
         enabled = ${if d.enable then "true" else "false"}
         mode = ${d.mode}
         profile = ${if d.profile == null then "" else toString d.profile}
@@ -97,13 +116,18 @@ in
     displays = mkOption {
       type = types.attrsOf displayType;
       default = { };
+      description = ''
+        Per-display ACM configuration.  The attribute name is the selector used to
+        find the display, unless `match` is set.  Prefer a stable selector such as
+        `hash:...`, because connector names change between boots.  Run
+        `acm-ctl list` to obtain the identifiers of the connected displays.
+      '';
       example = lib.literalExpression ''
         {
-          "eDP-1" = { };
-          "HDMI-A-1" = { gamma = 1.05; temperatureEnabled = true; temperature = 6000; };
+          internal = { match = "hash:380c4f83604eae61"; };
+          external = { match = "hash:4ce7d007462e9a2d"; temperatureEnabled = true; temperature = 6000; };
         }
       '';
-      description = "Per-output ACM configuration, keyed by DRM connector name";
     };
 
     reconcileSeconds = mkOption { type = types.int; default = 5; };

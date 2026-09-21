@@ -35,7 +35,7 @@ values match the Windows binaries byte for byte (verified by the test suite).
 
 | path | purpose |
 |---|---|
-| `src/acm-ctl.cpp` | CLI + session daemon; `on`/`off`/`status` drive the daemon and verify the hardware, plus `capabilities`, `compute`, `apply`, `verify`, `reset`, `selftest`, `daemon` |
+| `src/acm-ctl.cpp` | CLI + session daemon; `on`/`off`/`status` drive the daemon and verify the hardware, `list` prints the stable per-display identifiers, plus `capabilities`, `compute`, `apply`, `verify`, `reset`, `selftest`, `daemon` |
 | `docs/acm-ctl.1` | man page (installed to `share/man/man1`) |
 | `src/transform.{hpp,cpp}` | ACM-equivalent transform construction (degamma LUT, matrix, regamma + adjustment) |
 | `src/edid.{hpp,cpp}` | EDID parsing (primaries, white point, gamma) + ICC profile input |
@@ -54,6 +54,7 @@ the Windows reverse-engineering study and linked in by the build.
 nix-shell -p cmake gcc pkg-config libdrm wayland wayland-scanner wlr-protocols   # dev shell
 cmake -S . -B build && cmake --build build -j
 ./build/test_linux ..                    # 73 checks
+./build/acm-ctl list                     # connected displays + stable config keys
 ./build/acm-ctl status                   # is ACM on? (exit 0 = on and verified)
 ./build/acm-ctl off                      # turn it off, clear the hardware ramp
 ./build/acm-ctl on                       # turn it back on, verify
@@ -104,6 +105,52 @@ Per-display options: `enable`, `mode` (`auto`/`gamma`/`kms`), `profile` (ICC pat
 `null` derives the profile from the panel EDID), `content`
 (`sRGB`/`DisplayP3`/`Rec2020`/`scRGB`), `brightness`, `black`, `gamma`,
 `temperature`, `temperatureEnabled`, `sdrWhite`.
+
+## Stable display identifiers (do not key on "HDMI-A-1")
+
+DRM connector names such as `eDP-1` or `HDMI-A-1` are assigned at boot and can
+change (different port, GPU switch, dock, re-plug), so they must not be used as
+the identity of a display.  `acm-ctl list` prints what to use instead, derived
+from the panel's EDID:
+
+```
+$ acm-ctl list
+connected displays (connector names are volatile; use the suggested key):
+  eDP-1      active   id=CSW1656-00000000 serial=- hash=380c4f83604eae61 name=MNG007DA5-3
+             config key: hash:380c4f83604eae61        currently configured as 'hash:380c4f83604eae61'
+  HDMI-A-1   active   id=SKY0001-00000000 serial=0000000000 hash=4ce7d007462e9a2d name=F24B40Q
+             config key: hash:4ce7d007462e9a2d        currently configured as 'hash:4ce7d007462e9a2d'
+```
+
+Selectors accepted anywhere a display is named (configuration keys, `--output`):
+
+| selector | meaning | stability |
+|---|---|---|
+| `hash:<16 hex>` | SHA-256 of the EDID blob (first 16 hex digits) | most stable — survives connector changes, docking, port swaps |
+| `id:<PNP><PROD>-<SERIAL>` | manufacturer + product code + EDID serial number | stable unless two units share a serial |
+| `serial:<value>` | EDID serial number (hex) or the serial-string descriptor | stable per unit |
+| `name:<monitor name>` | the EDID monitor-name descriptor (substring match) | stable for a given model (ambiguous with two identical panels) |
+| `con:<connector>` | DRM connector name, e.g. `con:HDMI-A-1` | **volatile** — kept for disambiguation |
+| bare key | connector first, then monitor name, then id (backwards compatible) | — |
+
+Ambiguity (two identical panels) is reported explicitly and must be
+disambiguated with `con:`:
+
+```
+$ acm-ctl verify --config /tmp/sim.conf
+con:HDMI-A-9             SKIP  no connected display matches 'con:HDMI-A-9'
+hash:380c4f83604eae61    OK    eDP-1      GAMMA_LUT size=1024, max deviation 0.00005 (0.01/255)
+```
+
+In Nix the attribute name is a free label and `match` carries the selector:
+
+```nix
+home.acm.displays = {
+  internal = { match = "hash:380c4f83604eae61"; };              # 内置屏
+  external = { match = "hash:4ce7d007462e9a2d";                 # 外接屏
+               gamma = 1.05; temperatureEnabled = true; temperature = 6000; };
+};
+```
 
 ## Turning it on and off
 

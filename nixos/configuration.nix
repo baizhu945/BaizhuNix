@@ -51,9 +51,11 @@ in
   services.acm = {
     enable = true;
     user = "<yourusername>";
+    # Stable, EDID-derived selectors (connector names change between boots).
+    # `acm-ctl list` prints the identifiers of the connected displays.
     displays = {
-      "eDP-1" = { mode = "auto"; };
-      "HDMI-A-1" = { mode = "auto"; };
+      internal = { match = "hash:380c4f83604eae61"; mode = "auto"; };   # 内置屏 MNG007DA5-3
+      external = { match = "hash:4ce7d007462e9a2d"; mode = "auto"; };   # 外接屏 F24B40Q
     };
   };
 
@@ -366,8 +368,6 @@ EOF
       extraPortals = with pkgs; [
         xdg-desktop-portal-wlr
         xdg-desktop-portal-gtk
-        # xdg-desktop-portal-gnome
-        # kdePackages.xdg-desktop-portal-kde
       ];
     };
   };
@@ -526,6 +526,7 @@ EOF
 
     pkgs.unar pkgs.rar pkgs.unzip pkgs.unrar pkgs.p7zip
 
+    pkgs.pciutils
     pkgs.file
     pkgs.go
     pkgs.ungoogled-chromium
@@ -591,7 +592,7 @@ EOF
     pkgs.nodejs
     pkgs.os-prober
     
-    pkgs.kdePackages.sddm-kcm pkgs.kdePackages.kate pkgs.kdePackages.yakuake pkgs.kdePackages.layer-shell-qt pkgs.kdePackages.qttools  pkgs.kdePackages.kscreen pkgs.kdePackages.kdialog pkgs.kdePackages.drkonqi pkgs.kurve
+    pkgs.kdePackages.sddm-kcm pkgs.kdePackages.kate pkgs.kdePackages.yakuake pkgs.kdePackages.layer-shell-qt pkgs.kdePackages.qttools  pkgs.kdePackages.kscreen pkgs.kdePackages.kdialog pkgs.kdePackages.drkonqi pkgs.kurve pkgs.kdePackages.discover
     
     pkgs.thunderbird-bin
     pkgs.texlivePackages.dvipng

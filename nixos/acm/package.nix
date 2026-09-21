@@ -4,8 +4,8 @@
 # implementation (../docs/ in the acm-re research project) together with the
 # Linux appliers (KMS atomic + Wayland gamma-control).
 { pkgs ? import <nixpkgs> { }
-, enginePath ? /home/<yourusername>/Code/acm-re/src
-, linuxPath ? /home/<yourusername>/Code/acm-re/linux
+, enginePath ? /home/<yourusername>/Documents/Reproduce/acm-re/src
+, linuxPath ? /home/<yourusername>/Documents/Reproduce/acm-re/linux
 }:
 
 let

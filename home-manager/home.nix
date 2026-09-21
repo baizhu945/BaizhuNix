@@ -43,6 +43,7 @@ in
     ./latex-ocr.nix
     ./shell-services.nix
     ./bt11-control/bt11-control.nix
+    ./catia.nix   # CATIA V5 R20：cabextract 推导安装树 + Wine 前缀（声明式）
   ];
 
   # ACM-equivalent automatic colour management: the session daemon computes a
@@ -51,9 +52,11 @@ in
   home.acm = {
     enable = true;
     reconcileSeconds = 5;
+    # Selectors are EDID-derived (stable across boots); rename the labels freely
+    # and get the hashes from `acm-ctl list`.
     displays = {
-      "eDP-1" = { };                                   # internal panel (EDID-derived profile)
-      "HDMI-A-1" = { };                                # external display
+      internal = { match = "hash:380c4f83604eae61"; };   # 内置屏 MNG007DA5-3
+      external = { match = "hash:4ce7d007462e9a2d"; };   # 外接屏 F24B40Q
     };
   };
 
@@ -71,55 +74,8 @@ in
   programs.onlyoffice.enable = true;
 
   nixpkgs.overlays = with pkgs; [
-    # nixpkgs 更新把 frei0r 包升到 3.2.1（CMake 构建），
-    # 其 find_package(OpenCV) 在 CUDA 版 opencv 下硬性要求 CUDAToolkit/nvcc，
-    # 导致构建失败（上游回归，release-25.11 仍为 2.5.1）。
-    # 这里 pin 回 2.5.1（与 release-25.11 相同的表达式），
-    # 与旧系统产物 drv 哈希一致，直接复用本地缓存，零编译。
-    # 注意：ffmpeg-full 依赖的属性名是 frei0r（by-name 包），
-    # frei0r-plugins 是别名，两个都覆盖以确保一致。
     (self: super: let
-      # 注意：必须用 callPackage（而非裸 stdenv.mkDerivation）包装，
-      # 新版 nixpkgs 的 override/overrideAttrs 由 callPackage/makeOverridable 注入，
-      # mlt 等包会调用 frei0r.override { opencv = ...; }，裸 mkDerivation 产物没有该属性。
-      frei0r-251 = super.callPackage (
-        { lib, config, stdenv, fetchFromGitHub, cairo, cmake, opencv, pkg-config
-        , cudaSupport ? config.cudaSupport, cudaPackages
-        }:
-        stdenv.mkDerivation (finalAttrs: {
-          pname = "frei0r-plugins";
-          version = "2.5.1";
-          src = fetchFromGitHub {
-            owner = "dyne";
-            repo = "frei0r";
-            rev = "v${finalAttrs.version}";
-            hash = "sha256-3gUWvO5izOrJt+XwcNBNiLfu+iMqo4nuPbx++TYzao0=";
-          };
-          nativeBuildInputs = [ cmake pkg-config ];
-          buildInputs = [ cairo opencv ]
-            ++ lib.optionals cudaSupport [
-              cudaPackages.cuda_cudart
-              cudaPackages.cuda_nvcc
-            ];
-          postInstall = lib.optionalString stdenv.hostPlatform.isDarwin ''
-            for f in $out/lib/frei0r-1/*.so* ; do
-              ln -s $f "''${f%.*}.dylib"
-            done
-          '';
-          meta = {
-            homepage = "https://frei0r.dyne.org";
-            description = "Minimalist, cross-platform, shared video plugins";
-            license = lib.licenses.gpl2Plus;
-            platforms = lib.platforms.unix;
-          };
-        })
-      ) { };
     in {
-      frei0r = frei0r-251;
-      frei0r-plugins = frei0r-251;
-      
-      # GeoGebra 从官方目录移除了 nixpkgs 当前固定的 6-0-794-0，
-      # 改用官方仍保留的 Linux 64 位 6-0-804-0。
       geogebra6 = super.geogebra6.overrideAttrs (_: {
         version = "6-0-804-0";
         src = super.fetchurl {
@@ -128,25 +84,6 @@ in
         };
       });
     })
-
-    # Keep the Noctalia 4.7.7 PipeWire spectrum fix in the package set so the
-    # systemd service and every `noctalia-shell ipc ...` caller use the same
-    # patched shell instance.
-    (self: super:
-      let
-        patchedNoctaliaQs = super.noctalia-qs.overrideAttrs (old: {
-          postPatch = (old.postPatch or "") + ''
-            substituteInPlace src/services/pipewire/spectrum.cpp \
-              --replace-fail 'PW_KEY_NODE_PASSIVE, "true",' \
-                'PW_KEY_NODE_PASSIVE, "in-follow",'
-          '';
-        });
-      in {
-        noctalia-qs = patchedNoctaliaQs;
-        noctalia-shell = super.noctalia-shell.override {
-          noctalia-qs = patchedNoctaliaQs;
-        };
-      })
   ];
 
   home.packages = [
@@ -195,9 +132,7 @@ in
     stablePkgs.qalculate-gtk
     pkgs.brave
     pkgs.google-chrome
-    pkgs.kdePackages.discover
     pkgs.proton-vpn
-    pkgs.pciutils
     stablePkgs.haruna
     pkgs.smplayer
     pkgs.nvtopPackages.full
