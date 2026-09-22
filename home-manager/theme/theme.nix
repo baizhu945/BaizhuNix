@@ -1,12 +1,11 @@
 { config, pkgs, lib, ... }:
 
 let
-  # Python 脚本：读取 noctalia colors.json，转换为 DMS 自定义主题格式
-  themeScript = builtins.readFile ./noctalia-to-dms.py;
-  noctaliaToDms = pkgs.writeText "noctalia-to-dms.py" themeScript;
-  #
+  # 将 Noctalia V5 壁纸主色同步给 Waybar 歌词与鼠标拖尾。
+  colorSyncScript = builtins.readFile ./noctalia-color-sync.py;
+  noctaliaColorSync = pkgs.writeText "noctalia-color-sync.py" colorSyncScript;
   syncBinRawScript = builtins.readFile ./wallpaper-theme-sync.sh;
-  syncBinScript = builtins.replaceStrings ["@noctaliaToDms@"] ["${noctaliaToDms}"] syncBinRawScript;
+  syncBinScript = builtins.replaceStrings ["@noctaliaColorSync@"] ["${noctaliaColorSync}"] syncBinRawScript;
   syncBin = pkgs.writeShellApplication {
     name = "wallpaper-theme-sync";
     runtimeInputs = with pkgs; [ inotify-tools python3 jq ];
@@ -24,7 +23,7 @@ in
   systemd.user.services = {
     wallpaper-theme-sync = {
       Unit = {
-        Description = "Sync noctalia wallpaper palette → DankMaterialShell theme";
+        Description = "Sync Noctalia V5 wallpaper palette integrations";
         After  = [ "graphical-session.target" ];
         PartOf = [ "graphical-session.target" ];
       };

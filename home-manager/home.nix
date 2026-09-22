@@ -136,8 +136,6 @@ in
     stablePkgs.haruna
     pkgs.smplayer
     pkgs.nvtopPackages.full
-    pkgs.noctalia-shell
-    pkgs.dms-shell
     bilibiliPkgs.bilibili
     pkgs.spotify
     pkgs.matugen
@@ -359,7 +357,7 @@ in
           script = pkgs.replaceVars ./script/battery-monitor.sh {
             upower   = pkgs.upower;
             grep     = pkgs.gnugrep;
-            noctalia = pkgs.noctalia-shell;
+            noctalia = config.programs.noctalia.package;
             jq       = pkgs.jq;
             wlrrandr = pkgs.wlr-randr;
           };
