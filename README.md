@@ -2,8 +2,6 @@
 
 _如果需要，请将 `<yourusername>` 更换为你的密码，`<yourpassword>` 更换为你的用户名之后再 `rebuild`，可以直接 `cd BaizhuNix`到仓库中后运行_
 ```
-# 运行前先解压 7z 压缩包到该文件夹内
-
 find . -path "./.git" -prune -o -type f -name "*" -exec sed -i 's/<yourusername>/你的用户名/g' {} +
 
 find . -path "./.git" -prune -o -type f -name "*" -exec sed -i 's/<yourpassword>/你的密码/g' {} +
@@ -12,7 +10,7 @@ find . -path "./.git" -prune -o -type f -name "*" -exec sed -i 's/<yourpassword>
 # Features
 - 纯 `configuration.nix` 和 `home.nix`，无flake；
 - 包括 `Virt_manager` 和 `qemu/KVM` 在内的许多软件的补丁；
-- `noctalia` 和 `dms` 以及歌词、鼠标拖尾主题色同步；
+- `noctalia` 和歌词、鼠标拖尾主题色同步；
 - 基于自定义 `waybar` 的歌词显示脚本；
 - 声明式部署 `TTS` 和 `latexocr`；
 - 双系统的一些修复；
@@ -44,15 +42,10 @@ sudo nix-channel --add https://channels.nixos.org/nixos-unstable nixos
 sudo nix-channel --update
 ```
 
-# 三、noctalia 和 DankMaterialShell 配置
-将 7z 文件解压后，将 `noctalia` 和 `DankMaterialShell` 文件夹复制到 `~/.config/` 路径下。
-
-_别忘了将 `<yourusername>` 更换为你的密码，`<yourpassword>` 更换为你的用户名_
-
-# 四、Joplin配置
+# 三、Joplin配置
 安装插件 `Katex Input Helper`, `Record`, `Rich Markdown`, `Search & Replace`, `Kity Minder`, `Note Tabs`
 
-# 五、Qbittorrent配置
+# 四、Qbittorrent配置
 ![Qbittorrent配置](./doc/1778479402_grim.png)
 
 在上图处加上以下网址以启用 `no tracker` 下载：
@@ -65,7 +58,7 @@ http://tracker.bt4g.com:2095/announce
 udp://tracker.torrent.eu.org:451/announce
 ```
 
-# 六、AGENT 配置
+# 五、AGENT 配置
 
 ## `cc-connect` 配置
 在 `~/.cc-connect` 下放置如下 `config.toml` 文件
@@ -117,7 +110,7 @@ app_secret = "xxx"
 
 将 `~/.reasonix/config.toml` 的 `bash = "enforce"` 改为 `bash = "off"` 以允许 Reasonix 运行命令。
 
-# 七、Trouble shooting
+# 六、Trouble shooting
 ## Windows 时间错乱
 参考 https://wiki.archlinux.org/title/System_time#UTC_in_Microsoft_Windows
 
@@ -174,7 +167,7 @@ sudo fc-cache -fv
 ```
 若还有windows系统，则可以复制windows系统的字体到`~/.local/share/fonts/`中，然后运行`rm ~/.local/share/fonts/*.fon`
 
-# 八、Known BUGs
+# 七、Known BUGs
 ## Screen Recording
 在`niri`中，`noctalia`的屏幕录像不完全可用，`obs`的`Wayland output(dmabuf)`不可用，`Wayland output(scpy)`可用但是要设置 `Flip red and blue`
 
