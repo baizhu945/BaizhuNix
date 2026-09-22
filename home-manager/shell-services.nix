@@ -1,6 +1,6 @@
 { config, pkgs, lib, ... }:
 
-# Noctalia V5 与 dms（DankMaterialShell）由 systemd user service 托管。
+# Noctalia V5 由 systemd user service 托管，同时提供 main bar 与 bottom bar。
 # 启动条件：graphical-session.target（图形会话就绪）+ xdg-desktop-portal.service。
 # 依赖的服务（supergfxd、power-profiles-daemon）均为开机自启的系统服务
 # （ppd 已在 configuration.nix 中改为 wantedBy=multi-user.target），
@@ -11,7 +11,6 @@
       Unit = {
         Description = "Noctalia V5";
         After = [ "graphical-session.target" "xdg-desktop-portal.service" ];
-        Before = [ "dms.service" ];
         PartOf = [ "graphical-session.target" ];
       };
       Service = {
@@ -29,8 +28,7 @@
         # 恢复了旧的软阻塞，先解除它，否则控件无法重新开启蓝牙。
         ExecStartPre = "${pkgs.util-linux}/bin/rfkill unblock bluetooth";
         ExecStart = lib.getExe config.programs.noctalia.package;
-        # Before=dms.service only orders service startup. Keep that job pending
-        # until V5 has created its IPC socket and acquired shared D-Bus names.
+        # Keep the startup job pending until V5 has created its IPC socket.
         ExecStartPost = pkgs.writeShellScript "wait-for-noctalia-v5" ''
           attempt=0
           while [ "$attempt" -lt 100 ]; do
@@ -42,21 +40,6 @@
           done
           exit 1
         '';
-        Restart = "on-failure";
-        RestartSec = "3s";
-      };
-      Install.WantedBy = [ "graphical-session.target" ];
-    };
-
-    dms = {
-      Unit = {
-        Description = "DankMaterialShell (quickshell)";
-        After = [ "graphical-session.target" "xdg-desktop-portal.service" ];
-        PartOf = [ "graphical-session.target" ];
-      };
-      Service = {
-        Type = "simple";
-        ExecStart = "${pkgs.dms-shell}/bin/dms run";
         Restart = "on-failure";
         RestartSec = "3s";
       };

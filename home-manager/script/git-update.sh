@@ -6,7 +6,6 @@ cd ~/Documents/BaizhuNix
 SUBMODULES=$(git config --file .gitmodules --get-regexp '^submodule\..*\.path$' 2>/dev/null | cut -d' ' -f2 || true)
 
 remove-without-permission -r nixos
-remove-without-permission n\&d.7z
 
 # 同步 home-manager(排除子模块目录;--delete 保证本地已删除的文件不残留)
 rsync_args=(-a --delete)
@@ -16,8 +15,6 @@ for sm in $SUBMODULES; do
 done
 rsync "${rsync_args[@]}" ~/.config/home-manager/ ~/Documents/BaizhuNix/home-manager/
 
-cp -r ~/.config/noctalia/ ~/Documents/BaizhuNix/
-cp -r ~/.config/DankMaterialShell/ ~/Documents/BaizhuNix/
 cp -r /etc/nixos/ ~/Documents/BaizhuNix/
 
 # 若存在嵌入式 .git 目录,先清掉残留的 .git/modules 目标,再转为标准子模块布局
@@ -48,13 +45,6 @@ for sm in $SUBMODULES; do
     fi
 done
 
-shopt -s nullglob
-for dir in DankMaterialShell/plugins/*; do
-    [ -d "$dir" ] || continue
-    remove-without-permission -rf "$dir/.git"
-    git rm -r --cached --ignore-unmatch "$dir"
-done
-
 # sed 脱敏时排除子模块目录(子模块内容由各自仓库管理,不应被改动)
 sed_prune=()
 for sm in $SUBMODULES; do
@@ -64,10 +54,5 @@ done
 
 find . -path "./README.md" -prune -o -path "./.git" -prune -o -path "./.gitmodules" -prune -o "${sed_prune[@]}" -type f -name "*" -exec sed -i 's/<yourusername>/<yourusername>/g' {} +
 find . -path "./README.md" -prune -o -path "./.git" -prune -o -path "./.gitmodules" -prune -o "${sed_prune[@]}" -type f -name "*" -exec sed -i 's/<yourpassword>/<yourpassword>/g' {} +
-
-7z a -o{~/Documents/BaizhuNix} n\&d.7z noctalia/ DankMaterialShell
-
-remove-without-permission -r noctalia/
-remove-without-permission -r  DankMaterialShell/
 
 git status

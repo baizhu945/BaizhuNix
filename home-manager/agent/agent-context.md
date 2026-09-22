@@ -9,10 +9,8 @@ _Read this carefully. This is the guideline for operating this machine._
 | **CPU** | Intel Core Ultra 7 255HX (20 cores, Arrow Lake-HX) |
 | **GPU** | NVIDIA RTX 5060 Laptop 8GB (02:00.0, nvidia-open, CUDA 13) + Intel Arrow Lake-S iGPU + Intel NPU |
 | **Memory** | 30Gi DDR5 |
-| **Storage** | SAMSUNG MZVL81T0HELB 953.9G (system) · Great Wall GT745 953.9G (Windows) · T7 Shield 1.8T exfat (external) |
-| **Display** | Internal 2560x1600@165Hz · External 2560x1440@75Hz (HDMI) |
+| **Storage** | SAMSUNG MZVL81T0HELB 953.9G (system) · Great Wall GT745 953.9G (Windows) |
 | **Network** | Intel AX210 Wi-Fi 6E · Realtek RTL8111/8168 Ethernet |
-| **Audio** | Intel 800 Series ACE + USB DAC iFi DX5 II |
 
 ## System Information
 
@@ -26,45 +24,14 @@ _Read this carefully. This is the guideline for operating this machine._
 ## Configuration Entry Points
 
 ### System (`/etc/nixos/`) — managed via `imports = [...]`
-```
-configuration.nix      # Main entry: kernel (zen), NVIDIA, PipeWire, fonts, packages, services
-hardware-configuration.nix # Auto-generated, do not modify
-llm-cuda.nix           # Ollama CUDA (gemma4:12b, deepseek-ocr:3b, syncModels)
-qemu-kvm/              # libvirtd + virt* daemons, virtiofsd, swtpm, nested KVM
-hifi.nix               # MPD (DX5 II DSD), PipeWire up to 768kHz
-automount.nix          # Windows/T7 mounts + udev rules
-neovim.nix             # nixvim (cyberdream, coc-nvim, telescope, treesitter, ufo)
-sddm-theme.nix         # Arona theme, Wayland greeter, dual-screen layout
-customized-pkgs.nix    # FreeCAD, Ventoy, GParted, Ghost Downloader, Spectroterm; ffmpeg-full overlay
-flatpak-pkgs.nix       # nix-flatpak: Kazumi, Gopeed, Feishu (+libsndio workaround)
-zsh.nix · rm-protection/ · grub-theme.nix
-# Disabled: ros2.nix (nix-ros-overlay), g14-kernel.nix (self-built ASUS ROG kernel)
-```
 
 ### Home-Manager (`~/.config/home-manager/`) — user-level
-```
-home.nix              # Main entry + packages, scripts (mount-win, deepseek-ocr, nix-update)
-agent/                # pi/pi.nix · cc-connect.nix
-                      # agent-context.md (this file) · skills/
-ghostty/              # Bright Lights theme, cursor_tail shader
-waybar/ · lyrics/     # Top bar with NetEase lyrics module
-yazi.nix · unar/ · tts/ · latex-ocr.nix · showmethekey/
-mouse-trail/          # Wayland cursor trail (toggle with mouse-trail-toggle)
-theme/                # wallpaper-theme-sync: Noctalia colors → DMS theme + trail color
-script/               # niri-config.kdl, fastfetch-config.jsonc, battery-monitor.sh
-catia.nix             # CATIA V5R20 (Wine)：cabextract 推导安装树 + 前缀安装（catia / catia-setup）
-                      #   固定数据（许可清单/控制清单/图标）在 Documents/Reproduce/CATIA/
-# noctalia-v5/        # Home Manager programs.noctalia v5 config + local ports
-# Default startup intentionally remains the v4 shell in shell-services.nix
-```
 
 ## NVIDIA GPU
 
 - **Driver**: nvidia-open latest, CUDA 13; `hardware.nvidia.open = true`, dynamicBoost, modesetting
 - **Services**: supergfxd (GPU switching), asusd, power-profiles-daemon, nvidia-powerd; nvidia-container-toolkit (Docker CUDA)
 - **Kernel Params**: `nvidia-drm.modeset=1`, `nvidia_drm.fbdev=1`, `nvidia.NVreg_PreserveVideoMemoryAllocations=1`, `nvidia-modeset.hdmi_deepcolor=0`
-- **VA-API**: intel-media-driver + nvidia-vaapi-driver (HW decode for Kazumi etc.)
-- **OBS**: CUDA + wlrobs, waveform, vkcapture, input-overlay, pipewire-audio-capture
 
 ## Declarative Configuration Guidelines
 

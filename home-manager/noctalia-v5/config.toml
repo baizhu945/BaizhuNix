@@ -93,6 +93,7 @@ enabled = [
   "baizhu/screen_toolkit",
   "baizhu/supergfxctl",
   "baizhu/v4_extras",
+  "baizhu/bottom_bar",
   "noctalia/screen_recorder",
 ]
 auto_update = "none"
@@ -402,6 +403,9 @@ tab_previous   = ["shift+tab", "iso_left_tab"]
 #   - Deep Clean / Dark Mode / GPU → baizhu/v4_extras 聚合入口
 # V4 未实际放入当前布局的 kde-connect 仍不添加，避免引入无对应 UI 的空插件。
 
+[bar]
+order = ["main", "bottom"]
+
 [bar.main]
 position           = "top"
 # V4 density=default resolves to a 31px bar.
@@ -440,6 +444,39 @@ start  = ["launcher", "clock", "todo", "network-speed", "media-mini"]
 center = ["spacer-center", "showmethekey"]
 # V4 ends at Battery; control-center/session were not part of the saved bar.
 end    = ["catwalk", "workspaces", "tray", "btn-wallpaper", "screen-recorder", "screenshot", "btn-tts", "notifications", "volume", "brightness", "bluetooth", "network", "battery"]
+
+# Noctalia V5 的辅助底栏。外观参数逐项沿用上方 main bar，
+# 覆盖所有输出并从底部边缘自动显现。
+[bar.bottom]
+position                 = "bottom"
+enabled                  = true
+thickness                = 31
+background_opacity       = 0.0
+radius                   = 12
+margin_ends              = 0
+margin_edge              = 0
+concave_edge_corners     = false
+padding                  = 5
+widget_spacing           = 6
+scale                    = 1.0
+font_scale               = 0.94
+font_weight              = 500
+shadow                   = false
+auto_hide                = true
+smart_auto_hide          = false
+show_on_workspace_switch = false
+reserve_space            = false
+layer                    = "top"
+capsule                  = true
+capsule_thickness        = 0.8064516129
+capsule_radius           = 16
+capsule_padding          = 4
+capsule_opacity          = 0.7
+font_family              = "Noto Sans CJK HK"
+
+start  = ["bottom-color-picker"]
+center = ["bottom-taskbar"]
+end    = ["bottom-display-hub", "bottom-power"]
 
 # ── Widget 定义 ───────────────────────────────────────────────────────────────
 # 启动器按钮 (左)
@@ -641,6 +678,40 @@ glyph = "noctalia"
 # 会话/电源 (右)
 [widget.session]
 type = "session"
+
+# ── Bottom bar widgets ────────────────────────────────────────────────────────
+[widget.bottom-color-picker]
+type = "baizhu/bottom_bar:color-picker"
+
+[widget.bottom-taskbar]
+type                      = "taskbar"
+color                     = "primary"
+# Native taskbar titles use the 13px caption baseline while main-bar labels use
+# the 14px body baseline. 14/13 makes the effective rendered text size equal.
+font_scale                = 1.0769230769
+group_by_workspace        = false
+show_window_title         = true
+window_title_max_width    = 170
+taskbar_max_width         = 1200
+item_spacing              = 6
+only_active_workspace     = false
+show_all_outputs          = false
+focused_output_only       = false
+icon_scale                = 1.0
+show_active_indicator     = true
+active_indicator_color    = "primary"
+active_opacity            = 1.0
+inactive_opacity          = 1.0
+focused_color             = "primary"
+occupied_color            = "primary"
+empty_color               = "on_surface_variant"
+urgent_color              = "error"
+
+[widget.bottom-power]
+type = "baizhu/bottom_bar:power"
+
+[widget.bottom-display-hub]
+type = "baizhu/bottom_bar:display-hub"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # CONTROL CENTER — 控制中心

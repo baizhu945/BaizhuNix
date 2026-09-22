@@ -282,6 +282,22 @@ in
       Theme=kwinblur-mellow-youlan-dark
     '';
 
+    # The upstream SVGs are 30 px wide, but their 15 px side margins leave
+    # no center slice. On niri the white fallback then shows through.
+    # Keep the same theme and artwork, with usable slices and dark fallbacks.
+    ".local/share/fcitx5/themes/kwinblur-mellow-youlan-dark".source =
+      pkgs.runCommand "fcitx5-mellow-youlan-dark-niri" { } ''
+        mkdir -p "$out"
+        cp -L ${pkgs.fcitx5-mellow-themes}/share/fcitx5/themes/kwinblur-mellow-youlan-dark/* "$out/"
+        chmod u+w "$out/theme.conf"
+        sed -i \
+          -e '/^\[InputPanel\/Background\]$/,/^\[InputPanel\/Background\/Margin\]$/s/^Color=#ffffff$/Color=#151515/' \
+          -e '/^\[InputPanel\/Background\/Margin\]$/,/^\[InputPanel\/Background\/OverlayClipMargin\]$/s/^\(Left\|Right\|Top\|Bottom\)=15$/\1=10/' \
+          -e '/^\[InputPanel\/Highlight\]$/,/^\[InputPanel\/Highlight\/Margin\]$/s/^Color=#ffffff$/Color=#1781b5/' \
+          -e '/^\[InputPanel\/Highlight\/Margin\]$/,/^\[InputPanel\/Highlight\/OverlayClipMargin\]$/s/^\(Left\|Right\)=15$/\1=10/' \
+          "$out/theme.conf"
+      '';
+
     ".config/translate-shell/init.trans".text = ''
       {
         :engine          "bing"
@@ -323,9 +339,9 @@ in
 
   programs.joplin-desktop = {
     enable = true;
-    sync = {
-      interval = "5m";
-      target = "onedrive";
+    settings = {
+      "sync.interval" = 300;
+      "sync.target" = 3;
     };
   };
 

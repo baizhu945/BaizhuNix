@@ -1,0 +1,60 @@
+id = "baizhu/bottom_bar"
+name = "Bottom Bar Utilities"
+version = "1.0.0"
+plugin_api = 24
+author = "<yourusername>; inspired by Daniel-42-z, felri, and jfchenier"
+license = "GPL-3.0-only"
+dependencies = ["bash", "jq", "niri", "wl-mirror", "ddcutil", "hyprpicker", "wl-copy"]
+tags = ["bar", "battery", "display", "mirror", "niri"]
+icon = "layout-bottombar"
+description = "Color, power, display-management, and mirroring utilities for a secondary Noctalia bar."
+
+[[service]]
+id = "service"
+entry = "service.luau"
+
+[[widget]]
+id = "color-picker"
+entry = "color_picker.luau"
+
+  [widget.actions]
+  right = "none"
+
+[[widget]]
+id = "power"
+entry = "power.luau"
+
+[[widget]]
+id = "display-hub"
+entry = "display_hub.luau"
+
+  [widget.actions]
+  right = "none"
+  middle = "none"
+
+[[panel]]
+id = "color-picker-panel"
+entry = "color_picker_panel.luau"
+width = 780
+height = 720
+placement = "floating"
+position = "center"
+dismiss_on_outside_click = true
+
+[[panel]]
+id = "power-info"
+entry = "power_panel.luau"
+width = 380
+height = 390
+placement = "attached"
+position = "bottom_right"
+dismiss_on_outside_click = true
+
+[[panel]]
+id = "display-hub-panel"
+entry = "display_hub_panel.luau"
+width = 620
+height = 760
+placement = "attached"
+position = "bottom_right"
+dismiss_on_outside_click = true

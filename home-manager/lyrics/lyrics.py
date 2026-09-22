@@ -49,6 +49,7 @@ DEBUG = os.environ.get("WAYBAR_LYRICS_DEBUG", "").lower() in {
     "yes",
     "on",
 }
+LANGUAGE_OVERRIDE = os.environ.get("WAYBAR_LYRICS_LANGUAGE", "").lower()
 
 POLL_INTERVAL = 0.25
 INACTIVE_INTERVAL = 1.0
@@ -56,8 +57,8 @@ RETRY_INTERVAL = 30.0
 HTTP_TIMEOUT = (2.0, 5.0)
 FETCH_DEADLINE = 15.0
 # Bump this whenever candidate validation changes so previously selected
-# potentially incomplete timelines are evaluated again.
-CACHE_VERSION = 3
+# potentially incomplete or wrongly localized timelines are evaluated again.
+CACHE_VERSION = 5
 POSITIVE_CACHE_TTL = 30 * 24 * 60 * 60
 PLAIN_CACHE_TTL = 7 * 24 * 60 * 60
 NEGATIVE_CACHE_TTL = 60 * 60
@@ -204,6 +205,192 @@ def normalize_match_text(value):
     # Keep Unicode letters/numbers (important for Japanese and Chinese), but
     # discard punctuation and spacing so different providers compare equally.
     return re.sub(r"[^\w]+", "", value, flags=re.UNICODE).replace("_", "")
+
+
+def script_counts(text):
+    counts = {
+        "latin": 0,
+        "kana": 0,
+        "han": 0,
+        "hangul": 0,
+        "cyrillic": 0,
+        "arabic": 0,
+        "thai": 0,
+        "devanagari": 0,
+    }
+    for char in str(text or ""):
+        codepoint = ord(char)
+        name = unicodedata.name(char, "")
+        if "LATIN" in name:
+            counts["latin"] += 1
+        elif 0x3040 <= codepoint <= 0x30FF:
+            counts["kana"] += 1
+        elif (
+            0x3400 <= codepoint <= 0x4DBF
+            or 0x4E00 <= codepoint <= 0x9FFF
+        ):
+            counts["han"] += 1
+        elif 0xAC00 <= codepoint <= 0xD7AF:
+            counts["hangul"] += 1
+        elif 0x0400 <= codepoint <= 0x04FF:
+            counts["cyrillic"] += 1
+        elif 0x0600 <= codepoint <= 0x06FF:
+            counts["arabic"] += 1
+        elif 0x0E00 <= codepoint <= 0x0E7F:
+            counts["thai"] += 1
+        elif 0x0900 <= codepoint <= 0x097F:
+            counts["devanagari"] += 1
+    return counts
+
+
+def lyric_language(raw_lrc):
+    counts = script_counts(raw_lrc)
+    if counts["kana"] >= 3:
+        return "ja"
+    if counts["hangul"] >= 3:
+        return "ko"
+    if counts["han"] >= 3:
+        return "cjk"
+    if counts["cyrillic"] >= 3:
+        return "cyrillic"
+    if counts["arabic"] >= 3:
+        return "arabic"
+    if counts["thai"] >= 3:
+        return "thai"
+    if counts["devanagari"] >= 3:
+        return "devanagari"
+    if counts["latin"] >= 5:
+        return "latin"
+    return "unknown"
+
+
+def candidate_language_consensus(items, meta):
+    """Find a strong language consensus among same-track API candidates."""
+    counts = {}
+    total = 0
+    for item in items:
+        if not isinstance(item, dict) or not item.get("syncedLyrics"):
+            continue
+        title, artist = result_fields(item)
+        if (
+            not title
+            or not artist
+            or not candidate_is_acceptable(item, meta)
+            or not duration_matches(
+                item.get("duration"), meta["duration"]
+            )
+        ):
+            continue
+        profile = lyric_language(item.get("syncedLyrics", ""))
+        if profile == "unknown":
+            continue
+        counts[profile] = counts.get(profile, 0) + 1
+        total += 1
+
+    if not counts:
+        return None
+    profile, count = max(counts.items(), key=lambda pair: pair[1])
+    second = max(
+        (value for key, value in counts.items() if key != profile),
+        default=0,
+    )
+    if count >= 2 and count >= second + 1 and count / total >= 0.6:
+        return profile
+    return None
+
+
+def metadata_language_hint(meta):
+    """Infer language from artist/album first; title is only weak evidence."""
+    if LANGUAGE_OVERRIDE in {
+        "ja",
+        "zh",
+        "cjk",
+        "ko",
+        "cyrillic",
+        "arabic",
+        "thai",
+        "devanagari",
+    }:
+        return ("cjk" if LANGUAGE_OVERRIDE == "zh" else LANGUAGE_OVERRIDE), 1.0
+
+    strong_text = " ".join(
+        (meta.get("artist_value", ""), meta.get("album", ""))
+    )
+    strong_counts = script_counts(strong_text)
+    weak_counts = script_counts(meta.get("title", ""))
+
+    if strong_counts["kana"] >= 2:
+        return "ja", 1.0
+    if strong_counts["hangul"] >= 2:
+        return "ko", 1.0
+    if strong_counts["han"] >= 2:
+        return "cjk", 1.0
+    if strong_counts["cyrillic"] >= 2:
+        return "cyrillic", 1.0
+    if strong_counts["arabic"] >= 2:
+        return "arabic", 1.0
+    if strong_counts["thai"] >= 2:
+        return "thai", 1.0
+    if strong_counts["devanagari"] >= 2:
+        return "devanagari", 1.0
+
+    # A title such as "UNITE" gives no useful language evidence.  A title
+    # written in kana/Han can still be a useful fallback, but must not override
+    # a conflicting artist/album signal.
+    if weak_counts["kana"] >= 2:
+        return "ja", 0.35
+    if weak_counts["hangul"] >= 2:
+        return "ko", 0.35
+    if weak_counts["han"] >= 2:
+        return "cjk", 0.35
+    return None, 0.0
+
+
+TRANSLATION_MARKER_RE = re.compile(
+    r"\b(?:english|translation|translated|romanized|romaji|"
+    r"romanisation|transliteration)\b|英訳|翻訳|罗马音|拼音",
+    re.IGNORECASE,
+)
+
+
+def strongly_mismatched_language(raw_lrc, item, meta):
+    _target, strength = metadata_language_hint(meta)
+    return (
+        strength >= 0.5
+        and language_preference(raw_lrc, item, meta) < 0
+    )
+
+
+def language_preference(raw_lrc, item, meta, consensus=None):
+    target, strength = metadata_language_hint(meta)
+    if consensus and strength < 0.5:
+        target, strength = consensus, 0.65
+    actual = lyric_language(raw_lrc)
+    score = 0.0
+    if target:
+        compatible = {
+            "ja": {"ja": 1.0, "cjk": 0.55},
+            "cjk": {"cjk": 1.0, "ja": 0.85},
+            "ko": {"ko": 1.0},
+            "cyrillic": {"cyrillic": 1.0},
+            "arabic": {"arabic": 1.0},
+            "thai": {"thai": 1.0},
+            "devanagari": {"devanagari": 1.0},
+        }
+        if actual in compatible.get(target, {}):
+            score = compatible[target][actual]
+        elif actual == "latin":
+            score = -1.0
+        score *= strength
+
+    if isinstance(item, dict):
+        item_text = " ".join(
+            str(item.get(key, ""))
+            for key in ("trackName", "artistName", "albumName")
+        )
+        if TRANSLATION_MARKER_RE.search(item_text):
+            score -= 0.75
+    return score
 
 
 def clean_text(text):
@@ -544,6 +731,7 @@ def prepare_result(raw_lrc, meta, source, source_duration=0.0):
             "timeline_score": timeline_score(
                 lines, meta["duration"], provider_duration
             ),
+            "language": lyric_language(raw_lrc),
             "source": source,
             "raw": raw_lrc,
         }
@@ -557,15 +745,21 @@ def prepare_result(raw_lrc, meta, source, source_duration=0.0):
         return {
             "kind": "plain",
             "text": plain,
+            "language": lyric_language(raw_lrc),
             "source": source,
             "raw": raw_lrc,
         }
     return None
 
 
-def timed_result_rank(result, item, meta, priority=0.0):
+def timed_result_rank(
+    result, item, meta, priority=0.0, language_hint=None
+):
     """Rank already-validated timed candidates without trusting API order."""
     _title_score, _artist_score, match_score = result_match(item, meta)
+    language_score = language_preference(
+        result["raw"], item, meta, language_hint
+    )
     source_duration = (
         parse_source_duration(item.get("duration"))
         if isinstance(item, dict)
@@ -578,10 +772,12 @@ def timed_result_rank(result, item, meta, priority=0.0):
         duration_score = max(0.0, 1.0 - difference / tolerance)
     return (
         result.get("timeline_score", 0.0) * 100.0
+        + language_score * 35.0
         + match_score * 10.0
         + duration_score * 5.0
         + priority,
         result.get("timeline_score", 0.0),
+        language_score,
         match_score,
         priority,
     )
@@ -658,6 +854,9 @@ def lrclib_candidate(item, meta, source):
         return None
     source_duration = parse_source_duration(item.get("duration"))
     synced = item.get("syncedLyrics")
+    if synced and strongly_mismatched_language(synced, item, meta):
+        dbg("skip LRCLIB candidate with a strong language mismatch")
+        return None
     plain = item.get("plainLyrics")
     if synced:
         result = prepare_result(synced, meta, source, source_duration)
@@ -674,7 +873,11 @@ def fetch_lrclib(meta):
     """Prefer synced LRCLIB data, retaining plain text as a last resort."""
     contacted = False
     plain_fallback = None
+    exact_uncertain = False
+    exact_language_blocked = False
     best_timed = None
+    best_item = None
+    best_priority = 0.0
     best_rank = None
 
     data, responded = request_json(
@@ -703,10 +906,28 @@ def fetch_lrclib(meta):
                 parse_source_duration(data.get("duration")),
             )
             if result and result["kind"] == "timed":
-                best_timed = result
-                best_rank = timed_result_rank(result, data, meta, 1.0)
+                if strongly_mismatched_language(synced, data, meta):
+                    exact_language_blocked = True
+                    dbg("withhold exact LRCLIB candidate with wrong language")
+                elif (
+                    metadata_language_hint(meta)[1] < 0.5
+                    and lyric_language(synced) == "latin"
+                ):
+                    # A Latin-only exact result can be a translation/romaji
+                    # record.  Wait for search consensus before accepting it.
+                    exact_uncertain = True
+                    best_timed = result
+                    best_item = data
+                    best_priority = 1.0
+                else:
+                    best_timed = result
+                    best_item = data
+                    best_priority = 1.0
+                    best_rank = timed_result_rank(
+                        result, data, meta, 1.0
+                    )
         plain = data.get("plainLyrics") if exact_match else None
-        if plain:
+        if plain and not exact_uncertain and not exact_language_blocked:
             plain_fallback = prepare_result(
                 plain,
                 meta,
@@ -746,7 +967,19 @@ def fetch_lrclib(meta):
             )
 
         ranked.sort(key=lambda row: row[:4], reverse=True)
-        dbg(f"LRCLIB search {query!r}: {len(ranked)} usable candidates")
+        language_consensus = candidate_language_consensus(data, meta)
+        dbg(
+            f"LRCLIB search {query!r}: {len(ranked)} usable candidates "
+            f"language={language_consensus or 'unknown'}"
+        )
+        if best_timed and best_item is not None:
+            best_rank = timed_result_rank(
+                best_timed,
+                best_item,
+                meta,
+                best_priority,
+                language_consensus,
+            )
         for (
             has_synced,
             _combined,
@@ -758,21 +991,29 @@ def fetch_lrclib(meta):
             if has_synced:
                 result = lrclib_candidate(item, meta, source)
                 if result and result["kind"] == "timed":
-                    rank = timed_result_rank(result, item, meta)
+                    rank = timed_result_rank(
+                        result, item, meta, 0.0, language_consensus
+                    )
                     if best_rank is None or rank > best_rank:
                         best_timed = result
+                        best_item = item
+                        best_priority = 0.0
                         best_rank = rank
             elif plain_fallback is None:
                 result = lrclib_candidate(item, meta, source)
                 if result and result["kind"] == "plain":
                     plain_fallback = result
 
-    if best_timed:
+    if best_timed and not (exact_uncertain and best_priority == 1.0):
         dbg(
             "LRCLIB selected synced candidate: "
             f"{best_timed.get('source', 'unknown')}"
         )
         return best_timed, contacted
+    if exact_uncertain or exact_language_blocked:
+        dbg("LRCLIB withheld a language-uncertain exact candidate")
+        # Do not negative-cache a candidate deliberately withheld for language.
+        return None, False
     if plain_fallback:
         dbg("LRCLIB returned plain lyrics; waiting for synced fallbacks")
         return plain_fallback, contacted
@@ -1021,6 +1262,7 @@ def save_cache(path, meta, result, source_duration=0.0):
         "identity": cache_identity(meta),
         "kind": result["kind"],
         "source": result.get("source", "unknown"),
+        "language": result.get("language", "unknown"),
         "source_duration": parse_source_duration(source_duration),
         "lrc": result.get("raw", ""),
     }

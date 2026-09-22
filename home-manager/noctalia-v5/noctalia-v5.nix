@@ -39,6 +39,7 @@ let
       python3 ${./patches/patch-deskvis-idle-fade.py}
       python3 ${./patches/patch-spectrum-frequency-range.py}
       python3 ${./patches/patch-osd-timeout.py}
+      python3 ${./patches/patch-taskbar-title-color.py}
     '';
   });
 
@@ -57,6 +58,7 @@ let
     "supergfxctl-v5" = ./noctalia-v5-plugins/supergfxctl-v5;
     "v4-extras-v5" = ./noctalia-v5-plugins/v4-extras-v5;
     "screen-recorder-v5" = ./noctalia-v5-plugins/screen-recorder-v5;
+    "bottom-bar-v5" = ./noctalia-v5-plugins/bottom-bar-v5;
   };
   localPluginTree = pkgs.linkFarm "noctalia-v5-local-plugins" (
     pkgs.lib.mapAttrsToList (name: path: { inherit name path; }) localPluginSources
@@ -98,6 +100,8 @@ in
   # separate from the shell package because Noctalia does not bundle it.
   home.packages = with pkgs; [
     gpu-screen-recorder
+    # External-monitor DDC/CI controls used by the bottom display manager.
+    ddcutil
     # V5 Screen Toolkit replacements for the V4 QML overlays.
     satty
     hyprpicker
@@ -177,5 +181,6 @@ in
     ".config/noctalia/v5-plugins/supergfxctl-v5".source = localPluginSources."supergfxctl-v5";
     ".config/noctalia/v5-plugins/v4-extras-v5".source = localPluginSources."v4-extras-v5";
     ".config/noctalia/v5-plugins/screen-recorder-v5".source = localPluginSources."screen-recorder-v5";
+    ".config/noctalia/v5-plugins/bottom-bar-v5".source = localPluginSources."bottom-bar-v5";
   };
 }
