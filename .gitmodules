@@ -10,3 +10,6 @@
 [submodule "home-manager/bt11-control"]
 	path = home-manager/bt11-control
 	url = https://github.com/baizhu945/BT11-Control-Panel-Linux
+[submodule "home-manager/noctalia-v5"]
+	path = home-manager/noctalia-v5
+	url = https://github.com/baizhu945/Baizhu-Noctalia.git
