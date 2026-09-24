@@ -277,16 +277,16 @@ in
     ".config/fastfetch/config.jsonc".source = ./script/fastfetch-config.jsonc;
 
     ".config/fcitx5/conf/classicui.conf".text = ''
-      Theme=kwinblur-mellow-youlan-dark
+      Theme=mellow-youlan-dark
     '';
 
-    # The upstream SVGs are 30 px wide, but their 15 px side margins leave
-    # no center slice. On niri the white fallback then shows through.
-    # Keep the same theme and artwork, with usable slices and dark fallbacks.
-    ".local/share/fcitx5/themes/kwinblur-mellow-youlan-dark".source =
+    # Upstream removed the kwinblur variant; use its current dark theme.
+    # The 31 px SVGs with 15 px side margins leave almost no center slice.
+    # Keep usable slices and dark fallbacks on niri.
+    ".local/share/fcitx5/themes/mellow-youlan-dark".source =
       pkgs.runCommand "fcitx5-mellow-youlan-dark-niri" { } ''
         mkdir -p "$out"
-        cp -L ${pkgs.fcitx5-mellow-themes}/share/fcitx5/themes/kwinblur-mellow-youlan-dark/* "$out/"
+        cp -L ${pkgs.fcitx5-mellow-themes}/share/fcitx5/themes/mellow-youlan-dark/* "$out/"
         chmod u+w "$out/theme.conf"
         sed -i \
           -e '/^\[InputPanel\/Background\]$/,/^\[InputPanel\/Background\/Margin\]$/s/^Color=#ffffff$/Color=#151515/' \
