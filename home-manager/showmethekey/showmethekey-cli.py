@@ -96,8 +96,8 @@ def emit(text: str, cls: str):
         return
 
     prefix = {
-        "mouse": "🖱️ ",
-        "both": "🖱️+⌨ ",
+        "mouse": "🖱 ",
+        "both": "🖱 +⌨ ",
         "keyboard": "⌨ ",
     }.get(cls, "⌨ ")
 

@@ -43,13 +43,16 @@ let
   catiaDpi = 144;
 
   # ---- 固定输入：安装介质 + 破解文件 + 安装器派生数据 ----------------------
+  # 带 sha256：Nix 直接用已知哈希定位 store 路径，不再每次求值重新哈希介质。
   mediaSrc = builtins.path {
     path = "/home/<yourusername>/Documents/Reproduce/CATIA/安装包";
     name = "catia-v5r20-media";
+    sha256 = "sha256:12zidmi5sjgpz0055qd9c7wsqwwp3wgqzf37pwcp3k4yfmjlggv4";
   };
   crackSrc = builtins.path {
     path = "/home/<yourusername>/Documents/Reproduce/CATIA/破解文件";
     name = "catia-v5r20-crack";
+    sha256 = "sha256:1q0jf61n93sppvh2aim5j27a80mqvcarpd9k2w8m99y0hkp95j2g";
   };
   dataPcfg = /home/<yourusername>/Documents/Reproduce/CATIA/PCFG.list;
   dataCafPost = /home/<yourusername>/Documents/Reproduce/CATIA/CAFPost.list;
@@ -204,10 +207,10 @@ BAT
       mkdir -p "$WINEPREFIX/drive_c/Program Files/Dassault Systemes"
       ln -sfn '${catiaTree}' "$WINEPREFIX/drive_c/Program Files/Dassault Systemes/B20"
 
-      # (2) 每次都校正运行参数，使已有前缀也跟随 Nix 配置更新。
-      #     Graphics=x11 强制使用 XWayland，避开 Wine Wayland 驱动下的 CATIA 黑屏。
-      #     LogPixels 是 winecfg 的 DPI 设置；96 × ${catiaScale} = ${toString catiaDpi} DPI。
-      #     Wine 偶发无关的 winedbg 异常会让 reg 返回非 0，因此最多重试三次。
+      # (2) 运行参数（图形驱动 / DPI）：只在值变化时写注册表。
+      #     正常情况只需读一个标记文件，不再每次 switch/启动都起两个 wine 进程。
+      #     Graphics=x11 强制 XWayland，避开 Wine Wayland 驱动下的 CATIA 黑屏；
+      #     LogPixels 是 winecfg 的 DPI；96 × ${catiaScale} = ${toString catiaDpi}。
       ensure_wine_reg() {
         description="$1"
         shift
@@ -222,10 +225,15 @@ BAT
         return 0
       }
 
-      ensure_wine_reg "图形驱动：X11（XWayland）" \
-        'HKCU\Software\Wine\Drivers' /v Graphics /t REG_SZ /d x11
-      ensure_wine_reg "界面缩放：${catiaScale} 倍（${toString catiaDpi} DPI）" \
-        'HKCU\Control Panel\Desktop' /v LogPixels /t REG_DWORD /d '${toString catiaDpi}'
+      RUNCFG="$WINEPREFIX/.catia-runcfg"
+      RUNCFG_WANT="x11-${toString catiaDpi}"
+      if [ "$(cat "$RUNCFG" 2>/dev/null || true)" != "$RUNCFG_WANT" ]; then
+        ensure_wine_reg "图形驱动：X11（XWayland）" \
+          'HKCU\Software\Wine\Drivers' /v Graphics /t REG_SZ /d x11
+        ensure_wine_reg "界面缩放：${catiaScale} 倍（${toString catiaDpi} DPI）" \
+          'HKCU\Control Panel\Desktop' /v LogPixels /t REG_DWORD /d '${toString catiaDpi}'
+        echo "$RUNCFG_WANT" > "$RUNCFG"
+      fi
 
       if [ "$(cat "$STATE" 2>/dev/null || true)" = "$WANT" ]; then
         log "已安装（$WANT）"
