@@ -58,6 +58,25 @@ let
     dependencies = with py.pkgs; [ numpy typing-extensions ];
   };
 
+  # 12Hz 模型不执行 25Hz 的 ONNX 推理，但 qwen_tts 导入时仍会导入 onnxruntime。
+  # 使用官方 CPU wheel，避免全局 cudaSupport 触发 ONNX Runtime 的 CUDA 源码编译。
+  onnxruntimeWheel = py.pkgs.buildPythonPackage {
+    pname = "onnxruntime";
+    version = "1.30.0";
+    format = "wheel";
+    src = pkgs.fetchurl {
+      name = "onnxruntime-1.30.0-cp313-cp313-manylinux_2_28_x86_64.whl";
+      url = "https://files.pythonhosted.org/packages/f1/a1/ede48ab5dc54907a2999362777f541e132639fb06628ded1932058aa8a36/onnxruntime-1.30.0-cp313-cp313-manylinux_2_28_x86_64.whl";
+      hash = "sha256-hvlAr8gB6paBpNqK+E++leHZ6n2AkDlSzBv61U+q048=";
+    };
+    nativeBuildInputs = [ pkgs.autoPatchelfHook ];
+    buildInputs = [ pkgs.stdenv.cc.cc.lib ];
+    dependencies = with py.pkgs; [ flatbuffers numpy packaging protobuf ];
+    doCheck = false;
+    pythonImportsCheck = [ ];
+    dontCheckRuntimeDeps = true;
+  };
+
   # qwen-tts 源码 (pin rev + hash)
   qwenTtsSrc = pkgs.fetchFromGitHub {
     owner = "QwenLM";
@@ -75,7 +94,7 @@ let
     ps.einops
     ps.librosa
     ps.soundfile
-    ps.onnxruntime
+    onnxruntimeWheel
     ps.numpy
     ps.tqdm
   ]);
