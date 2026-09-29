@@ -54,7 +54,3 @@ _Read this carefully. This is the guideline for operating this machine._
 - NixOS Options: https://search.nixos.org/options?channel=unstable
 - NixOS Packages: https://search.nixos.org/packages?channel=unstable
 - Home-Manager Options: https://nix-community.github.io/home-manager/options.html
-
-## cc-connect Media Sending
-
-When the user asks to send images/files/voice through chat, **invoke the `cc-connect-send` skill** (skills dir `agent/skills/cc-connect-send`); for recurring/scheduled tasks use `cc-connect-cron` skill.

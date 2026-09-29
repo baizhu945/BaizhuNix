@@ -32,6 +32,20 @@ let
       GOPROXY = "https://goproxy.cn,direct";
     });
   };
+
+  # 只让 cc-connect 启动的 Pi 发现聊天专用技能；本机的 pi 命令不受影响。
+  piForCcConnect = pkgs.writeShellScriptBin "pi" ''
+    export PATH="${lib.makeBinPath config.programs.pi-coding-agent.extraPackages}:$PATH"
+    exec ${config.programs.pi-coding-agent.package}/bin/pi \
+      --skill ${./skills/cc-connect-send} \
+      --skill ${./skills/cc-connect-cron} \
+      "$@"
+  '';
+
+  ccConnectStart = pkgs.writeShellScript "cc-connect-start" ''
+    export PATH="${piForCcConnect}/bin:$PATH"
+    exec ${cc-connect}/bin/cc-connect
+  '';
 in
 {
   home.packages = [
@@ -44,8 +58,7 @@ in
       After = [ "network-online.target" ];
     };
     Service = {
-      ExecStart =
-        "${cc-connect}/bin/cc-connect";
+      ExecStart = "${ccConnectStart}";
       Restart = "always";
       RestartSec = 5;
     };
