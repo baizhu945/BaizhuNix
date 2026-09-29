@@ -159,6 +159,15 @@ in
     cudaSupport = true;
   };
   nix.settings = {
+    # Lix 从 nix.conf 读取 nix-path；仅设置 NIX_PATH 不会加入用户的 channels。
+    # Home Manager 的独立模式需要在此显式注册用户已安装的 channel。
+    # 显式配置时保留 NixOS 默认的 nixpkgs、nixos-config 和 root channels。
+    nix-path = [
+      "nixpkgs=/nix/var/nix/profiles/per-user/root/channels/nixos"
+      "nixos-config=/etc/nixos/configuration.nix"
+      "/nix/var/nix/profiles/per-user/root/channels"
+      "home-manager=/home/<yourusername>/.nix-defexpr/channels/home-manager"
+    ];
     auto-optimise-store = true;
     experimental-features = [ "nix-command" "flakes" ];
     substituters = [
