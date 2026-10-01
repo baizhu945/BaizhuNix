@@ -16,16 +16,14 @@ _Read this carefully. This is the guideline for operating this machine._
 
 - **OS**: NixOS 26.11pre (Zokor), kernel `linuxPackages_zen`
 - **Host**: nixos · user <yourusername> (uid=1000, shell=zsh, groups: wheel, disk, networkmanager, libvirtd, kvm, docker, input, ydotool)
-- **Locale**: zh_CN.UTF-8 (also en_US, ja_JP) · TZ: Asia/Shanghai
 - **Desktop**: Niri 26.04 (Wayland) + KDE Plasma 6, SDDM (Wayland + kwin_wayland, Arona theme)
-- **Input Method**: Fcitx5 + Mozc
 - **Nix**: Lix 2.95.2
 
 ## Configuration Entry Points
 
-### System (`/etc/nixos/`) — managed via `imports = [...]`
+- System (`/etc/nixos/`) — managed via `imports = [...]`
 
-### Home-Manager (`~/.config/home-manager/`) — user-level
+- Home-Manager (`~/.config/home-manager/`) — user-level
 
 ## NVIDIA GPU
 
@@ -35,7 +33,7 @@ _Read this carefully. This is the guideline for operating this machine._
 
 ## Declarative Configuration Guidelines
 
-1. One `.nix` file (or dir) per module, composed via `imports = [...]`; 2-space indent; comments may be Chinese
+1. One `.nix` file (or dir) per module, composed via `imports = [...]`; 2-space indent
 2. `/etc/nixos/` = system-level, `~/.config/home-manager/` = user-level; `configuration.nix` / `home.nix` are the main entries
 3. Use `let` bindings for reusable values: `stablePkgs`, `bilibiliPkgs`, `fenix` (see Channels above); `_module.args.stablePkgs` injects across modules
 4. Modules may live in subdirs with aux scripts (e.g. `qemu-kvm/`, `rm-protection/`, `theme/`)
@@ -45,7 +43,6 @@ _Read this carefully. This is the guideline for operating this machine._
 1. **No non-Nix package managers** — no `apt`, `pip install`, `npm install -g`, `cargo install`; use `nix-shell -p` / `conda-shell` for ad-hoc tools (conda envs: `~/.conda/envs/{latexocr,tts}`)
 2. **Never modify `/home/<yourusername>/Documents/BaizhuNix`** — read-only GitHub repo backup
 3. **Prefer declarative config** — check if home-manager `home.file` can manage a file under `~/.config/` before editing it directly
-4. **Reproducibility** — all `fetchTarball`/`fetchFromGitHub`/`fetchurl` must pin a fixed hash; git refs must use `rev` not branches; fill hash by empty-first then confirm
 5. **Use `remove-without-permission` instead of `rm`** — the pre-installed rm wrapper (functionally identical)
 6. **No flake** - only use traditional nix configs
 

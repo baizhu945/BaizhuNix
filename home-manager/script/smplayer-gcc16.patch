@@ -1,0 +1,11 @@
+diff --git a/webserver/mongoose.c b/webserver/mongoose.c
+--- a/webserver/mongoose.c
++++ b/webserver/mongoose.c
+@@ -3844,6 +3844,7 @@ time_t mg_socket_if_poll(struct mg_iface *iface, int timeout_ms) {
+   num_ev = select((int) max_fd + 1, &read_set, &write_set, &err_set, &tv);
+   now = mg_time();
++  (void) num_fds; /* Used only by disabled debug logging below. */
+ #if 0
+   DBG(("select @ %ld num_ev=%d of %d, timeout=%d", (long) now, num_ev, num_fds,
+        timeout_ms));
+ #endif

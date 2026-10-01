@@ -236,8 +236,8 @@ EOF
   };
 
   # Allow installation of unfree corefonts package
-  nixpkgs.config.allowUnfreePredicate = pkg:
-    builtins.elem (lib.getName pkg) [ "corefonts" ];
+  # nixpkgs.config.allowUnfreePredicate = pkg:
+    # builtins.elem (lib.getName pkg) [ "corefonts" ];
 
   fonts.packages = with pkgs; [
     lxgw-wenkai
@@ -246,7 +246,7 @@ EOF
     lxgw-wenkai-tc
     lxgw-wenkai-screen
 
-    corefonts
+    # corefonts
     vista-fonts
     vista-fonts-chs
     vista-fonts-cht

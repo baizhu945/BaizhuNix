@@ -28,6 +28,7 @@ let
 in
 {
   imports = [
+    ./compact.nix
     ./acm.nix   # ACM-equivalent display colour management (see /etc/nixos/acm/)
     ./tts/tts-qwen.nix
     ./ghostty/ghostty.nix
@@ -70,7 +71,7 @@ in
 
   news.entries = lib.mkForce [];
 
-  nixpkgs.config.cudaSupport = true;
+  # CUDA / 预编译 ML 依赖策略集中在 compact.nix。
 
   programs.onlyoffice.enable = true;
 

@@ -4,10 +4,10 @@ let
   # The official Linux package currently uses a `latest` URL.  Keep the
   # extracted package version and fixed-output hash together so the result is
   # reproducible even if that URL is replaced upstream.
-  version = "26.818.61809";
+  version = "26.928.31416";
   src = pkgs.fetchurl {
     url = "https://persistent.oaistatic.com/codex-app-prod/linux/deb/latest/chatgpt_amd64.deb";
-    hash = "sha256-0nqcApGc/khNzF80WEueqf0NemXGncyHK1vc+g77WYM=";
+    hash = "sha256-xGNyfx7V3O14M4yOKmXYib0VMnb/Nz/XdpjMua8y0YE=";
   };
 
   chatgpt-desktop = pkgs.stdenv.mkDerivation {
