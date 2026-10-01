@@ -189,7 +189,7 @@ in
         find "$out/packages/app-cli/tests/support" -maxdepth 1 -type f -name 'photo*' -delete
       '';
     };
-    missingHashes = ./joplin-missing-hashes.json;
+    missingHashes = ./script/joplin-missing-hashes.json;
     offlineCache = pkgs.yarn-berry_4.fetchYarnBerryDeps {
       inherit (finalAttrs) src missingHashes;
       hash = "sha256-W5hXh1i1rTe4OkhTvHPpDQgPSvRqTZ/GsJnHXE2D/2Y=";
