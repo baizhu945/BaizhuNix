@@ -28,7 +28,6 @@ let
 in
 {
   imports = [
-    ./compact.nix
     ./acm.nix   # ACM-equivalent display colour management (see /etc/nixos/acm/)
     ./tts/tts-qwen.nix
     ./ghostty/ghostty.nix
@@ -69,6 +68,8 @@ in
 
   home.stateVersion = "26.11"; # Please read the comment before changing.
 
+  nixpkgs.config.cudaSupport = true;
+  
   news.entries = lib.mkForce [];
 
   # CUDA / 预编译 ML 依赖策略集中在 compact.nix。
@@ -136,7 +137,6 @@ in
     pkgs.google-chrome
     pkgs.proton-vpn
     stablePkgs.haruna
-    pkgs.smplayer
     pkgs.nvtopPackages.full
     bilibiliPkgs.bilibili
     pkgs.spotify

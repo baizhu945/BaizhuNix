@@ -1,7 +1,57 @@
 { config, pkgs, lib, ... }:
 
 let
-  inherit (pkgs.python3Packages)
+  # Reuse the official CUDA 13 wheels already used by Qwen TTS. Keeping this
+  # application on Python 3.13 also pins the ABI of those precompiled wheels.
+  py = pkgs.python313;
+  wheels = import ./tts/wheels.nix { inherit pkgs py; };
+  inherit (wheels) torch tokenizersWheel safetensorsWheel hubWheel;
+
+  torchvision = wheels.mkWheel {
+    pname = "torchvision";
+    version = "0.27.0"; # Matches torch 2.12.0 from wheels.nix.
+    name = "torchvision-0.27.0+cu130-cp313-cp313-manylinux_2_28_x86_64.whl";
+    url = "https://download.pytorch.org/whl/cu130/torchvision-0.27.0%2Bcu130-cp313-cp313-manylinux_2_28_x86_64.whl";
+    sha256 = "afa4128f37066b83af9d426841a53147dd3c208efea893c93dc3eb6fa2af2287";
+    dependencies = [ torch ] ++ (with py.pkgs; [ numpy pillow ]);
+  };
+
+  # pix2tex only needs the tokenizer API. Use the same precompiled dependency
+  # versions as TTS rather than pulling another PyTorch stack through nixpkgs.
+  tokenizers = tokenizersWheel;
+  transformers = wheels.mkWheel {
+    pname = "transformers";
+    version = "4.57.3";
+    name = "transformers-4.57.3-py3-none-any.whl";
+    url = "https://files.pythonhosted.org/packages/6a/6b/2f416568b3c4c91c96e5a365d164f8a4a4a88030aa8ab4644181fdadce97/transformers-4.57.3-py3-none-any.whl";
+    sha256 = "1x03f0gq8czk2iw8kqpnfwsish8knfn3cgb0j40qicai90x3azf7";
+    dependencies = with py.pkgs; [
+      filelock hubWheel jinja2 numpy packaging pyyaml regex requests
+      safetensorsWheel tokenizersWheel tqdm
+    ];
+  };
+
+  # Image preprocessing does not use OpenCV CUDA. The abi3 wheel avoids
+  # rebuilding all of OpenCV with CUDA when the Python interpreter changes.
+  opencv4 = py.pkgs.buildPythonPackage {
+    pname = "opencv-python-headless";
+    version = "4.13.0.92";
+    format = "wheel";
+    src = pkgs.fetchurl {
+      name = "opencv_python_headless-4.13.0.92-cp37-abi3-manylinux_2_28_x86_64.whl";
+      url = "https://files.pythonhosted.org/packages/4b/33/b5db29a6c00eb8f50708110d8d453747ca125c8b805bc437b289dbdcc057/opencv_python_headless-4.13.0.92-cp37-abi3-manylinux_2_28_x86_64.whl";
+      sha256 = "0bd48544f77c68b2941392fcdf9bcd2b9cdf00e98cb8c29b2455d194763cf99e";
+    };
+    nativeBuildInputs = [ pkgs.autoPatchelfHook ];
+    buildInputs = [ pkgs.stdenv.cc.cc.lib pkgs.zlib ];
+    dependencies = [ py.pkgs.numpy ];
+    doCheck = false;
+    pythonImportsCheck = [ "cv2" ];
+  };
+
+  runtimeLibs = lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ];
+
+  inherit (py.pkgs)
     buildPythonPackage
     buildPythonApplication
     fetchPypi
@@ -18,7 +68,7 @@ let
       hash = "sha256-Qbse29SXobU7Hw/IC+/VQ0mdxwS05UNt32xXKKLQBUY=";
     };
 
-    propagatedBuildInputs = with pkgs.python3Packages; [
+    propagatedBuildInputs = with py.pkgs; [
       torch
     ];
 
@@ -43,7 +93,7 @@ let
       hash = "sha256-sI+WMHUmNWxTlpfDq1Q0yC1yZOR45qJ9LRAPKumuaVk=";
     };
 
-    propagatedBuildInputs = with pkgs.python3Packages; [
+    propagatedBuildInputs = with py.pkgs; [
       torch
       torchvision
     ];
@@ -67,11 +117,11 @@ let
       hash = "sha256-loAhpd9AG0G2ymSaCgrOrdVvIyv62YgOoLGeFXHwsWg=";
     };
 
-    nativeBuildInputs = with pkgs.python3Packages; [
+    nativeBuildInputs = with py.pkgs; [
       setuptools
     ];
 
-    propagatedBuildInputs = with pkgs.python3Packages; [
+    propagatedBuildInputs = with py.pkgs; [
       torch
       einops
     ] ++ [ entmax-1_3 ];
@@ -97,7 +147,7 @@ let
       hash = "sha256-re9uQ05Q4iwu4Se3o+cfLjX6CIvPVEMeGJcLYtl9AAU=";
     };
 
-    propagatedBuildInputs = with pkgs.python3Packages; [
+    propagatedBuildInputs = with py.pkgs; [
       numpy
       opencv4
       simsimd
@@ -126,7 +176,7 @@ let
       hash = "sha256-L2OSV6EeaBBx9PfRD2pth0rnBbzOUnRodM2NfjF6Ftc=";
     };
 
-    propagatedBuildInputs = with pkgs.python3Packages; [
+    propagatedBuildInputs = with py.pkgs; [
       numpy
       opencv4
       pillow
@@ -182,7 +232,7 @@ let
       hash = "sha256-RPJNJj0jUWSpEXMWejDUSfQ2Dj8KWSOc5rhDxQpBxgE=";
     };
 
-    propagatedBuildInputs = with pkgs.python3Packages; [
+    propagatedBuildInputs = with py.pkgs; [
       sympy
     ] ++ [ antlr4-python3-runtime-4_7_2 ];
 
@@ -207,11 +257,11 @@ let
       hash = "sha256-oCQwlQj8PopM5SQeCVJ2Ym0JjfU+YJQQAT8uw1pLdhI=";
     };
 
-    nativeBuildInputs = with pkgs.python3Packages; [
+    nativeBuildInputs = with py.pkgs; [
       setuptools
     ];
 
-    propagatedBuildInputs = with pkgs.python3Packages; [
+    propagatedBuildInputs = with py.pkgs; [
       tqdm
       munch
       torch
@@ -252,12 +302,17 @@ let
     };
 
     postInstall = let
-      sitePackages = "${pkgs.python3Packages.python.libPrefix}/site-packages";
+      sitePackages = "${py.libPrefix}/site-packages";
     in ''
       dest="$out/lib/${sitePackages}/pix2tex/model/checkpoints"
       mkdir -p "$dest"
       cp ${weights} "$dest/weights.pth"
       cp ${resizer} "$dest/image_resizer.pth"
+
+      # Upstream's no-argument Python API defaults to CPU even when CUDA is
+      # available. Prefer CUDA there too; explicit --no-cuda remains supported.
+      substituteInPlace "$out/lib/${sitePackages}/pix2tex/cli.py" \
+        --replace-fail "'no_cuda': True" "'no_cuda': False"
 
       # Patch download_checkpoints to skip if weights already exist
       python3 -c "
@@ -299,6 +354,7 @@ with open(path, 'w') as f:
       #!/usr/bin/env bash
       export QT_QPA_PLATFORM="wayland;xcb"
       export NO_ALBUMENTATIONS_UPDATE="1"
+      export LD_LIBRARY_PATH="/run/opengl-driver/lib:${runtimeLibs}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
       case "''${XDG_CURRENT_DESKTOP:-}" in
         *KDE*|*Plasma*|*plasma*)
@@ -321,7 +377,6 @@ with open(path, 'w') as f:
   };
 
   latex-ocr-cli = pkgs.writeShellScriptBin "latex-ocr" ''
-    export LD_LIBRARY_PATH=/run/current-system/sw/share/nix-ld/lib
     exec ${pix2tex}/bin/latexocr "$@"
   '';
 
