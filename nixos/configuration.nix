@@ -23,6 +23,16 @@ let
   ) { };
 
   targetDpi = 144;
+
+  # Keep Assetto Corsa's 32-bit launchers from loading the full host font set.
+  acFontConfig = pkgs.writeText "assetto-corsa-fontconfig.conf" ''
+    <?xml version="1.0"?>
+    <!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
+    <fontconfig>
+      <dir>/home/<yourusername>/.local/share/Steam/steamapps/compatdata/244210/pfx/drive_c/windows/Fonts</dir>
+      <cachedir prefix="xdg">fontconfig/assetto-corsa</cachedir>
+    </fontconfig>
+  '';
 in
 {
   imports =
@@ -235,10 +245,6 @@ EOF
     };
   };
 
-  # Allow installation of unfree corefonts package
-  # nixpkgs.config.allowUnfreePredicate = pkg:
-    # builtins.elem (lib.getName pkg) [ "corefonts" ];
-
   fonts.packages = with pkgs; [
     lxgw-wenkai
     lxgw-neoxihei
@@ -246,7 +252,6 @@ EOF
     lxgw-wenkai-tc
     lxgw-wenkai-screen
 
-    # corefonts
     vista-fonts
     vista-fonts-chs
     vista-fonts-cht
@@ -345,6 +350,40 @@ EOF
     capabilities = "cap_sys_ptrace,cap_dac_read_search+ep";  # 所需能力
     owner = "root";
     group = "root";
+  };
+
+  programs.steam = {
+    enable = true;
+    protontricks.enable = true;
+    # Assetto Corsa / Content Manager: pin a runner compatible with native .NET.
+    extraCompatPackages = [
+      (pkgs.proton-ge-bin.overrideAttrs (finalAttrs: old: {
+        version = "GE-Proton9-20";
+        toolName = "GE-Proton9-20";
+        steamDisplayName = "GE-Proton9-20";
+        src = pkgs.fetchzip {
+          url = "https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton9-20/GE-Proton9-20.tar.gz";
+          hash = "sha256-1twCv81KO1fcRcIb4H7VtAjtcKrX+DymsYdf885eOWo=";
+        };
+        # Set Fontconfig before Proton initializes the game's Wine prefix.
+        postInstall = (old.postInstall or "") + ''
+          ${pkgs.coreutils}/bin/unlink "$steamcompattool/proton"
+          cp ${pkgs.writeScript "proton-ac-fontconfig" ''
+            #!${pkgs.runtimeShell}
+            acCompatPath="''${STEAM_COMPAT_DATA_PATH:-}"
+            acCompatPath="''${acCompatPath%/}"
+
+            if [[ "''${SteamAppId:-}" == 244210 ||
+                  "''${SteamGameId:-}" == 244210 ||
+                  "$acCompatPath" == */compatdata/244210 ]]; then
+              export FONTCONFIG_FILE=${acFontConfig}
+            fi
+
+            exec "${finalAttrs.src}/proton" "$@"
+          ''} "$steamcompattool/proton"
+        '';
+      }))
+    ];
   };
 
   programs.obs-studio = {

@@ -138,7 +138,8 @@ in
     pkgs.proton-vpn
     stablePkgs.haruna
     pkgs.nvtopPackages.full
-    bilibiliPkgs.bilibili
+    # bilibiliPkgs.bilibili
+    pkgs.bilibili
     pkgs.spotify
     pkgs.matugen
     pkgs.dgop
