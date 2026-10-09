@@ -45,6 +45,7 @@ in
     ./bt11-control/bt11-control.nix
     ./catia.nix   # CATIA V5 R20：cabextract 推导安装树 + Wine 前缀（声明式）
     ./matlab.nix  # MATLAB R2024b：官方安装器 + 破解（Wine，113 个产品全量）
+    ./craft.nix
   ];
 
   # ACM-equivalent automatic colour management: the session daemon computes a

@@ -482,6 +482,8 @@ EOF
     nvidia.acceptLicense = true;
   };
 
+  programs.ghidra.enable = true;
+
   programs.appimage = {
     enable = true;
     binfmt = true;
@@ -512,6 +514,9 @@ EOF
     libraries = with pkgs; [
       # Needed by latexocr
       libxkbfile krb5 brotli libxcb-cursor stdenv.cc.cc zlib fuse3 icu nss openssl curl expat wayland libglvnd libxcb-wm      libxcb-image     libxcb-keysyms  libxcb-render-util libxcb-cursor   libx11 libxcursor libxext libxi libxrender libxtst libxkbcommon fontconfig freetype dbus glib libpng libjpeg
+
+      # PhotoCraft (winit dlopens libwayland-client, libxkbcommon, libvulkan, libEGL)
+      mesa egl-wayland libgbm
 
       #Needed by Kazumi
       harfbuzz webkitgtk_4_1 libsoup_3 libepoxy libayatana-indicator libXv 
