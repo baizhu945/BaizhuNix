@@ -639,7 +639,7 @@ EOF
     pkgs.alsa-utils
     pkgs.quickshell
     
-    pkgs.fastfetch pkgs.foodfetch pkgs.gitfetch pkgs.cpufetch pkgs.gpufetch pkgs.ramfetch pkgs.onefetch
+    pkgs.fastfetch pkgs.foodfetch pkgs.gitfetch pkgs.cpufetch pkgs.ramfetch pkgs.onefetch
     
     pkgs.exfatprogs pkgs.ntfsprogs-plus pkgs.ntfs3g
     pkgs.nodejs

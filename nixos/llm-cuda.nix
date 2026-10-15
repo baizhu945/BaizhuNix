@@ -44,7 +44,7 @@ EOF
     cudaPackages.cudatoolkit
     cudaPackages.cuda_nvcc
     cudaPackages.nvcomp
-    cudaPackages.nvidia_fs
+    # cudaPackages.nvidia_fs
     cudaPackages.cuda_opencl
     cudaPackages.cuda_cudart
   ];

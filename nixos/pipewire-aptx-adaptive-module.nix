@@ -29,13 +29,16 @@ let
     src = pkgs.fetchFromGitHub {
       owner = "<yourusername>";
       repo = "pipewire";
+      # 2026-10-13: adds APTX_ADAPTIVE_TS_CONSTANT (constant RTP timestamp
+      # for SOURCE_TYPE_2 sinks; off by default, enabled per-experiment
+      # through the user-service drop-in).
       # 2026-09-11: adds APTX_ADAPTIVE_ADVERTISE_R2_2 (report the R2.2
       # capability to the peer while the encoder keeps its ordinary R2 path).
       # The option is off by default, so the deployed stream is unchanged;
       # it exists because the byte-identical Qualcomm configuration had to be
       # testable.  See research/aptx-adaptive-qemu/HANDOFF.md section 21.
-      rev = "8976dcf7fa81ed53d01ddeb5714fb2b3477950cf";
-      hash = "sha256-admPs/eJN2qsb+0GZEvTD8n+veL3WTtllFlrpdy6C18=";
+      rev = "eefe57e41acc0f2130533e3138dc29dcb62a862b";
+      hash = "sha256-1/6wXuiayzCPaOxYCJJRgYtT2M1xghivN8niuus0pEA=";
     };
     outputs = [ "out" "dev" "doc" "man" "jack" ];
     patches = [];
