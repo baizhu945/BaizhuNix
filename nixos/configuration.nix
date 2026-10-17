@@ -162,7 +162,7 @@ in
     PATH = "/usr/bin:$PATH"; # Fixed Kazumi in NixOS BUG (Caused by NixOS)
   };
 
-  nix.package = pkgs.lixPackageSets.latest.lix;
+  nix.package = pkgs.lixPackageSets.lix_2_96.lix;
 
 
   nixpkgs.config = {
