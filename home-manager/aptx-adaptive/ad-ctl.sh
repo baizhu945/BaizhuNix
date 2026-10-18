@@ -69,9 +69,14 @@ readonly ADDRESS_STATE="$HOME/.local/state/ad-ctl/headset-address"
 # The plugin reads this on every codec configuration, so the rate can change
 # without restarting the monitor that caches the configured preference.
 readonly RATE_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/aptx-adaptive-rate"
+# bluetoothd runs without access to $XDG_RUNTIME_DIR, so the AVDTP RECONFIGURE
+# handshake goes through files in a directory the daemon owns: the request is
+# world-writable, the status is world-readable and echoes the request nonce.
+readonly RECONF_REQUEST=/run/aptx-adaptive/request
+readonly RECONF_STATUS=/run/aptx-adaptive/status
 readonly LOCK_FILE="$HOME/.local/state/ad-ctl/lock"
 readonly PROFILE_SETTLE=4
-readonly AD_WAIT=15
+readonly AD_WAIT=10
 
 log() {
   [ -n "${AD_CTL_VERBOSE:-}" ] || return 0
@@ -80,13 +85,15 @@ log() {
 
 wait_for_rate() {
   local want=$1 seconds=$2 got=''
-  for _ in $(seq 1 "$seconds"); do
+  # Poll fast: the renegotiation takes about a second, so a 1 s granularity
+  # would hide most of the real latency.
+  for _ in $(seq 1 $((seconds * 5))); do
     got=$(link_rate 2>/dev/null || true)
     if [ -n "$got" ] && { [ -z "$want" ] || [ "$got" = "$want" ]; }; then
       printf '%s' "$got"
       return 0
     fi
-    sleep 1
+    sleep 0.2
   done
   printf '%s' "$got"
   return 1
@@ -152,6 +159,19 @@ for obj in json.load(sys.stdin):
     if codec:
         lines.append("%s/%s" % (props.get("api.bluez5.profile", "?"), codec))
 print(", ".join(lines) if lines else "no bluez node")
+'
+}
+
+# Codec reported by whatever bluez node exists right now ('' when none).
+bluez_state_codec() {
+  pw-dump 2>/dev/null | python3 -c '
+import json, sys
+for obj in json.load(sys.stdin):
+    props = (obj.get("info") or {}).get("props") or {}
+    codec = props.get("api.bluez5.codec")
+    if codec:
+        print(codec)
+        break
 '
 }
 
@@ -272,27 +292,96 @@ other_a2dp_profile_index() {
   profile_index_by_name "$1" a2dp-sink-sbc a2dp-sink-sbc_xq a2dp-sink-aac
 }
 
+# The A2DP transport object for the headset, as exported by BlueZ.
+bluez_transport_path() {
+  busctl --system tree org.bluez --no-pager 2>/dev/null |
+    grep -oE '/org/bluez/hci[0-9]+/dev_[0-9A-F_]+/sep[0-9]+/fd[0-9]+' | head -1
+}
+
+# Ask bluetoothd to re-select the codec configuration and send it as an AVDTP
+# RECONFIGURE on the open stream (needs this account's bluez patch).  The daemon
+# polls $RECONF_REQUEST, so writing a fresh nonce there is the trigger; the new
+# rate itself comes from $RATE_FILE, which the encoder reads on every
+# configuration.  The stream is never closed, so the headset neither reconnects
+# nor announces another codec.  bluetoothd echoes the nonce in $RECONF_STATUS
+# together with the outcome.
+bluez_reconfigure() {
+  local nonce deadline line
+  nonce=$(date +%s%N)
+  log "bluez reconfigure: request $nonce"
+  printf '%s\n' "$nonce" >"$RECONF_REQUEST" 2>/dev/null || {
+    log 'cannot write the reconfigure request (patched bluetoothd not running?)'
+    return 1
+  }
+  deadline=$(($(date +%s) + 4))
+  while [ "$(date +%s)" -lt "$deadline" ]; do
+    line=$(head -c 160 "$RECONF_STATUS" 2>/dev/null | tr -d '\r\n')
+    case $line in
+    "$nonce ok"*)
+      log "bluez reconfigure: ${line#"$nonce "}"
+      return 0
+      ;;
+    "$nonce error"*)
+      log "bluez reconfigure: ${line#"$nonce "}"
+      return 1
+      ;;
+    esac
+    sleep 0.1
+  done
+  log 'bluez reconfigure: no answer (is the patched bluetoothd running?)'
+  return 1
+}
+
 # Rebuild the A2DP transport on the existing connection without leaving A2DP.
 # Cycling through "off" does not renegotiate the codec - BlueZ keeps the running
 # configuration - so the profile is bounced through another codec instead, which
 # produces a fresh AVDTP SetConfiguration (measured: 0 HCI disconnect events).
+# Force a fresh AVDTP configuration and make sure the link really comes back on
+# aptX Adaptive.  The bounce goes through another codec because BlueZ only
+# renegotiates when the profile changes, and it returns through the generic
+# a2dp-sink profile, which is what picks Adaptive.
 force_reconfigure() {
-  local dev a2dp other
+  local dev bounce target waited codec
   dev=$(bluez_device_id)
   [ -n "$dev" ] || return 1
-  a2dp=$(a2dp_profile_index "$dev" 2>/dev/null || true)
-  other=$(other_a2dp_profile_index "$dev" 2>/dev/null || true)
-  [ -n "$a2dp" ] && [ -n "$other" ] && [ "$a2dp" != "$other" ] || return 1
+  bounce=$(other_a2dp_profile_index "$dev" 2>/dev/null || true)
+  # The generic a2dp-sink entry is the one that negotiates aptX Adaptive; asking
+  # for a2dp-sink-aptx lands on plain aptX (measured by a user watching the
+  # headset announce "aptX" instead of "aptX Adaptive").
+  target=$(profile_index_by_name "$dev" a2dp-sink 2>/dev/null || true)
+  [ -n "$bounce" ] && [ -n "$target" ] && [ "$bounce" != "$target" ] || return 1
 
-  log "reconfigure: dev=$dev bounce=$other back=$a2dp"
-  wpctl set-profile "$dev" "$other" >/dev/null 2>&1 || { log 'bounce step failed'; return 1; }
-  sleep "$PROFILE_SETTLE"
-  wpctl set-profile "$dev" "$a2dp" >/dev/null 2>&1 || { log 'return step failed'; return 1; }
-  log 'reconfigure done'
+  log "reconfigure: dev=$dev via=$bounce back=$target"
+  wpctl set-profile "$dev" "$bounce" >/dev/null 2>&1 || { log 'bounce step failed'; return 1; }
+
+  # Wait until the intermediate codec is really running, not just until the
+  # Adaptive transport is gone: switching back too early makes WirePlumber
+  # coalesce the two profile requests and the round trip silently does nothing.
+  for waited in $(seq 1 40); do
+    codec=$(bluez_state_codec)
+    [ -n "$codec" ] && [ "$codec" != 'aptx_adaptive' ] && break
+    sleep 0.2
+  done
+
+  wpctl set-profile "$dev" "$target" >/dev/null 2>&1 || { log 'return step failed'; return 1; }
+
+  # And wait for the Adaptive node to come back.  If nothing appears after 3 s,
+  # repeat the request once: a coalesced profile change is simply ignored.
+  for waited in $(seq 1 50); do
+    if [ "$(ad_codec)" = 'aptx_adaptive' ]; then
+      log "reconfigure done after $((waited * 200))ms"
+      return 0
+    fi
+    if [ "$waited" = 15 ]; then
+      log 'Adaptive node still missing, repeating the profile request'
+      wpctl set-profile "$dev" "$target" >/dev/null 2>&1 || true
+    fi
+    sleep 0.2
+  done
+  log 'reconfigure did not bring Adaptive back'
+  return 1
 }
 
-# Recovery only: bring A2DP back when the headset sits on the hands-free
-# profile or has no profile at all.
 cycle_a2dp_profile() {
   local dev index
   dev=$(bluez_device_id)
@@ -449,12 +538,37 @@ apply_rate() {
 
   if [ -n "$want" ] && [ "${got:-}" != "$want" ]; then
     ensure_ad_link || return 1
-    force_reconfigure || log 'reconfigure failed'
-    got=$(wait_for_rate "$want" "$AD_WAIT" || true)
+    # Preferred path: bluetoothd renegotiates the running stream on the same
+    # ACL (~1 s, no profile switch, no codec announcement).  The bluez5 sink
+    # node follows the replaced transport and starts itself, so audio keeps
+    # playing.  The profile bounce below is only the fallback for a daemon or a
+    # PipeWire without these patches.
+    if bluez_reconfigure; then
+      got=$(wait_for_rate "$want" 10 || true)
+    fi
+    if [ "${got:-}" != "$want" ]; then
+      # No patched bluetoothd (or the sink refused): fall back to the profile
+      # bounce, which does work but is audible on the headset.
+      log 'falling back to the profile bounce'
+      force_reconfigure || log 'reconfigure failed'
+      got=$(wait_for_rate "$want" "$AD_WAIT" || true)
+    fi
     if [ "${got:-}" != "$want" ]; then
       log "saw ${got:-nothing} after the first reconfigure, retrying once"
       force_reconfigure || true
       got=$(wait_for_rate "$want" "$AD_WAIT" || true)
+    fi
+    # Never leave the headset on the hands-free profile: if the rate change
+    # failed, put the link back on Adaptive (at whatever rate) and say so.
+    if [ -z "${got:-}" ] && [ "$(bluez_state_codec 2>/dev/null)" != 'aptx_adaptive' ]; then
+      printf 'ad-ctl: 采样率未能切换（bluez 现状：%s），正在恢复 Adaptive 链路\n' \
+        "$(bluez_state)" >&2
+      cycle_a2dp_profile || true
+      wait_for_ad 20 || true
+      got=$(link_rate 2>/dev/null || true)
+      if [ -n "${got:-}" ]; then
+        printf 'ad-ctl: 已恢复为 %s kHz Adaptive（仍是原采样率）\n' "$((got / 1000))" >&2
+      fi
     fi
   fi
   elapsed=$(( $(date +%s) - started ))

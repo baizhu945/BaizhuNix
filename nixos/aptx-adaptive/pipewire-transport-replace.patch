@@ -1,0 +1,743 @@
+diff --git a/spa/plugins/bluez5/bluez5-dbus.c b/spa/plugins/bluez5/bluez5-dbus.c
+index ce03cd3..8453bcb 100644
+--- a/spa/plugins/bluez5/bluez5-dbus.c
++++ b/spa/plugins/bluez5/bluez5-dbus.c
+@@ -86,6 +86,8 @@ struct spa_bt_monitor {
+ 	struct spa_handle handle;
+ 	struct spa_device device;
+ 
++	struct spa_list link;
++
+ 	struct spa_log *log;
+ 	struct spa_loop *main_loop;
+ 	struct spa_loop *data_loop;
+@@ -1900,6 +1902,27 @@ static uint32_t adapter_connectable_profiles(struct spa_bt_adapter *adapter)
+ 	return mask;
+ }
+ 
++/* Used to get a unique serial for every object */
++static uint32_t serial_counter;
++
++/*
++ * List of all monitors, so that device and node factories can find the
++ * device or transport by serial.
++ */
++static struct spa_list monitor_list = SPA_LIST_INIT(&monitor_list);
++
++struct spa_bt_device *spa_bt_device_find_by_serial(uint32_t serial)
++{
++	struct spa_bt_monitor *monitor;
++	struct spa_bt_device *d;
++
++	spa_list_for_each(monitor, &monitor_list, link)
++		spa_list_for_each(d, &monitor->device_list, link)
++			if (d->serial == serial)
++				return d;
++	return NULL;
++}
++
+ struct spa_bt_device *spa_bt_device_find(struct spa_bt_monitor *monitor, const char *path)
+ {
+ 	struct spa_bt_device *d;
+@@ -1940,6 +1963,7 @@ static struct spa_bt_device *device_create(struct spa_bt_monitor *monitor, const
+ 		return NULL;
+ 
+ 	d->id = monitor->id++;
++	d->serial = serial_counter++;
+ 	d->monitor = monitor;
+ 	d->path = strdup(path);
+ 	d->battery_path = battery_get_name(d->path);
+@@ -2159,7 +2183,7 @@ static void emit_device_info(struct spa_bt_monitor *monitor,
+ 	items[n_items++] = SPA_DICT_ITEM_INIT(SPA_KEY_API_BLUEZ5_ICON, device->icon);
+ 	items[n_items++] = SPA_DICT_ITEM_INIT(SPA_KEY_API_BLUEZ5_PATH, device->path);
+ 	items[n_items++] = SPA_DICT_ITEM_INIT(SPA_KEY_API_BLUEZ5_ADDRESS, device->address);
+-	snprintf(dev, sizeof(dev), "pointer:%p", device);
++	snprintf(dev, sizeof(dev), "%u", device->serial);
+ 	items[n_items++] = SPA_DICT_ITEM_INIT(SPA_KEY_API_BLUEZ5_DEVICE, dev);
+ 	snprintf(class, sizeof(class), "0x%06x", device->bluetooth_class);
+ 	items[n_items++] = SPA_DICT_ITEM_INIT(SPA_KEY_API_BLUEZ5_CLASS, class);
+@@ -3365,6 +3389,18 @@ static void remote_endpoint_free(struct spa_bt_remote_endpoint *remote_endpoint)
+ 	free(remote_endpoint);
+ }
+ 
++struct spa_bt_transport *spa_bt_transport_find_by_serial(uint32_t serial)
++{
++	struct spa_bt_monitor *monitor;
++	struct spa_bt_transport *t;
++
++	spa_list_for_each(monitor, &monitor_list, link)
++		spa_list_for_each(t, &monitor->transport_list, link)
++			if (t->serial == serial)
++				return t;
++	return NULL;
++}
++
+ struct spa_bt_transport *spa_bt_transport_find(struct spa_bt_monitor *monitor, const char *path)
+ {
+ 	struct spa_bt_transport *t;
+@@ -3395,6 +3431,7 @@ struct spa_bt_transport *spa_bt_transport_create(struct spa_bt_monitor *monitor,
+ 	if (t == NULL)
+ 		return NULL;
+ 
++	t->serial = serial_counter++;
+ 	t->acquire_refcount = 0;
+ 	t->monitor = monitor;
+ 	t->path = path;
+@@ -5435,6 +5472,16 @@ static DBusHandlerResult endpoint_set_configuration(DBusConnection *conn,
+ 
+ 	transport = spa_bt_transport_find(monitor, transport_path);
+ 
++	/* BlueZ destroys and re-creates the MediaTransport1 object at the same
++	 * object path when it renegotiates a stream. Drop the old transport so
++	 * that its acquired/fd/error state does not leak into the new one. */
++	if (transport != NULL) {
++		spa_log_info(monitor->log, "transport %p: replaced at %s",
++				transport, transport_path);
++		spa_bt_transport_free(transport);
++		transport = NULL;
++	}
++
+ 	if (transport == NULL) {
+ 		char *tpath = strdup(transport_path);
+ 
+@@ -7197,6 +7244,8 @@ static int impl_clear(struct spa_handle *handle)
+ 
+ 	monitor = (struct spa_bt_monitor *) handle;
+ 
++	spa_list_remove(&monitor->link);
++
+ 	/*
+ 	 * We don't call BlueZ API unregister methods here, since BlueZ generally does the
+ 	 * unregistration when the DBus connection is closed below.  We'll unregister DBus
+@@ -7868,6 +7917,8 @@ impl_init(const struct spa_handle_factory *factory,
+ 	this->backends[BACKEND_OFONO] = backend_ofono_new(this, this->conn, info, this->quirks, support, n_support);
+ 	this->backends[BACKEND_HSPHFPD] = backend_hsphfpd_new(this, this->conn, info, this->quirks, support, n_support);
+ 
++	spa_list_append(&monitor_list, &this->link);
++
+ 	return 0;
+ 
+ fail:
+diff --git a/spa/plugins/bluez5/bluez5-device.c b/spa/plugins/bluez5/bluez5-device.c
+index 40db73b..995b996 100644
+--- a/spa/plugins/bluez5/bluez5-device.c
++++ b/spa/plugins/bluez5/bluez5-device.c
+@@ -730,7 +730,7 @@ static void emit_node(struct impl *this, struct spa_bt_transport *t,
+ 	else
+ 		in_device_set = this->device_set.source_enabled;
+ 
+-	snprintf(transport, sizeof(transport), "pointer:%p", t);
++	snprintf(transport, sizeof(transport), "%u", t->serial);
+ 	items[0] = SPA_DICT_ITEM_INIT(SPA_KEY_API_BLUEZ5_TRANSPORT, transport);
+ 	items[1] = SPA_DICT_ITEM_INIT(SPA_KEY_API_BLUEZ5_PROFILE, spa_bt_profile_name(t->profile));
+ 	items[2] = SPA_DICT_ITEM_INIT(SPA_KEY_API_BLUEZ5_CODEC, get_codec_name(t, a2dp_duplex));
+@@ -893,6 +893,7 @@ static void dynamic_node_transport_state_changed(void *data,
+ 		if (SPA_FLAG_IS_SET(this->id, DYNAMIC_NODE_ID_FLAG)) {
+ 			SPA_FLAG_CLEAR(this->id, DYNAMIC_NODE_ID_FLAG);
+ 			spa_bt_transport_keepalive(t, false);
++			spa_bt_transport_emit_remove_node(t);
+ 			spa_device_emit_object_info(&impl->hooks, this->id, NULL);
+ 		}
+ 	}
+@@ -1311,6 +1312,9 @@ static int emit_nodes(struct impl *this)
+ {
+ 	struct spa_bt_transport *t;
+ 
++	if (!this->bt_dev)
++		return 0;
++
+ 	switch (this->profile) {
+ 	case DEVICE_PROFILE_BAP:
+ 	case DEVICE_PROFILE_BAP_SINK:
+@@ -1517,6 +1521,8 @@ static void emit_remove_nodes(struct impl *this)
+ 		struct node * node = &this->nodes[i];
+ 		node_offload_set_active(node, false);
+ 		if (node->transport) {
++			if (node->active)
++				spa_bt_transport_emit_remove_node(node->transport);
+ 			spa_hook_remove(&node->transport_listener);
+ 			node->transport = NULL;
+ 		}
+@@ -1860,6 +1866,15 @@ static void device_switch_profile(void *userdata)
+ 	set_profile(this, profile, 0, false);
+ }
+ 
++static void device_destroy(void *userdata)
++{
++	struct impl *this = userdata;
++
++	/* The device is being freed; it must not be dereferenced anymore. */
++	spa_hook_remove(&this->bt_dev_listener);
++	this->bt_dev = NULL;
++}
++
+ static const struct spa_bt_device_events bt_dev_events = {
+ 	SPA_VERSION_BT_DEVICE_EVENTS,
+ 	.connected = device_connected,
+@@ -1868,6 +1883,7 @@ static const struct spa_bt_device_events bt_dev_events = {
+ 	.profiles_changed = profiles_changed,
+ 	.device_set_changed = device_set_changed,
+ 	.switch_profile = device_switch_profile,
++	.destroy = device_destroy,
+ };
+ 
+ static int impl_add_listener(void *object,
+@@ -2935,6 +2951,9 @@ static int impl_enum_params(void *object, int seq,
+ 	spa_return_val_if_fail(this != NULL, -EINVAL);
+ 	spa_return_val_if_fail(num != 0, -EINVAL);
+ 
++	if (!this->bt_dev)
++		return -ENODEV;
++
+ 	result.id = id;
+ 	result.next = start;
+       next:
+@@ -3320,6 +3339,9 @@ static int impl_set_param(void *object,
+ 
+ 	spa_return_val_if_fail(this != NULL, -EINVAL);
+ 
++	if (!this->bt_dev)
++		return -ENODEV;
++
+ 	switch (id) {
+ 	case SPA_PARAM_Profile:
+ 	{
+@@ -3521,6 +3543,7 @@ impl_init(const struct spa_handle_factory *factory,
+ {
+ 	struct impl *this;
+ 	const char *str;
++	uint32_t serial;
+ 	unsigned int i;
+ 
+ 	spa_return_val_if_fail(factory != NULL, -EINVAL);
+@@ -3536,12 +3559,13 @@ impl_init(const struct spa_handle_factory *factory,
+ 
+ 	spa_log_topic_init(this->log, &log_topic);
+ 
+-	if (info && (str = spa_dict_lookup(info, SPA_KEY_API_BLUEZ5_DEVICE)))
+-		sscanf(str, "pointer:%p", &this->bt_dev);
++	if (info && (str = spa_dict_lookup(info, SPA_KEY_API_BLUEZ5_DEVICE)) &&
++	    spa_atou32(str, &serial, 10))
++		this->bt_dev = spa_bt_device_find_by_serial(serial);
+ 
+ 	if (this->bt_dev == NULL) {
+-		spa_log_error(this->log, "a device is needed");
+-		return -EINVAL;
++		spa_log_debug(this->log, "could not find device by serial");
++		return -ESTALE;
+ 	}
+ 
+ 	if (info) {
+diff --git a/spa/plugins/bluez5/defs.h b/spa/plugins/bluez5/defs.h
+index cb06551..7c7c8ce 100644
+--- a/spa/plugins/bluez5/defs.h
++++ b/spa/plugins/bluez5/defs.h
+@@ -542,6 +542,7 @@ struct spa_bt_device {
+ 	struct spa_bt_monitor *monitor;
+ 	struct spa_bt_adapter *adapter;
+ 	uint32_t id;
++	uint32_t serial;
+ 	char *path;
+ 	char *alias;
+ 	char *address;
+@@ -593,6 +594,7 @@ struct spa_bt_device {
+ 	bool disable_dummy_call;
+ };
+ 
++struct spa_bt_device *spa_bt_device_find_by_serial(uint32_t serial);
+ struct spa_bt_device *spa_bt_device_find(struct spa_bt_monitor *monitor, const char *path);
+ struct spa_bt_device *spa_bt_device_find_by_address(struct spa_bt_monitor *monitor, const char *remote_address, const char *local_address);
+ int spa_bt_device_add_profile(struct spa_bt_device *device, enum spa_bt_profile profile);
+@@ -649,7 +651,7 @@ enum spa_bt_transport_state {
+ };
+ 
+ struct spa_bt_transport_events {
+-#define SPA_VERSION_BT_TRANSPORT_EVENTS	0
++#define SPA_VERSION_BT_TRANSPORT_EVENTS	1
+ 	uint32_t version;
+ 
+ 	void (*destroy) (void *data);
+@@ -657,6 +659,8 @@ struct spa_bt_transport_events {
+ 	void (*state_changed) (void *data, enum spa_bt_transport_state old,
+ 			enum spa_bt_transport_state state);
+ 	void (*volume_changed) (void *data);
++	/** The node using the transport will be removed */
++	void (*remove_node) (void *data);
+ };
+ 
+ struct spa_bt_transport_implementation {
+@@ -682,6 +686,7 @@ struct spa_bt_transport_volume {
+ 
+ struct spa_bt_transport {
+ 	struct spa_list link;
++	uint32_t serial;
+ 	struct spa_bt_monitor *monitor;
+ 	struct spa_bt_backend *backend;
+ 	char *path;
+@@ -739,6 +744,7 @@ struct spa_bt_transport {
+ struct spa_bt_transport *spa_bt_transport_create(struct spa_bt_monitor *monitor, char *path, size_t extra);
+ void spa_bt_transport_free(struct spa_bt_transport *transport);
+ void spa_bt_transport_set_state(struct spa_bt_transport *transport, enum spa_bt_transport_state state);
++struct spa_bt_transport *spa_bt_transport_find_by_serial(uint32_t serial);
+ struct spa_bt_transport *spa_bt_transport_find(struct spa_bt_monitor *monitor, const char *path);
+ struct spa_bt_transport *spa_bt_transport_find_full(struct spa_bt_monitor *monitor,
+                                                     bool (*callback) (struct spa_bt_transport *t, const void *data),
+@@ -758,6 +764,7 @@ int spa_bt_transport_ensure_sco_io(struct spa_bt_transport *t, struct spa_loop *
+ #define spa_bt_transport_emit_delay_changed(t)		spa_bt_transport_emit(t, delay_changed, 0)
+ #define spa_bt_transport_emit_state_changed(t,...)	spa_bt_transport_emit(t, state_changed, 0, __VA_ARGS__)
+ #define spa_bt_transport_emit_volume_changed(t)		spa_bt_transport_emit(t, volume_changed, 0)
++#define spa_bt_transport_emit_remove_node(t)		spa_bt_transport_emit(t, remove_node, 1)
+ 
+ #define spa_bt_transport_add_listener(t,listener,events,data) \
+         spa_hook_list_append(&(t)->listener_list, listener, events, data)
+diff --git a/spa/plugins/bluez5/media-sink.c b/spa/plugins/bluez5/media-sink.c
+index e42a4a3..5528a9e 100644
+--- a/spa/plugins/bluez5/media-sink.c
++++ b/spa/plugins/bluez5/media-sink.c
+@@ -144,6 +144,7 @@ struct impl {
+ 	struct props props;
+ 
+ 	struct spa_bt_transport *transport;
++	uint32_t transport_serial;
+ 	struct spa_hook transport_listener;
+ 
+ 	struct port port;
+@@ -151,6 +152,8 @@ struct impl {
+ 	unsigned int started:1;
+ 	unsigned int start_ready:1;
+ 	unsigned int transport_started:1;
++	unsigned int transport_start_failed:1;
++	unsigned int start_check_pending:1;
+ 	unsigned int following:1;
+ 	unsigned int is_output:1;
+ 	unsigned int flush_pending:1;
+@@ -183,6 +186,7 @@ struct impl {
+ 
+ 	uint64_t packet_delay_ns;
+ 	struct spa_source *update_delay_event;
++	struct spa_source *start_event;
+ 
+ 	uint32_t encoder_delay;
+ 
+@@ -1563,8 +1567,11 @@ static int transport_start(struct impl *this)
+ 				this->codec_props,
+ 				this->transport->write_mtu);
+ 		if (this->codec_data == NULL) {
+-			spa_log_error(this->log, "%p: codec %s initialization failed", this,
+-					this->codec->description);
++			spa_log_error(this->log,
++					"%p: codec %s initialization failed for transport %s "
++					"(state %d, configuration %d bytes)",
++					this, this->codec->description, this->transport->path,
++					this->transport->state, size);
+ 			return -EIO;
+ 		}
+ 	} else {
+@@ -1698,6 +1705,48 @@ fail:
+ 	return -EIO;
+ }
+ 
++/*
++ * Start the transport if it is already ACTIVE when the node starts. The
++ * state_changed callback only runs on transitions, and a node created after
++ * the transport was (re)acquired may never see one. Main loop only; the
++ * serial is cleared when the transport is destroyed so that a freed transport
++ * is never dereferenced here.
++ */
++static int transport_maybe_start(struct impl *this)
++{
++	int res;
++
++	if (!this->started || !this->start_ready || this->transport_started ||
++			this->transport_start_failed)
++		return 0;
++	if (this->transport == NULL || this->transport_serial == 0 ||
++			this->transport->serial != this->transport_serial)
++		return 0;
++	if (this->transport->state != SPA_BT_TRANSPORT_STATE_ACTIVE)
++		return 0;
++
++	res = transport_start(this);
++	if (res < 0) {
++		this->transport_start_failed = true;
++		spa_log_error(this->log,
++				"%p: active transport %s could not be started: %s "
++				"(codec %s, configuration %d bytes)",
++				this, this->transport->path, spa_strerror(res),
++				this->codec->description,
++				this->transport->configuration_len);
++	}
++	return res;
++}
++
++static void transport_start_event(void *data, uint64_t count)
++{
++	struct impl *this = data;
++
++	(void) count;
++	this->start_check_pending = false;
++	transport_maybe_start(this);
++}
++
+ static int do_start(struct impl *this)
+ {
+ 	struct port *port = &this->port;
+@@ -1735,6 +1784,11 @@ static int do_start(struct impl *this)
+ 	set_timers(this);
+ 
+ 	this->started = true;
++	this->transport_start_failed = false;
++
++	/* The transport may already be ACTIVE, in which case no state change
++	 * will be delivered to this node. */
++	transport_maybe_start(this);
+ 
+ 	return 0;
+ }
+@@ -2323,6 +2377,15 @@ static int impl_node_process(void *object)
+ 		return SPA_STATUS_HAVE_DATA;
+ 	}
+ 
++	if (this->started && !this->transport_started &&
++			!this->transport_start_failed && !this->start_check_pending &&
++			this->start_event != NULL) {
++		this->start_check_pending = true;
++		if (spa_loop_utils_signal_event(this->loop_utils,
++				this->start_event) < 0)
++			this->start_check_pending = false;
++	}
++
+ 	if (!this->started || !this->transport_started) {
+ 		if (io->status != SPA_STATUS_HAVE_DATA) {
+ 			io->status = SPA_STATUS_HAVE_DATA;
+@@ -2441,6 +2504,10 @@ static int do_transport_destroy(struct spa_loop *loop,
+ 				void *user_data)
+ {
+ 	struct impl *this = user_data;
++
++	if (this->transport)
++		spa_hook_remove(&this->transport_listener);
++	this->transport_serial = 0;
+ 	this->transport = NULL;
+ 	return 0;
+ }
+@@ -2449,6 +2516,17 @@ static void transport_destroy(void *data)
+ {
+ 	struct impl *this = data;
+ 	spa_log_debug(this->log, "transport %p destroy", this->transport);
++	this->transport_serial = 0;
++	spa_loop_locked(this->data_loop, do_transport_destroy, 0, NULL, 0, this);
++}
++
++static void transport_remove_node(void *data)
++{
++	struct impl *this = data;
++
++	spa_log_debug(this->log, "transport %p remove node", this->transport);
++	this->transport_serial = 0;
++	do_stop(this);
+ 	spa_loop_locked(this->data_loop, do_transport_destroy, 0, NULL, 0, this);
+ }
+ 
+@@ -2461,10 +2539,13 @@ static void transport_state_changed(void *data,
+ 
+ 	spa_log_debug(this->log, "%p: transport %p state %d->%d", this, this->transport, old, state);
+ 
+-	if (state == SPA_BT_TRANSPORT_STATE_ACTIVE)
+-		transport_start(this);
+-	else
++	if (state == SPA_BT_TRANSPORT_STATE_ACTIVE) {
++		if (old != SPA_BT_TRANSPORT_STATE_ACTIVE)
++			this->transport_start_failed = false;
++		transport_maybe_start(this);
++	} else {
+ 		transport_stop(this);
++	}
+ 
+ 	if (state < SPA_BT_TRANSPORT_STATE_ACTIVE && was_started && !this->is_duplex && this->is_output) {
+ 		/*
+@@ -2499,6 +2580,7 @@ static const struct spa_bt_transport_events transport_events = {
+ 	.delay_changed = transport_delay_changed,
+ 	.state_changed = transport_state_changed,
+ 	.destroy = transport_destroy,
++	.remove_node = transport_remove_node,
+ };
+ 
+ static int impl_get_interface(struct spa_handle *handle, const char *type, void **interface)
+@@ -2523,6 +2605,10 @@ static int impl_clear(struct spa_handle *handle)
+ 	struct impl *this = (struct impl *) handle;
+ 
+ 	do_stop(this);
++	if (this->start_event) {
++		spa_loop_utils_destroy_source(this->loop_utils, this->start_event);
++		this->start_event = NULL;
++	}
+ 	if (this->codec_props && this->codec->clear_props)
+ 		this->codec->clear_props(this->codec_props);
+ 	if (this->transport)
+@@ -2566,6 +2652,7 @@ impl_init(const struct spa_handle_factory *factory,
+ 
+ 	this = (struct impl *) handle;
+ 
++	this->start_event = NULL;
+ 	this->log = spa_support_find(support, n_support, SPA_TYPE_INTERFACE_Log);
+ 	this->data_loop = spa_support_find(support, n_support, SPA_TYPE_INTERFACE_DataLoop);
+ 	this->data_system = spa_support_find(support, n_support, SPA_TYPE_INTERFACE_DataSystem);
+@@ -2638,13 +2725,16 @@ impl_init(const struct spa_handle_factory *factory,
+ 	if (info && (str = spa_dict_lookup(info, "bluez5.debug.iso-mono")) != NULL)
+ 		this->iso_debug_mono = spa_atob(str);
+ 
+-	if (info && (str = spa_dict_lookup(info, SPA_KEY_API_BLUEZ5_TRANSPORT)))
+-		sscanf(str, "pointer:%p", &this->transport);
++	uint32_t serial;
++	if (info && (str = spa_dict_lookup(info, SPA_KEY_API_BLUEZ5_TRANSPORT)) &&
++	    spa_atou32(str, &serial, 10))
++		this->transport = spa_bt_transport_find_by_serial(serial);
+ 
+ 	if (this->transport == NULL) {
+-		spa_log_error(this->log, "a transport is needed");
+-		return -EINVAL;
++		spa_log_debug(this->log, "could not find transport by serial");
++		return -ESTALE;
+ 	}
++	this->transport_serial = serial;
+ 	if (this->transport->media_codec == NULL) {
+ 		spa_log_error(this->log, "a transport codec is needed");
+ 		return -EINVAL;
+@@ -2660,6 +2750,11 @@ impl_init(const struct spa_handle_factory *factory,
+ 		this->codec = this->codec->duplex_codec;
+ 	}
+ 
++	this->start_event = spa_loop_utils_add_event(this->loop_utils,
++			transport_start_event, this);
++	if (this->start_event == NULL)
++		spa_log_warn(this->log, "%p: failed to create transport start event: %m", this);
++
+ 	if (this->codec->init_props != NULL)
+ 		this->codec_props = this->codec->init_props(this->codec,
+ 					this->is_duplex ? MEDIA_CODEC_FLAG_SINK : 0,
+diff --git a/spa/plugins/bluez5/media-source.c b/spa/plugins/bluez5/media-source.c
+index 2cbc16d..d259c02 100644
+--- a/spa/plugins/bluez5/media-source.c
++++ b/spa/plugins/bluez5/media-source.c
+@@ -129,6 +129,7 @@ struct impl {
+ 	struct props props;
+ 
+ 	struct spa_bt_transport *transport;
++	uint32_t transport_serial;
+ 	struct spa_hook transport_listener;
+ 
+ 	struct port port;
+@@ -136,6 +137,8 @@ struct impl {
+ 	unsigned int started:1;
+ 	unsigned int start_ready:1;
+ 	unsigned int transport_started:1;
++	unsigned int transport_start_failed:1;
++	unsigned int start_check_pending:1;
+ 	unsigned int following:1;
+ 	unsigned int matching:1;
+ 	unsigned int resampling:1;
+@@ -183,6 +186,7 @@ struct impl {
+ 	struct delay_info delay;
+ 	struct spa_latency_info delay_sink;
+ 	struct spa_source *update_delay_event;
++	struct spa_source *start_event;
+ 
+ 	struct spa_bt_recvmsg_data recv;
+ };
+@@ -1003,6 +1007,11 @@ static int transport_start(struct impl *this)
+ 			this->codec_props,
+ 			this->transport->read_mtu);
+ 	if (this->codec_data == NULL) {
++		spa_log_error(this->log,
++				"%p: codec %s initialization failed for transport %s "
++				"(state %d, configuration %d bytes)",
++				this, this->codec->description, this->transport->path,
++				this->transport->state, this->transport->configuration_len);
+ 		res = -EIO;
+ 		goto fail;
+ 	}
+@@ -1107,6 +1116,48 @@ fail:
+ 	return res;
+ }
+ 
++/*
++ * Start the transport if it is already ACTIVE when the node starts. The
++ * state_changed callback only runs on transitions, and a node created after
++ * the transport was (re)acquired may never see one. Main loop only; the
++ * serial is cleared when the transport is destroyed so that a freed transport
++ * is never dereferenced here.
++ */
++static int transport_maybe_start(struct impl *this)
++{
++	int res;
++
++	if (!this->started || !this->start_ready || this->transport_started ||
++			this->transport_start_failed)
++		return 0;
++	if (this->transport == NULL || this->transport_serial == 0 ||
++			this->transport->serial != this->transport_serial)
++		return 0;
++	if (this->transport->state != SPA_BT_TRANSPORT_STATE_ACTIVE)
++		return 0;
++
++	res = transport_start(this);
++	if (res < 0) {
++		this->transport_start_failed = true;
++		spa_log_error(this->log,
++				"%p: active transport %s could not be started: %s "
++				"(codec %s, configuration %d bytes)",
++				this, this->transport->path, spa_strerror(res),
++				this->codec->description,
++				this->transport->configuration_len);
++	}
++	return res;
++}
++
++static void transport_start_event(void *data, uint64_t count)
++{
++	struct impl *this = data;
++
++	(void) count;
++	this->start_check_pending = false;
++	transport_maybe_start(this);
++}
++
+ static int do_start(struct impl *this)
+ {
+ 	int res;
+@@ -1143,6 +1194,11 @@ static int do_start(struct impl *this)
+ 	set_timers(this);
+ 
+ 	this->started = true;
++	this->transport_start_failed = false;
++
++	/* The transport may already be ACTIVE, in which case no state change
++	 * will be delivered to this node. */
++	transport_maybe_start(this);
+ 
+ 	return 0;
+ }
+@@ -1997,6 +2053,15 @@ static int impl_node_process(void *object)
+ 	if ((io = port->io) == NULL)
+ 		return -EIO;
+ 
++	if (this->started && !this->transport_started &&
++			!this->transport_start_failed && !this->start_check_pending &&
++			this->start_event != NULL) {
++		this->start_check_pending = true;
++		if (spa_loop_utils_signal_event(this->loop_utils,
++				this->start_event) < 0)
++			this->start_check_pending = false;
++	}
++
+ 	if (!this->started || !this->transport_started)
+ 		return SPA_STATUS_OK;
+ 
+@@ -2056,10 +2121,13 @@ static void transport_state_changed(void *data,
+ 
+ 	spa_log_debug(this->log, "%p: transport %p state %d->%d", this, this->transport, old, state);
+ 
+-	if (state == SPA_BT_TRANSPORT_STATE_ACTIVE)
+-		transport_start(this);
+-	else
++	if (state == SPA_BT_TRANSPORT_STATE_ACTIVE) {
++		if (old != SPA_BT_TRANSPORT_STATE_ACTIVE)
++			this->transport_start_failed = false;
++		transport_maybe_start(this);
++	} else {
+ 		transport_stop(this);
++	}
+ 
+ 	if (state == SPA_BT_TRANSPORT_STATE_ERROR) {
+ 		uint8_t buffer[1024];
+@@ -2088,6 +2156,10 @@ static int do_transport_destroy(struct spa_loop *loop,
+ 				void *user_data)
+ {
+ 	struct impl *this = user_data;
++
++	if (this->transport)
++		spa_hook_remove(&this->transport_listener);
++	this->transport_serial = 0;
+ 	this->transport = NULL;
+ 	return 0;
+ }
+@@ -2096,6 +2168,17 @@ static void transport_destroy(void *data)
+ {
+ 	struct impl *this = data;
+ 	spa_log_debug(this->log, "transport %p destroy", this->transport);
++	this->transport_serial = 0;
++	spa_loop_locked(this->data_loop, do_transport_destroy, 0, NULL, 0, this);
++}
++
++static void transport_remove_node(void *data)
++{
++	struct impl *this = data;
++
++	spa_log_debug(this->log, "transport %p remove node", this->transport);
++	this->transport_serial = 0;
++	do_stop(this);
+ 	spa_loop_locked(this->data_loop, do_transport_destroy, 0, NULL, 0, this);
+ }
+ 
+@@ -2103,7 +2186,8 @@ static const struct spa_bt_transport_events transport_events = {
+ 	SPA_VERSION_BT_TRANSPORT_EVENTS,
+ 	.delay_changed = transport_delay_changed,
+ 	.state_changed = transport_state_changed,
+-        .destroy = transport_destroy,
++	.destroy = transport_destroy,
++	.remove_node = transport_remove_node,
+ };
+ 
+ static int impl_get_interface(struct spa_handle *handle, const char *type, void **interface)
+@@ -2129,6 +2213,10 @@ static int impl_clear(struct spa_handle *handle)
+ 	struct port *port = &this->port;
+ 
+ 	do_stop(this);
++	if (this->start_event) {
++		spa_loop_utils_destroy_source(this->loop_utils, this->start_event);
++		this->start_event = NULL;
++	}
+ 	if (this->codec_props && this->codec->clear_props)
+ 		this->codec->clear_props(this->codec_props);
+ 	if (this->transport)
+@@ -2166,6 +2254,7 @@ impl_init(const struct spa_handle_factory *factory,
+ 
+ 	this = (struct impl *) handle;
+ 
++	this->start_event = NULL;
+ 	this->log = spa_support_find(support, n_support, SPA_TYPE_INTERFACE_Log);
+ 	this->data_loop = spa_support_find(support, n_support, SPA_TYPE_INTERFACE_DataLoop);
+ 	this->data_system = spa_support_find(support, n_support, SPA_TYPE_INTERFACE_DataSystem);
+@@ -2236,12 +2325,15 @@ impl_init(const struct spa_handle_factory *factory,
+ 
+ 	this->quantum_limit = 8192;
+ 
+-	if (info && (str = spa_dict_lookup(info, SPA_KEY_API_BLUEZ5_TRANSPORT)) != NULL)
+-		sscanf(str, "pointer:%p", &this->transport);
++	uint32_t serial;
++	if (info && (str = spa_dict_lookup(info, SPA_KEY_API_BLUEZ5_TRANSPORT)) != NULL &&
++	    spa_atou32(str, &serial, 10))
++		this->transport = spa_bt_transport_find_by_serial(serial);
+ 	if (this->transport == NULL) {
+-		spa_log_error(this->log, "a transport is needed");
+-		return -EINVAL;
++		spa_log_debug(this->log, "could not find transport by serial");
++		return -ESTALE;
+ 	}
++	this->transport_serial = serial;
+ 	if (this->transport->media_codec == NULL) {
+ 		spa_log_error(this->log, "a transport codec is needed");
+ 		return -EINVAL;
+@@ -2283,6 +2375,11 @@ impl_init(const struct spa_handle_factory *factory,
+ 		this->is_input = true;
+ 	}
+ 
++	this->start_event = spa_loop_utils_add_event(this->loop_utils,
++			transport_start_event, this);
++	if (this->start_event == NULL)
++		spa_log_warn(this->log, "%p: failed to create transport start event: %m", this);
++
+ 	if (this->codec->kind == MEDIA_CODEC_BAP)
+ 		this->is_input = this->transport->bap_initiator;
+ 

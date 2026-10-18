@@ -103,6 +103,15 @@ let
     ];
   };
 
+  # bluetoothd with a working AVDTP RECONFIGURE sender: patching avdtp.c/a2dp.c
+  # lets the daemon re-negotiate the codec configuration of a stream that is
+  # already open, which is how the link sample rate changes without a
+  # reconnect.  transport.c is deliberately untouched, so acquiring the media
+  # transport (and with it audio output) is exactly the stock code path.
+  bluezPatched = pkgs.bluez.overrideAttrs (old: {
+    patches = (old.patches or [ ]) ++ [ ./bluez-avdtp-reconfigure.patch ];
+  });
+
   pipewire-aptx-fork = pkgs.pipewire.overrideAttrs (old: {
     pname = "pipewire-aptx-adaptive";
     version = "1.7.0-aptx-adaptive";
@@ -121,7 +130,12 @@ let
       hash = "sha256-1/6wXuiayzCPaOxYCJJRgYtT2M1xghivN8niuus0pEA=";
     };
     outputs = [ "out" "dev" "doc" "man" "jack" ];
-    patches = [];
+    # A2DP rate changes close and renegotiate the stream asynchronously, which
+    # makes BlueZ replace the MediaTransport1 object at the same path.  This
+    # backport keeps the rebuilt bluez5 sink node bound to the live transport
+    # (unique serials, ESTALE for stale queued node creates, remove_node events,
+    # fresh transport on same-path reuse) instead of leaving it silent.
+    patches = [ ./pipewire-transport-replace.patch ];
     buildInputs = (old.buildInputs or []) ++ [ openaptx-adaptive ];
     mesonFlags = (pkgs.lib.filter
       (flag: !(pkgs.lib.hasPrefix "-Dinstalled_test_prefix=" flag))
@@ -314,6 +328,13 @@ in
     ];
 
     services.pipewire.package = pipewire-aptx-adaptive;
+
+    # Swapping the package keeps the unit, udev and D-Bus details of the stock
+    # NixOS bluetooth module exactly as they are; only the daemon binary
+    # differs.
+    hardware.bluetooth.package = bluezPatched;
+
+
 
     # The clean-room plugin reads exactly two variables; declaring them here
     # keeps the slot and the boot default explicit and reproducible.  Both match

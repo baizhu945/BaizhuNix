@@ -46,7 +46,7 @@ in
       ./qemu-kvm/qemu-kvm.nix
       ./flatpak-pkgs.nix
       ./hifi.nix
-      ./pipewire-aptx-adaptive-module.nix
+      ./aptx-adaptive/pipewire-aptx-adaptive-module.nix
       ./zsh.nix
       ./customized-pkgs.nix
       ./automount.nix

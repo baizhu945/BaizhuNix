@@ -47,7 +47,7 @@
 { pkgs, lib, ... }:
 
 let
-  watchEnable = true;
+  watchEnable = false;
 
   ad-ctl = pkgs.writeShellApplication {
     name = "ad-ctl";
