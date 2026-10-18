@@ -1,6 +1,6 @@
 diff -ruN src.orig/profiles/audio/a2dp.c src/profiles/audio/a2dp.c
 --- a/profiles/audio/a2dp.c	2026-07-03 23:31:24.000000000 +0800
-+++ b/profiles/audio/a2dp.c	2026-10-18 12:45:27.375950566 +0800
++++ b/profiles/audio/a2dp.c	2026-10-18 18:20:53.538075438 +0800
 @@ -20,6 +20,9 @@
  #include <stdio.h>
  #include <errno.h>
@@ -44,7 +44,7 @@ diff -ruN src.orig/profiles/audio/a2dp.c src/profiles/audio/a2dp.c
  	if (new_state == AVDTP_STATE_OPEN) {
  		struct a2dp_setup *setup;
  		int err;
-@@ -1522,6 +1537,323 @@
+@@ -1522,6 +1537,328 @@
  	return queue_find(chan->seps, match_remote_sep, rsep);
  }
  
@@ -348,6 +348,11 @@ diff -ruN src.orig/profiles/audio/a2dp.c src/profiles/audio/a2dp.c
 +
 +	if (g_mkdir_with_parents(RECONF_DIR, 0755) < 0)
 +		error("reconfigure: cannot create " RECONF_DIR);
++	/* bluetoothd runs with a restrictive umask, so the directory may end up
++	 * unreadable for the unprivileged control tool; it must stay traversable
++	 * for the request file to be usable. */
++	if (chmod(RECONF_DIR, 0755) < 0)
++		error("reconfigure: cannot chmod " RECONF_DIR);
 +
 +	/* The control tool runs unprivileged: it has to be able to write the
 +	 * request file, and to read the status file. */
@@ -368,7 +373,7 @@ diff -ruN src.orig/profiles/audio/a2dp.c src/profiles/audio/a2dp.c
  static gboolean a2dp_reconfigure(gpointer data)
  {
  	struct a2dp_setup *setup = data;
-@@ -2798,6 +3130,8 @@
+@@ -2798,6 +3135,8 @@
  
  	servers = g_slist_append(servers, server);
  
@@ -646,6 +651,41 @@ diff -ruN src.orig/profiles/audio/avdtp.h src/profiles/audio/avdtp.h
  int avdtp_start(struct avdtp *session, struct avdtp_stream *stream);
  int avdtp_suspend(struct avdtp *session, struct avdtp_stream *stream);
  int avdtp_close(struct avdtp *session, struct avdtp_stream *stream,
+diff -ruN src.orig/profiles/audio/media.c src/profiles/audio/media.c
+--- a/profiles/audio/media.c	2026-07-03 23:31:24.000000000 +0800
++++ b/profiles/audio/media.c	2026-10-18 18:08:42.580207497 +0800
+@@ -574,14 +574,29 @@
+ 	DBusMessageIter iter;
+ 	struct media_transport *transport;
+ 	int8_t init_volume;
++	const char *remote_path;
+ 
+ 	transport = find_device_transport(endpoint, device);
+ 
+ 	if (transport != NULL)
+ 		return FALSE;
+ 
+-	transport = media_transport_create(device,
+-					a2dp_setup_remote_path(data->setup),
++	/* Without the remote SEP the transport would be created directly under
++	 * the device ("<device>/fdN" instead of "<remote sep>/fdN").  Audio
++	 * servers cannot attach such a transport, and it survives a profile
++	 * cycle, so the link stays silent for good.  This happens when the A2DP
++	 * profile is connected while the headset is still reconnecting: the
++	 * redundant connect fails with EBUSY and the stream that does get set up
++	 * has no remote SEP yet.  Fail the setup instead, so the next connect
++	 * attempt (wireplumber retries) builds a usable transport. */
++	remote_path = a2dp_setup_remote_path(data->setup);
++	if (remote_path == NULL) {
++		error("A2DP setup without a remote SEP, refusing to create a "
++			"transport that could never carry audio");
++		return FALSE;
++	}
++
++	transport = media_transport_create(device, remote_path,
+ 					configuration, size, endpoint, NULL);
+ 	if (transport == NULL)
+ 		return FALSE;
 diff -ruN src.orig/profiles/audio/transport.c src/profiles/audio/transport.c
 --- a/profiles/audio/transport.c	2026-07-03 23:31:24.000000000 +0800
 +++ b/profiles/audio/transport.c	2026-10-18 12:18:30.659755376 +0800

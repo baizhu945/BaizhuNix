@@ -52,6 +52,7 @@ usage: ad-ctl <command>
   switch <mode>    select a mode: hq (427 kbps / 12 ms) or ll (270 kbps / 10 ms)
   rate <hz>        pin the link sample rate: 44100, 48000, 96000, or default
   rate auto        follow the playing stream's rate (the HQ policy)
+  guard            repair a transport created without a remote SEP (used by the guard service)
   recover          heavier recovery: profile cycle, then a service restart
   watch            run the adaptive watcher in the foreground (user service)
 
@@ -306,6 +307,23 @@ bluez_transport_path() {
 # nor announces another codec.  bluetoothd echoes the nonce in $RECONF_STATUS
 # together with the outcome.
 bluez_reconfigure() {
+  local attempt=0
+  while [ "$attempt" -lt 3 ]; do
+    attempt=$((attempt + 1))
+    if bluez_reconfigure_once; then
+      return 0
+    fi
+    # Only a "no stream" answer is worth retrying: the stream may still be
+    # starting, and the fallback path is audible, so a retry is much cheaper.
+    case $(head -c 160 "$RECONF_STATUS" 2>/dev/null) in
+    *"no stream"*) sleep 0.4 ;;
+    *) return 1 ;;
+    esac
+  done
+  return 1
+}
+
+bluez_reconfigure_once() {
   local nonce deadline line
   nonce=$(date +%s%N)
   log "bluez reconfigure: request $nonce"
@@ -538,12 +556,12 @@ apply_rate() {
 
   if [ -n "$want" ] && [ "${got:-}" != "$want" ]; then
     ensure_ad_link || return 1
-    # Preferred path: bluetoothd renegotiates the running stream on the same
-    # ACL (~1 s, no profile switch, no codec announcement).  The bluez5 sink
-    # node follows the replaced transport and starts itself, so audio keeps
-    # playing.  The profile bounce below is only the fallback for a daemon or a
-    # PipeWire without these patches.
-    if bluez_reconfigure; then
+    # Preferred path: bluetoothd closes and renegotiates the running stream on
+    # the same ACL (~1.2-1.4 s, no profile switch, no codec announcement).  The
+    # rebuilt codec keeps the RTP sequence running (resetting it mid-stream made
+    # the headset drop every packet: silence) and the ABR climbs back to the top
+    # row, so audio continues.  The profile bounce below is only the fallback.
+    if [ -z "${AD_CTL_NO_FAST:-}" ] && bluez_reconfigure; then
       got=$(wait_for_rate "$want" 10 || true)
     fi
     if [ "${got:-}" != "$want" ]; then
@@ -831,6 +849,82 @@ cmd_switch() {
 # "auto" and the mode is HQ.  Runs as a user service (see the home-manager
 # module); each change re-establishes the A2DP transport, so it waits for a
 # stable target and then holds off before acting again.
+# BlueZ occasionally creates the A2DP media transport without a remote SEP,
+# which shows up as a transport object directly under the device
+# ("/org/bluez/hci0/dev_XX/fd0") instead of under the remote SEP
+# (".../dev_XX/sepN/fd0").  PipeWire cannot attach such a transport, so the sink
+# node exists and looks running but nothing reaches the headset; cycling the
+# profile does not clear it because BlueZ keeps the object.  A clean reconnect
+# of the headset rebuilds it properly, so a guard watches for that state.
+bad_transport_path() {
+  local paths
+  paths=$(busctl --system tree org.bluez 2>/dev/null || true)
+  printf '%s\n' "$paths" |
+    grep -oE '/org/bluez/hci0/dev_[0-9A-F_]+/fd[0-9]+$' | head -1 || true
+}
+
+# How many A2DP media transports BlueZ currently exposes, at either path shape.
+transport_count() {
+  local paths n
+  paths=$(busctl --system tree org.bluez 2>/dev/null || true)
+  n=$(printf '%s\n' "$paths" |
+    grep -cE '/org/bluez/hci0/dev_[0-9A-F_]+/(sep[0-9]+/)?fd[0-9]+$' || true)
+  printf '%s' "${n:-0}"
+}
+
+cmd_guard() {
+  local address bad count missing=0 connected
+  while :; do
+    bad=$(bad_transport_path)
+    count=$(transport_count)
+    # Nothing to repair while a usable transport exists.
+    if [ -z "$bad" ] && [ "${count:-0}" != 0 ]; then
+      missing=0
+      sleep 5
+      continue
+    fi
+    # A connected headset without any transport is the other half of the race
+    # (the redundant profile connect fails with EBUSY and nothing retries it).
+    # Wait ~30 s before acting, so a normal connection is never disturbed.
+    if [ -z "$bad" ]; then
+      missing=$((missing + 1))
+      address=$(headset_address 2>/dev/null || true)
+      connected=''
+      if [ -n "$address" ] &&
+        bluetoothctl info "$address" 2>/dev/null | grep -q 'Connected: yes'; then
+        connected=yes
+      fi
+      if [ "$missing" -lt 6 ] || [ -z "$connected" ]; then
+        sleep 5
+        continue
+      fi
+    fi
+    address=$(headset_address 2>/dev/null || true)
+    if [ -z "$address" ]; then
+      log 'guard: link needs repair but no headset address is known'
+      sleep 30
+      continue
+    fi
+    # Never fight a manual command that is already rebuilding the link.
+    acquire_lock try || { sleep 5; continue; }
+    log "guard: repairing the A2DP link (transport=${bad:-none} count=$count)"
+    bluetoothctl disconnect "$address" >/dev/null 2>&1 || true
+    sleep 2
+    bluetoothctl connect "$address" >/dev/null 2>&1 || true
+    sleep 6
+    bad=$(bad_transport_path)
+    count=$(transport_count)
+    if [ -z "$bad" ] && [ "${count:-0}" != 0 ]; then
+      log 'guard: A2DP transport repaired'
+    else
+      log 'guard: still broken after the reconnect'
+    fi
+    release_lock
+    missing=0
+    sleep 60
+  done
+}
+
 cmd_watch() {
   local mode target current last='' stable=0 cooldown=0
   while :; do
@@ -940,6 +1034,7 @@ case "${1:-}" in
   switch | sw) shift; cmd_switch "$@" ;;
   rate | r) shift; cmd_rate "$@" ;;
   watch) cmd_watch ;;
+  guard) cmd_guard ;;
   recover) cmd_recover ;;
   -h | --help | help | '') usage ;;
   *) usage >&2; exit 2 ;;

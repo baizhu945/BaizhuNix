@@ -92,6 +92,26 @@ in
     Install.WantedBy = [ "default.target" ];
   };
 
+  # BlueZ sometimes creates the A2DP media transport without a remote SEP (a
+  # reconnect race: the profile connect fails with "Device or resource busy" and
+  # the transport ends up directly under the device).  PipeWire cannot use it,
+  # so the sink stays silent while everything looks connected; the profile
+  # cannot be cycled away from it either.  This guard notices that exact object
+  # and repairs it with a clean reconnect, which is the only reliable cure.
+  systemd.user.services.aptx-adaptive-guard = {
+    Unit = {
+      Description = "aptX Adaptive: repair transports created without a remote SEP";
+      After = [ "pipewire.service" "wireplumber.service" ];
+      PartOf = [ "pipewire.service" ];
+    };
+    Service = {
+      ExecStart = "${ad-ctl}/bin/ad-ctl guard";
+      Restart = "always";
+      RestartSec = 10;
+    };
+    Install.WantedBy = [ "default.target" ];
+  };
+
   home.file = {
     # The guard is part of the plugin's aptx-slot design
     # (theacrat/aptx-linux docs/adr/0004-aptx-slot.md): our entries share the
