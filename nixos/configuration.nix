@@ -60,6 +60,27 @@ let
   '';
 in
 {
+  # ---- supergfxctl 99-nvidia-ac.rules 误杀 nvidia-powerd 修复 ----
+  # supergfxctl 自带的 99-nvidia-ac.rules 是：
+  #   SUBSYSTEM=="power_supply", ENV{POWER_SUPPLY_ONLINE}=="0", RUN+="systemctl --no-block stop nvidia-powerd.service"
+  #   SUBSYSTEM=="power_supply", ENV{POWER_SUPPLY_ONLINE}=="1", RUN+="systemctl --no-block start nvidia-powerd.service"
+  # 它没有限定设备类型，于是本机的 USB-C PD 电源
+  # ucsi-source-psy-USBC000:001/002（TYPE=USB，没插 USB-C 充电器时 online 恒为 0）
+  # 也满足条件：插拔任何 USB-C 设备产生的 udev change 事件都会执行
+  # `systemctl stop nvidia-powerd.service`。nvidia-powerd 一退出，GPU 功耗上限就从
+  # 115W（Dynamic Boost）回落到默认 55W；而且之后再没有 AC 事件来 start，就永久卡在 55W。
+  # 修复：把规则收窄到只匹配交流适配器（ADP0，POWER_SUPPLY_TYPE=Mains）。
+  nixpkgs.overlays = [
+    (final: prev: {
+      supergfxctl = prev.supergfxctl.overrideAttrs (old: {
+        postInstall = (old.postInstall or "") + ''
+          substituteInPlace $out/lib/udev/rules.d/99-nvidia-ac.rules \
+            --replace 'SUBSYSTEM=="power_supply",' 'SUBSYSTEM=="power_supply", ENV{POWER_SUPPLY_TYPE}=="Mains",'
+        '';
+      });
+    })
+  ];
+
   imports =
     [ 
       ./hardware-configuration.nix # Include the results of the hardware scan.
