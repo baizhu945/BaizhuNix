@@ -55,6 +55,7 @@ let
       nss
       pango
       systemd
+      tpm2-tss
       vulkan-loader
       wayland
       libx11

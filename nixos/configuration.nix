@@ -24,6 +24,31 @@ let
 
   targetDpi = 144;
 
+  # ---- NVIDIA 615.78.08 + patchelf 0.19.x 修复 ----
+  # nixpkgs 现在用 patchelf 0.19.2 给 nvidia 驱动的预编译程序设置 interpreter/rpath。
+  # 对 615.78.08 的 nvidia-smi / nvidia-powerd 等 ELF 可执行文件，0.19.2 重写段布局时
+  # 会生成互相重叠的 LOAD 段，把 .dynamic 落进了只读映射；glibc 启动时在 dl_main 里写
+  # DT_DEBUG 就会 SIGSEGV（表现为 nvidia-smi 一运行就段错误、nvidia-powerd 起不来）。
+  # patchelf 0.15.2 生成的布局正确（615.71.09 时代就是用它构建的）。
+  patchelf015 = pkgs.patchelf.overrideAttrs (_: {
+    version = "0.15.2";
+    src = pkgs.fetchurl {
+      url = "https://github.com/NixOS/patchelf/releases/download/0.15.2/patchelf-0.15.2.tar.bz2";
+      hash = "sha256-F3RfVkFZyOIo/EEtplogSLhGxLa0Igt3y/IkFuAvLXw=";
+    };
+    # 0.15.2 的测试套件在新 glibc 下会失败，跳过。
+    doCheck = false;
+  });
+
+  nvidiaStable = config.boot.kernelPackages.nvidiaPackages.latest.overrideAttrs (old: {
+    # 驱动的 builder.sh 在 installPhase 里直接用 PATH 中的 patchelf 处理
+    # $out/lib/*.so.* 和 $bin/bin/{nvidia-smi,nvidia-powerd,...}，因此在这里换掉它。
+    preInstall = builtins.concatStringsSep "\n" (lib.filter (x: x != null && x != "") [
+      (old.preInstall or null)
+      "export PATH=${patchelf015}/bin:$PATH"
+    ]);
+  });
+
   # Keep Assetto Corsa's 32-bit launchers from loading the full host font set.
   acFontConfig = pkgs.writeText "assetto-corsa-fontconfig.conf" ''
     <?xml version="1.0"?>
@@ -207,7 +232,6 @@ in
     fcitx5 = {
       waylandFrontend = true;
       addons = with pkgs; [
-        fcitx5-mozc
         fcitx5-gtk
         qt6Packages.fcitx5-chinese-addons
         fcitx5-pinyin-zhwiki
@@ -715,17 +739,12 @@ EOF
     open = true;
     nvidiaSettings = true;
     dynamicBoost.enable = true;
-    package = config.boot.kernelPackages.nvidiaPackages.latest;
+    package = nvidiaStable;
     modesetting.enable = true;
     powerManagement.enable = true;
   };
 
   programs.gpu-screen-recorder.enable = true;
-
-  # In /etc/nixos/configuration.nix
-  virtualisation.docker = {
-    enable = true;
-  };
 
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions

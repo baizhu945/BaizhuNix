@@ -31,60 +31,11 @@ let
       platforms = platforms.linux;
     };
   };
-
-
-  ghost-downloader = pkgs.stdenv.mkDerivation {
-      pname = "ghost-downloader";
-      version = "4.0.5";
-      src = pkgs.fetchurl {
-        url = "https://github.com/XiaoYouChR/Ghost-Downloader-3/releases/download/v4.0.5/Ghost-Downloader-v4.0.5-Linux-x86_64.tar.xz";
-        hash = "sha256-4em0MIMnEnC6/Ew3hq/fxfPEqZuCvLwSheTtYqfmdBU=";
-      };
-      icon = pkgs.fetchurl {
-        url = "https://raw.githubusercontent.com/XiaoYouChR/Ghost-Downloader-3/main/app/assets/logo.png";
-        hash = "sha256-2I+2YzSLK4kzZnN/e0tsIyenFrYJXKNDpBcm34BGXsM="; 
-      };
-      sourceRoot = ".";
-      dontBuild = true;
-      dontStrip = true;
-      dontPatchELF = true;
-      installPhase = ''
-        mkdir -p $out/lib/ghost-downloader
-        cp -r . $out/lib/ghost-downloader/
-        chmod +x $out/lib/ghost-downloader/Ghost-Downloader-3.bin
-        mkdir -p $out/bin
-        cat > $out/bin/ghost-downloader << EOF
-  #!/bin/sh
-  cd "$out/lib/ghost-downloader"
-  exec ./Ghost-Downloader-3.bin "\$@"
-  EOF
-        chmod +x $out/bin/ghost-downloader
-  
-        install -Dm644 $icon $out/share/icons/hicolor/256x256/apps/ghost-downloader.png
-  
-        mkdir -p $out/share/applications
-        cat > $out/share/applications/ghost-downloader.desktop << 'EOF'
-  [Desktop Entry]
-  Type=Application
-  Name=Ghost Downloader
-  Comment=Ghost Downloader 3 - Multi-threaded downloader
-  Exec=ghost-downloader %u
-  Icon=ghost-downloader
-  Terminal=false
-  Categories=Network;FileTransfer;
-  EOF
-      '';
-      meta = with lib; {
-        description = "Ghost Downloader 3 - multi-threaded downloader";
-        platforms = platforms.linux;
-      };
-    };
 in
 {
   environment.systemPackages = with pkgs; [
     ffmpeg-full
     spectroterm
-    ghost-downloader
 
     # 包装后的二进制
     freecad-wrapped
