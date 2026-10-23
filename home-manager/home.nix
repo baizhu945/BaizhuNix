@@ -29,7 +29,7 @@ in
 {
   imports = [
     ./acm.nix   # ACM-equivalent display colour management (see /etc/nixos/acm/)
-    ./tts/tts-qwen.nix
+    ./tts/tts-cosyvoice.nix
     ./ghostty/ghostty.nix
     ./lyrics/lyrics.nix
     ./theme/theme.nix
@@ -95,6 +95,7 @@ in
     # # "Hello, world!" when run.
     # pkgs.hello
 
+    pkgs.openutau
     pkgs.wlrctl
     pkgs.agent-browser
     pkgs.geogebra6

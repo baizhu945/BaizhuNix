@@ -200,5 +200,5 @@ let
   };
 in
 {
-  inherit mkWheel torch torchaudio tokenizersWheel safetensorsWheel hubWheel;
+  inherit mkWheel torch torchaudio triton tokenizersWheel safetensorsWheel hubWheel;
 }
