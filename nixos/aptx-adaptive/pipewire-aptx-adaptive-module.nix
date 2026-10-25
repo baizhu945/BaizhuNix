@@ -11,9 +11,9 @@ let
   #     (pull request #17).  The patch is applied to the encoder below.
   #   * theacrat/aptx-linux is the clean-room aptX Adaptive encoder (MIT).
   #
-  # The one input that cannot be fetched is Qualcomm's own encoder library: the
-  # encoder reads its codec tables out of it at build time.  It is declared as
-  # `vendorEncoder` below and is never redistributed.
+  # The encoder's codec tables were extracted once from Qualcomm's encoder
+  # library and live in ./aptx-tables.rs next to this module, so the build is
+  # reproducible from this directory alone and needs no external file.
   # ---------------------------------------------------------------------------
   # The encoder comes from this account's fork of theacrat/aptx-linux, which
   # carries two commits on top of the last upstream commit (a30bbd8):
@@ -64,8 +64,12 @@ let
     version = "0.1.0-unstable-2026-10-16";
     src = aptxLinuxSrc;
     cargoLock.lockFile = "${aptxLinuxSrc}/Cargo.lock";
-    # build.rs reads the codec tables from the vendor encoder at build time.
-    APTX_ADAPTIVE_SO = "${cfg.vendorEncoder}";
+    # The codec tables were extracted from the vendor encoder once and are
+    # checked in next to this module (aptx-tables.rs); the small patch teaches
+    # build.rs to use them, so the build needs no external library and does not
+    # break after the store path of a .so has been garbage collected.
+    patches = [ ./aptx-tables.patch ];
+    APTX_ADAPTIVE_TABLES = "${./aptx-tables.rs}";
     doCheck = false;
     postInstall = ''
       # The cargo hook builds with an explicit --target, so the cdylib is not in
@@ -219,44 +223,6 @@ in
   options.services.pipewire.aptxAdaptive = {
     enable = lib.mkEnableOption
       "the aptX Adaptive A2DP source (clean-room encoder in the aptx slot)";
-
-    vendorEncoder = lib.mkOption {
-      type = lib.types.path;
-      example = "/run/keys/libaptXAdaptiveEnc.so";
-      description = ''
-        Qualcomm's aptX Adaptive encoder library.  The clean-room encoder reads
-        its codec tables from this file at build time; nothing else uses it, and
-        it is never redistributed.
-
-        The file must be added to the store first, so that the hash below is
-        verified before it is used:
-
-        ```sh
-        nix-store --add-fixed sha256 /path/to/libaptXAdaptiveEnc.so
-        ```
-
-        The copy from the OnePlus 15 (CPH2749) package is what this hash pins;
-        it lives at work/aptxlibs_CPH2749/libaptXAdaptiveEnc.so and has to be
-        added to the store again after a garbage collection:
-
-          nix-store --add-fixed sha256 \
-            /home/<yourusername>/work/aptxlibs_CPH2749/libaptXAdaptiveEnc.so
-      '';
-      default = pkgs.requireFile {
-        name = "libaptXAdaptiveEnc.so";
-        sha256 = "1ac881571cd1db4d256113d4448304016de73fedebc059824b1b2ed09599f0c9";
-        message = ''
-          libaptXAdaptiveEnc.so is not in the Nix store yet.  Add the vendor
-          library once, then rebuild:
-
-            nix-store --add-fixed sha256 /path/to/libaptXAdaptiveEnc.so
-
-          The file is only read while building the encoder and is never
-          redistributed by this configuration.
-        '';
-      };
-      defaultText = lib.literalExpression "pkgs.requireFile { … }";
-    };
 
     defaultRate = lib.mkOption {
       type = lib.types.nullOr (lib.types.enum [ 44100 48000 96000 ]);

@@ -95,6 +95,7 @@ in
     # # "Hello, world!" when run.
     # pkgs.hello
 
+    pkgs.drawio
     pkgs.openutau
     pkgs.wlrctl
     pkgs.agent-browser

@@ -1,0 +1,25 @@
+--- a/crates/aptx-adaptive/build.rs	2026-10-25 11:54:36.509294272 +0800
++++ b/crates/aptx-adaptive/build.rs	2026-10-25 11:54:36.520508100 +0800
+@@ -101,6 +101,22 @@
+     println!("cargo::rerun-if-changed=build.rs");
+     println!("cargo::rerun-if-changed=build");
+     println!("cargo::rerun-if-env-changed={ENV}");
++    // Reproducible builds: use a previously extracted tables file instead of the
++    // vendor encoder library, so the build needs no external .so at all.
++    if let Some(tables) = env::var_os("APTX_ADAPTIVE_TABLES") {
++        println!("cargo::rerun-if-env-changed=APTX_ADAPTIVE_TABLES");
++        let src = PathBuf::from(tables);
++        let text = fs::read_to_string(&src)
++            .map_err(|e| format!("can't read {}: {e}", src.display()))?;
++        let out = PathBuf::from(
++            env::var("OUT_DIR").map_err(|e| format!("OUT_DIR: {e}"))?,
++        )
++        .join("tables.rs");
++        fs::write(&out, text)
++            .map_err(|e| format!("can't write {}: {e}", out.display()))?;
++        return Ok(());
++    }
++
+     let path = match env::var_os(ENV) {
+         Some(p) if !p.is_empty() => PathBuf::from(p),
+         _ => return Err(format!("{ENV} is not set. {HOW_TO_GET}")),
