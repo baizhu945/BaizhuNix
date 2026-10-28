@@ -594,7 +594,7 @@ EOF
       # Verified games requirements
       libxt libxmu libogg libvorbis SDL SDL2_image glew_1_10 libidn tbb
       # Other things from runtime
-      flac freeglut libjpeg libpng libpng12 libsamplerate libmikmod libtheora 
+      flac freeglut libjpeg libpng libsamplerate libmikmod libtheora 
       libtiff pixman speex SDL_image SDL_ttf SDL_mixer SDL2_ttf SDL2_mixer 
       libcaca libcanberra      
       libgcrypt libvpx librsvg libxft libvdpau

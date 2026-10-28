@@ -145,7 +145,7 @@ in
     pkgs.bilibili
     pkgs.spotify
     pkgs.matugen
-    pkgs.dgop
+    pkgs.dux-gop
     pkgs.cava
     pkgs.wl-mirror
     pkgs.glava
