@@ -15,6 +15,7 @@ let
 in
 {
   imports = [
+    ./aniplayer.nix
     ./acm.nix   # ACM-equivalent display colour management (see /etc/nixos/acm/)
     ./tts/tts-cosyvoice.nix
     ./ghostty/ghostty.nix
@@ -56,15 +57,38 @@ in
 
   home.stateVersion = "26.11"; # Please read the comment before changing.
 
-  nixpkgs.config.cudaSupport = true;
-  
+  nixpkgs.config = {
+    cudaSupport = true;
+    problems.handlers."gtk+".broken = "warn"; # OnlyOffice 有 gtk2 的依赖
+  };
+
   news.entries = lib.mkForce [];
 
   # CUDA / 预编译 ML 依赖策略集中在 compact.nix。
 
   programs.onlyoffice.enable = true;
 
+  programs.zed-editor = {
+    enable = true;
+  };
+
   nixpkgs.overlays = with pkgs; [
+    (self: super: {
+      pi-coding-agent = super.pi-coding-agent.overrideAttrs (old: {
+        postInstall = (old.postInstall or "") + ''
+          local nm="$out/lib/node_modules/pi-monorepo/node_modules"
+          if [ -d packages/schema ]; then
+            mkdir -p "$nm/@earendil-works"
+            rm -rf "$nm/@earendil-works/pi-schema"
+            cp -r packages/schema "$nm/@earendil-works/pi-schema"
+          fi
+        '';
+        postInstallCheck = (old.postInstallCheck or "") + ''
+          node --input-type=module -e \
+            "await import('file://$out/lib/node_modules/pi-monorepo/node_modules/@earendil-works/pi-ai/dist/utils/validation.js')"
+        '';
+      });
+    })
     (self: super: let
     in {
       geogebra6 = super.geogebra6.overrideAttrs (_: {
@@ -82,6 +106,7 @@ in
     # # "Hello, world!" when run.
     # pkgs.hello
 
+    pkgs.yt-dlp
     pkgs.drawio
     pkgs.openutau
     pkgs.wlrctl
@@ -98,7 +123,6 @@ in
     stablePkgs.localsend
     pkgs.tokei
     pkgs.kile
-    pkgs.kdePackages.kmplot
     pkgs.labplot
     stablePkgs.sage
     stablePkgs.octaveFull
@@ -326,6 +350,8 @@ in
   home.sessionVariables = {
     # EDITOR = "emacs";
   };
+
+  programs.gradle.enable = true;
 
   programs.joplin-desktop = {
     enable = true;

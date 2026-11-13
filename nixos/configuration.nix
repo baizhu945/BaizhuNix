@@ -127,10 +127,15 @@ in
   services.blueman.enable = true;
   services.pipewire.aptxAdaptive.enable = true;
 
-  # BT11's interface 1 is a vendor HID channel. The application itself is
-  # installed by Home Manager; NixOS only grants access to this exact device.
+  # BT11, GS3108T-PRO, Rapoo NearLink Mouse, MK870-PRO keyboard
   services.udev.extraRules = ''
     SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0a12", ATTRS{idProduct}=="4007", MODE="0660", GROUP="input", TAG+="uaccess"
+
+   SUBSYSTEM=="hidraw", ATTRS{idVendor}=="05ac", ATTRS{idProduct}=="024f", MODE="0660", GROUP="input", TAG+="uaccess"
+
+   SUBSYSTEM=="hidraw", ATTRS{idVendor}=="24ae", ATTRS{idProduct}=="186a", MODE="0660", GROUP="input", TAG+="uaccess"
+
+   SUBSYSTEM=="hidraw", ATTRS{idVendor}=="3151", ATTRS{idProduct}=="4015", MODE="0660", GROUP="input", TAG+="uaccess"
   '';
 
   # Bootloader.
@@ -213,6 +218,8 @@ in
 
   nixpkgs.config = {
     cudaSupport = true;
+
+    android_sdk.accept_license = true; # Support for Android SDK
   };
   nix.settings = {
     # Lix 从 nix.conf 读取 nix-path；仅设置 NIX_PATH 不会加入用户的 channels。
@@ -444,7 +451,6 @@ EOF
       obs-pipewire-audio-capture
       obs-gstreamer
       obs-vkcapture
-      obs-3d-effect
       input-overlay
     ];
   };
@@ -539,8 +545,6 @@ EOF
     nix-direnv.enable = true;
   };
 
-  programs.nh.enable = true;
-
   programs.ydotool.enable = true;
 
   programs.clash-verge = {
@@ -575,7 +579,7 @@ EOF
       pipewire libxcb libxdamage libxshmfence libxxf86vm libelf
 
       # Required
-      glib gtk2
+      glib
 
       # Inspired by steam
       # https://github.com/NixOS/nixpkgs/blob/master/pkgs/by-name/st/steam/package.nix#L36-L85
@@ -620,7 +624,9 @@ EOF
     pkgs.yad
     pkgs.python3
     pkgs.vulkan-tools
+    
     pkgs.android-tools
+    pkgs.kotlin
 
     pkgs.unar pkgs.rar pkgs.unzip pkgs.unrar pkgs.p7zip
 
@@ -632,7 +638,6 @@ EOF
     pkgs.testdisk
     pkgs.ext4magic
     pkgs.mediainfo
-    pkgs.yt-dlp
     pkgs.glib
     pkgs.gnumake
     pkgs.alacritty
@@ -734,6 +739,8 @@ EOF
       ];
     };
   };
+
+  programs.java.enable = true;
 
   programs.atop = {
     enable = true;
