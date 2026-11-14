@@ -106,6 +106,7 @@ in
     # # "Hello, world!" when run.
     # pkgs.hello
 
+    pkgs.pkg-config
     pkgs.yt-dlp
     pkgs.drawio
     pkgs.openutau

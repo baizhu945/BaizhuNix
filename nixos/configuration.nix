@@ -11,6 +11,11 @@ let
     config = builtins.removeAttrs config.nixpkgs.config [ "rewriteURL" ];
   };
 
+  unstableTarball = fetchTarball "https://nixos.org/channels/nixpkgs-unstable/nixexprs.tar.xz";
+  unstablePkgs = import unstableTarball {
+    config = builtins.removeAttrs config.nixpkgs.config [ "rewriteURL" ];
+  };
+
   nix-alien-pkgs = import (
     builtins.fetchTarball {
       url = "https://github.com/thiagokokada/nix-alien/archive/df422df4324674417f91dee49bae401eef87c6ed.tar.gz";
@@ -151,7 +156,7 @@ in
   };
 
   # boot.kernelPackages = pkgs.linuxPackages_latest; 
-  boot.kernelPackages = pkgs.linuxPackages_zen;
+  boot.kernelPackages = unstablePkgs.linuxPackages_zen; # 7.3.4-zen1 has a BUG, so I need nixpkgs that provides zen2
 
   hardware.cpu.intel.updateMicrocode = true;
 
@@ -379,6 +384,19 @@ EOF
   programs.niri = {
     enable = true;
     useNautilus = false;
+    package =
+      let
+        # memory-fixes 分支中包含打包定义和 NVIDIA read-fence 补丁的提交。
+        revision = "ebbb9ff71c44f06e36458cab04c64ef266cc858a";
+        src = builtins.fetchTarball {
+          url = "https://codeload.github.com/<yourusername>/niri-manual/tar.gz/${revision}";
+          sha256 = "sha256-LmSq6tU3i9cJ9ITmifjwnoGYrn5IwuCS8J91zFFVXsk=";
+        };
+      in
+      import (src + "/nix/package.nix") {
+        inherit pkgs src revision;
+        withNvidiaReadFenceWorkaround = true;
+      };
   };
 
   services.iio-niri = {
@@ -579,7 +597,7 @@ EOF
       pipewire libxcb libxdamage libxshmfence libxxf86vm libelf
 
       # Required
-      glib
+      glib 
 
       # Inspired by steam
       # https://github.com/NixOS/nixpkgs/blob/master/pkgs/by-name/st/steam/package.nix#L36-L85
