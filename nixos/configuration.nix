@@ -103,6 +103,7 @@ in
       ./automount.nix
       ./rm-protection/rm-protection.nix
       ./acm/module.nix
+      ./niri/niri.nix
       # ./ros2.nix
       # ./g14-kernel.nix
     ];
@@ -381,23 +382,6 @@ EOF
   programs.kdeconnect.enable = true;
 
   services.displayManager.defaultSession = lib.mkForce "niri"; # Fix defaultSession ERROR BUG
-  programs.niri = {
-    enable = true;
-    useNautilus = false;
-    package =
-      let
-        # memory-fixes 分支中包含打包定义和 NVIDIA read-fence 补丁的提交。
-        revision = "ebbb9ff71c44f06e36458cab04c64ef266cc858a";
-        src = builtins.fetchTarball {
-          url = "https://codeload.github.com/<yourusername>/niri-manual/tar.gz/${revision}";
-          sha256 = "sha256-LmSq6tU3i9cJ9ITmifjwnoGYrn5IwuCS8J91zFFVXsk=";
-        };
-      in
-      import (src + "/nix/package.nix") {
-        inherit pkgs src revision;
-        withNvidiaReadFenceWorkaround = true;
-      };
-  };
 
   services.iio-niri = {
     enable = true;
@@ -427,7 +411,7 @@ EOF
     protontricks.enable = true;
     # Assetto Corsa / Content Manager: pin a runner compatible with native .NET.
     extraCompatPackages = [
-      (pkgs.proton-ge-bin.overrideAttrs (finalAttrs: old: {
+      (pkgs.proton-ge-bin.overrideAttrs (old: {
         version = "GE-Proton9-20";
         toolName = "GE-Proton9-20";
         steamDisplayName = "GE-Proton9-20";
@@ -435,9 +419,9 @@ EOF
           url = "https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton9-20/GE-Proton9-20.tar.gz";
           hash = "sha256-1twCv81KO1fcRcIb4H7VtAjtcKrX+DymsYdf885eOWo=";
         };
-        # Set Fontconfig before Proton initializes the game's Wine prefix.
-        postInstall = (old.postInstall or "") + ''
-          ${pkgs.coreutils}/bin/unlink "$steamcompattool/proton"
+        # Let nixpkgs patch the Python launcher first, then wrap the patched copy.
+        postFixup = (old.postFixup or "") + ''
+          mv "$steamcompattool/proton" "$steamcompattool/proton-real"
           cp ${pkgs.writeScript "proton-ac-fontconfig" ''
             #!${pkgs.runtimeShell}
             acCompatPath="''${STEAM_COMPAT_DATA_PATH:-}"
@@ -449,7 +433,7 @@ EOF
               export FONTCONFIG_FILE=${acFontConfig}
             fi
 
-            exec "${finalAttrs.src}/proton" "$@"
+            exec "''${0%/*}/proton-real" "$@"
           ''} "$steamcompattool/proton"
         '';
       }))
@@ -645,6 +629,8 @@ EOF
     
     pkgs.android-tools
     pkgs.kotlin
+
+    pkgs.flutter
 
     pkgs.unar pkgs.rar pkgs.unzip pkgs.unrar pkgs.p7zip
 

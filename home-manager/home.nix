@@ -16,6 +16,7 @@ in
 {
   imports = [
     ./aniplayer.nix
+    ./gopeed.nix
     ./acm.nix   # ACM-equivalent display colour management (see /etc/nixos/acm/)
     ./tts/tts-cosyvoice.nix
     ./ghostty/ghostty.nix
@@ -28,6 +29,7 @@ in
     ./agent/agent.nix
     ./mouse-trail/mouse-trail.nix
     ./noctalia-v5/noctalia-v5.nix
+    ./nekomote  # niri: one interactive wallpaper service per output
     ./latex-ocr.nix
     ./shell-services.nix
     ./bt11-control/bt11-control.nix
@@ -360,6 +362,7 @@ in
       "sync.interval" = 300;
       "sync.target" = 3;
     };
+    package = pkgs.joplin-desktop.override { electron = pkgs.electron_43; };
   };
 
   systemd.user.services.battery-monitor = {
